@@ -1,7 +1,559 @@
 ﻿@page "/"
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@rendermode InteractiveServer
+@implements IDisposable
 
-<PageTitle>Home</PageTitle>
+<PageTitle>CyberPet / Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<style>
+    .game-app {
+        font-family: ui-monospace, Consolas, "Courier New", monospace;
+        font-size: 14px;
+        color: #d4d4d4;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .dev-panel {
+        padding: 1rem;
+        border: 1px solid #333;
+        background: #1e1e1e;
+    }
+    .dev-panel h1, .dev-panel h2 {
+        font-size: 0.95rem;
+        font-weight: normal;
+        margin: 0 0 0.75rem;
+        color: #4ec9b0;
+    }
+    .dev-panel h2 { font-size: 0.85rem; color: #569cd6; }
+    .dev-panel pre {
+        margin: 0 0 1rem;
+        padding: 0.5rem;
+        background: #252526;
+        border: 1px solid #3c3c3c;
+        white-space: pre-wrap;
+        font-size: 12px;
+    }
+    .dev-panel .stat { margin: 0.25rem 0; }
+    .dev-panel .label {
+        color: #9cdcfe;
+        display: inline-block;
+        width: 9ch;
+    }
+    .dev-panel .bar { color: #6a9955; }
+    .dev-panel hr {
+        border: none;
+        border-top: 1px solid #3c3c3c;
+        margin: 0.75rem 0;
+    }
+    .dev-panel .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .dev-panel .actions.col {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .dev-panel .actions button {
+        font-family: inherit;
+        font-size: 12px;
+        padding: 0.3rem 0.55rem;
+        background: #2d2d30;
+        color: #d4d4d4;
+        border: 1px solid #555;
+        cursor: pointer;
+    }
+    .dev-panel .actions button:hover:not(:disabled) { background: #3e3e42; }
+    .dev-panel .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-Welcome to your new app.
+    .status-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem 1.5rem;
+        padding: 0.65rem 1rem;
+    }
+    .status-bar .game-title {
+        color: #4ec9b0;
+        font-size: 1rem;
+        margin-right: 0.5rem;
+    }
+    .status-bar .chip {
+        font-size: 12px;
+        padding: 0.15rem 0.45rem;
+        border: 1px solid #3c3c3c;
+        background: #252526;
+    }
+    .status-bar .chip.on { color: #dcdcaa; border-color: #5a5a00; }
+    .status-bar .chip.off { color: #808080; }
+
+    .game-body {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    .pet-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: sticky;
+        top: 1rem;
+    }
+    .world-column {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-width: 0;
+    }
+
+    .tab-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .tab-btn {
+        font-family: inherit;
+        font-size: 13px;
+        padding: 0.4rem 0.75rem;
+        background: #2d2d30;
+        color: #d4d4d4;
+        border: 1px solid #555;
+        cursor: pointer;
+    }
+    .tab-btn:hover { background: #3e3e42; }
+    .tab-btn.active {
+        background: #252526;
+        border-color: #4ec9b0;
+        color: #4ec9b0;
+    }
+    .tab-btn.locked { opacity: 0.65; }
+    .tab-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .section-panel { min-height: 200px; }
+    .section-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .badge {
+        font-size: 12px;
+        padding: 0.1rem 0.35rem;
+        border: 1px solid #3c3c3c;
+    }
+    .badge.on { color: #4ec9b0; border-color: #4ec9b0; }
+    .badge.off { color: #808080; }
+    .badge.work.on { color: #dcdcaa; border-color: #5a5a00; }
+    .badge.fish.on { color: #4fc1ff; border-color: #4fc1ff; }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 0.5rem;
+    }
+    .card {
+        padding: 0.5rem;
+        background: #252526;
+        border: 1px solid #3c3c3c;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 12px;
+    }
+    .card.unlocked { border-color: #4ec9b0; }
+    .card.locked { opacity: 0.85; }
+    .card.fish-card { border-color: #4fc1ff33; }
+    .card .name { color: #ce9178; }
+    .card .meta { color: #808080; }
+    .card .desc { color: #6a9955; margin: 0; }
+    .card .qty { color: #b5cea8; }
+
+    .room-content {
+        padding: 0.75rem;
+        background: #252526;
+        border: 1px solid #3c3c3c;
+    }
+    .room-content.unlocked { border-color: #569cd6; }
+    .room-content.locked { opacity: 0.8; }
+
+    .hint, .empty {
+        color: #6a9955;
+        font-size: 12px;
+        margin: 0;
+    }
+    .section-title {
+        color: #9cdcfe;
+        font-size: 12px;
+        margin: 0.5rem 0 0.35rem;
+    }
+    .catch-result {
+        margin: 0.75rem 0 0;
+        padding: 0.5rem;
+        background: #252526;
+        border: 1px solid #3c3c3c;
+        font-size: 12px;
+    }
+    .work-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    .work-info { flex: 1; min-width: 180px; }
+
+    .rarity-common { color: #d4d4d4; }
+    .rarity-rare { color: #4fc1ff; }
+    .rarity-epic { color: #c586c0; }
+    .rarity-legendary { color: #dcdcaa; }
+
+    @@media (max-width: 900px) {
+        .game-body { grid-template-columns: 1fr; }
+        .pet-column { position: static; }
+    }
+</style>
+
+<div class="game-app">
+    <header class="dev-panel status-bar">
+        <span class="game-title">// CyberPet</span>
+        <span class="stat"><span class="label">Money</span> @player.Money</span>
+        <span class="stat"><span class="label">Bag</span> @BackpackTotalCount()</span>
+        <span class="stat"><span class="label">House</span> Lv.@playerHouse.House_Level</span>
+        <span class="chip @(player.IsWorking ? "on" : "off")">
+            @(player.IsWorking ? "WORKING" : "IDLE")
+        </span>
+        <span class="chip @(fishingManager.IsFishing ? "on" : "off")">
+            @(fishingManager.IsFishing ? "FISHING" : "—")
+        </span>
+    </header>
+
+    <div class="game-body">
+        <aside class="pet-column">
+            <div class="dev-panel">
+                <h1>// CyberCat</h1>
+                <pre>Name = "@cat.Name"
+@cat.GetMood()</pre>
+                <div class="stat"><span class="label">Hunger</span> <span class="bar">@Bar(cat.Hunger, 100)</span> @cat.Hunger</div>
+                <div class="stat"><span class="label">Thirst</span> <span class="bar">@Bar(cat.Thirst, 100)</span> @cat.Thirst</div>
+                <div class="stat"><span class="label">Energy</span> <span class="bar">@Bar(cat.Energy, 100)</span> @cat.Energy</div>
+                <div class="stat"><span class="label">Happy</span>  <span class="bar">@Bar(cat.Happiness, 100)</span> @cat.Happiness</div>
+                <hr />
+                <div class="actions col">
+                    <button @onclick="() => cat.FeedFood(normalFood)">Feed 普通猫粮</button>
+                    <button @onclick="() => cat.FeedFood(luxuryFood)">Feed 金枪鱼罐头</button>
+                    <button @onclick="() => cat.DrinkWater(20)">DrinkWater(20)</button>
+                    <button @onclick="cat.Stroke">Stroke()</button>
+                    <button @onclick="cat.Sleep">Sleep()</button>
+                </div>
+            </div>
+
+            <div class="dev-panel">
+                <h1>// AutoFeeder</h1>
+                <div class="stat"><span class="label">Food</span> <span class="bar">@Bar(feeder.FoodCount, feeder.MaxFoodCount)</span> @feeder.FoodCount/@feeder.MaxFoodCount</div>
+                <hr />
+                <div class="actions col">
+                    <button @onclick="() => feeder.AddFoodFromBackpack(player, normalFood)">Add 普通猫粮</button>
+                    <button @onclick="() => feeder.AddFoodFromBackpack(player, luxuryFood)">Add 金枪鱼罐头</button>
+                    <button @onclick="() => feeder.RemoveLastFood()">RemoveLastFood()</button>
+                </div>
+            </div>
+
+            <div class="dev-panel">
+                <h1>// Shop</h1>
+                <div class="actions col">
+                    @foreach (var item in shop.ShopItems)
+                    {
+                        <button @onclick="() => player.BuyItem(item)">
+                            Buy @item.Food.Name (@item.Price)
+                        </button>
+                    }
+                </div>
+            </div>
+        </aside>
+
+        <main class="world-column">
+            <nav class="tab-bar">
+                <button type="button" class="tab-btn @(activeSection == "house" ? "active" : "")" @onclick='() => SelectSection("house")'>家园</button>
+                <button type="button" class="tab-btn @(activeSection == "fishing" ? "active" : "")" @onclick='() => SelectSection("fishing")'>钓鱼</button>
+                <button type="button" class="tab-btn @(activeSection == "work" ? "active" : "")" @onclick='() => SelectSection("work")'>工地</button>
+                <button type="button" class="tab-btn @(activeSection == "backpack" ? "active" : "")" @onclick='() => SelectSection("backpack")'>背包</button>
+            </nav>
+
+            @if (activeSection == "house")
+            {
+                <div class="dev-panel section-panel">
+                    <div class="section-header">
+                        <h1>// PlayerHouse</h1>
+                        <span class="meta">Rooms @UnlockedRoomCount()/@playerHouse.Rooms.Count · Furniture @UnlockedFurnitureCount()/@TotalFurnitureCount()</span>
+                    </div>
+                    <div class="tab-bar">
+                        @foreach (var entry in playerHouse.Rooms)
+                        {
+                            <button type="button"
+                                    class="tab-btn @(selectedRoomKey == entry.Key ? "active" : "") @(!entry.Value.IsUnlocked ? "locked" : "")"
+                                    @onclick="() => SelectRoom(entry.Key)">
+                                @entry.Key
+                            </button>
+                        }
+                    </div>
+                    @if (playerHouse.Rooms.TryGetValue(selectedRoomKey, out var selectedRoom))
+                    {
+                        <div class="room-content @(selectedRoom.IsUnlocked ? "unlocked" : "locked")">
+                            <div class="section-header">
+                                <h2>// @selectedRoom.Name</h2>
+                                <span class="badge @(selectedRoom.IsUnlocked ? "on" : "off")">
+                                    @(selectedRoom.IsUnlocked ? "UNLOCKED" : $"LOCKED · {selectedRoom.UnlockPrice}g")
+                                </span>
+                            </div>
+                            @if (selectedRoom.IsUnlocked)
+                            {
+                                <div class="card-grid">
+                                    @foreach (var item in selectedRoom.Furniture)
+                                    {
+                                        <div class="card @(item.IsUnlocked ? "unlocked" : "locked")">
+                                            <span class="name">@item.Name</span>
+                                            <span class="meta">@item.Id · @item.Price gold</span>
+                                            <p class="desc">@item.Description</p>
+                                            <span class="badge @(item.IsUnlocked ? "on" : "off")">
+                                                @(item.IsUnlocked ? "UNLOCKED" : "LOCKED")
+                                            </span>
+                                            @if (!item.IsUnlocked)
+                                            {
+                                                <div class="actions">
+                                                    <button @onclick="() => playerHouse.BuyFurniture(player, item)">
+                                                        Buy (@item.Price)
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="hint">// unlock room to place furniture</p>
+                                <div class="actions">
+                                    <button @onclick="() => playerHouse.UnlockRoom(player, selectedRoom)">
+                                        Unlock @selectedRoom.Name (@selectedRoom.UnlockPrice)
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else if (activeSection == "fishing")
+            {
+                <div class="dev-panel section-panel">
+                    <div class="section-header">
+                        <h1>// Fishing</h1>
+                        <span class="badge fish @(fishingManager.IsFishing ? "on" : "off")">
+                            @(fishingManager.IsFishing ? "FISHING" : "IDLE")
+                        </span>
+                    </div>
+                    @if (fishingManager.IsFishing)
+                    {
+                        <div class="stat"><span class="label">Spot</span> @fishingManager.CurrentSpot?.Name</div>
+                        <div class="stat"><span class="label">Wait</span> @fishingManager.RemainingTicks tick × @FishingManager.TickIntervalSeconds s</div>
+                        <hr />
+                    }
+                    <div class="tab-bar">
+                        @foreach (var entry in fishingManager.FishingSpots)
+                        {
+                            <button type="button"
+                                    class="tab-btn @(selectedSpotKey == entry.Key ? "active" : "")"
+                                    disabled="@fishingManager.IsFishing"
+                                    @onclick="() => SelectSpot(entry.Key)">
+                                @entry.Key
+                            </button>
+                        }
+                    </div>
+                    @if (fishingManager.FishingSpots.TryGetValue(selectedSpotKey, out var selectedSpot))
+                    {
+                        <div class="stat"><span class="label">Time</span> @selectedSpot.FishingTime tick × @FishingManager.TickIntervalSeconds s = @(selectedSpot.FishingTime * FishingManager.TickIntervalSeconds)s</div>
+                        <div class="stat"><span class="label">Level</span> Lv.@selectedSpot.RequiredLevel</div>
+                        <div class="card-grid">
+                            @foreach (var fish in selectedSpot.FishTable)
+                            {
+                                <div class="card">
+                                    <span class="name">@fish.Name</span>
+                                    <span class="meta">@fish.MinWeight–@fish.MaxWeight kg</span>
+                                    <span class="meta">+@fish.HungerRestore hunger</span>
+                                </div>
+                            }
+                        </div>
+                        <div class="actions">
+                            <button disabled="@fishingManager.IsFishing" @onclick="() => StartFishing(selectedSpot)">
+                                StartFishing("@selectedSpot.Name")
+                            </button>
+                        </div>
+                    }
+                    @if (fishingManager.LastCaughtFish is Fish lastFish)
+                    {
+                        <p class="catch-result">
+                            // last catch:
+                            <span class="name">@lastFish.Name</span>
+                            · <span class="@RarityClass(lastFish.Rarity)">@lastFish.Rarity</span>
+                            · @(lastFish.ActualWeight)kg (@(lastFish.SizePercentage)%)
+                            · sell @lastFish.SellPrice gold
+                        </p>
+                    }
+                </div>
+            }
+            else if (activeSection == "work")
+            {
+                <div class="dev-panel section-panel">
+                    <div class="section-header">
+                        <h1>// @workingPlace.Name</h1>
+                        <span class="badge work @(player.IsWorking ? "on" : "off")">
+                            @(player.IsWorking ? "WORKING" : "IDLE")
+                        </span>
+                    </div>
+                    <div class="work-row">
+                        <div class="work-info">
+                            <div class="stat"><span class="label">Income</span> +2 / tick</div>
+                            <div class="stat"><span class="label">Money</span> @player.Money</div>
+                            <p class="hint">// toggle work to earn gold while cat auto-ticks</p>
+                        </div>
+                        <div class="actions">
+                            <button @onclick="ToggleWork">
+                                @(player.IsWorking ? "StopWork()" : "StartWork()")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (activeSection == "backpack")
+            {
+                <div class="dev-panel section-panel">
+                    <div class="section-header">
+                        <h1>// Backpack</h1>
+                        <span class="meta">Items @player.Backpack.Count · Fish @player.FishBackpack.Count · Total @BackpackTotalCount()</span>
+                    </div>
+                    @if (player.Backpack.Count == 0 && player.FishBackpack.Count == 0)
+                    {
+                        <p class="empty">// empty — buy from Shop or go fishing</p>
+                    }
+                    else
+                    {
+                        @if (player.Backpack.Count > 0)
+                        {
+                            <p class="section-title">// items</p>
+                            <div class="card-grid">
+                                @foreach (var entry in player.Backpack.OrderBy(e => e.Key))
+                                {
+                                    <div class="card">
+                                        <span class="name">@entry.Key</span>
+                                        <span class="qty">x@(entry.Value)</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        @if (player.FishBackpack.Count > 0)
+                        {
+                            <p class="section-title">// fish</p>
+                            <div class="card-grid">
+                                @foreach (var fish in player.FishBackpack)
+                                {
+                                    <div class="card fish-card">
+                                        <span class="name">@fish.Name</span>
+                                        <span class="meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · @(fish.SizePercentage)% size</span>
+                                        <span class="meta">@(fish.ActualWeight)kg · @fish.SellPrice gold</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+@code {
+    private CyberCat cat = new CyberCat();
+    private AutoFeeder feeder = new AutoFeeder();
+    private Shop shop = new Shop();
+    private Player player = new Player();
+    private WorkingPlace workingPlace = new WorkingPlace();
+    private PlayerHouse playerHouse = new PlayerHouse();
+    private FishingManager fishingManager = new FishingManager();
+    private string selectedRoomKey = "";
+    private string selectedSpotKey = "";
+    private string activeSection = "house";
+
+    private Food normalFood = new Food("普通猫粮", 15, 2, 2);
+    private Food luxuryFood = new Food("金枪鱼罐头", 35, 15, 5);
+
+    private void ToggleWork() => workingPlace.ToggleWork(player);
+    private void SelectRoom(string roomKey) => selectedRoomKey = roomKey;
+    private void SelectSpot(string spotKey) => selectedSpotKey = spotKey;
+    private void SelectSection(string section) => activeSection = section;
+    private void StartFishing(FishingSpot spot) => fishingManager.StartFishing(spot, player);
+
+    private static string RarityClass(FishRarity rarity) => rarity switch
+    {
+        FishRarity.Rare => "rarity-rare",
+        FishRarity.Epic => "rarity-epic",
+        FishRarity.Legendary => "rarity-legendary",
+        _ => "rarity-common"
+    };
+
+    private int BackpackTotalCount() =>
+        player.Backpack.Values.Sum() + player.FishBackpack.Count;
+
+    private int UnlockedRoomCount() =>
+        playerHouse.Rooms.Values.Count(r => r.IsUnlocked);
+
+    private int TotalFurnitureCount() =>
+        playerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
+
+    private int UnlockedFurnitureCount() =>
+        playerHouse.Rooms.Values.SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);
+
+    private static string Bar(int value, int max)
+    {
+        var percentage = (double)value / max;
+        var filled = Math.Clamp((int)Math.Round(percentage * 10), 0, 10);
+        return new string('#', filled) + new string('.', 10 - filled);
+    }
+
+    private System.Timers.Timer? gameTimer;
+
+    protected override void OnInitialized()
+    {
+        selectedRoomKey = playerHouse.Rooms.Keys.First();
+        selectedSpotKey = fishingManager.FishingSpots.Keys.First();
+        fishingManager.OnChanged = () => InvokeAsync(StateHasChanged);
+
+        gameTimer = new System.Timers.Timer(2000);
+        gameTimer.Elapsed += OnTimerElapsed;
+        gameTimer.Start();
+    }
+
+    private void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        cat.Tick();
+        if (player.IsWorking) player.Money += 2;
+        feeder.CheckAndFeed(cat);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (gameTimer != null)
+        {
+            gameTimer.Stop();
+            gameTimer.Elapsed -= OnTimerElapsed;
+            gameTimer.Dispose();
+        }
+        fishingManager.Dispose();
+    }
+}
