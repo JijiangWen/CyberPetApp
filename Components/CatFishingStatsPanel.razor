@@ -1,0 +1,34 @@
+@using CyberPetApp.Models
+
+<div class="fishing-stats-panel @(Compact ? "fishing-stats-panel--compact" : "")">
+    <div class="fishing-module-title">// fishing.stats · 钓鱼六维</div>
+
+    <div class="fishing-stat-grid">
+        @foreach (var stat in CatFishingStatsHelper.GetStatDisplays(Cat))
+        {
+            <div class="fishing-stat-card" title="@stat.Tooltip">
+                <span class="fishing-stat-abbr">@stat.Abbr</span>
+                <span class="fishing-stat-val">@stat.Value</span>
+                <span class="fishing-stat-lv">Lv.@stat.Tier</span>
+                <span class="fishing-stat-hint">@stat.ShortHint</span>
+            </div>
+        }
+    </div>
+
+    @if (ShowSummary)
+    {
+        var computed = CatFishingStatsHelper.Compute(Cat);
+        <div class="fishing-stats-summary">
+            @foreach (var line in computed.StatusLines.Skip(1))
+            {
+                <div class="fishing-stats-summary-line">@line</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CyberCat Cat { get; set; } = default!;
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public bool ShowSummary { get; set; }
+}

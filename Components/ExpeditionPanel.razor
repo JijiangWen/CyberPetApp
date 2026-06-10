@@ -1,0 +1,166 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inject ExpeditionService ExpeditionService
+@implements IDisposable
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="cat" /> EXPED.dispatch · 猫咪派遣</span>
+        <span class="panel-meta">// 消耗 Energy · 挂机带回材料</span>
+    </div>
+
+    @{
+        var status = ExpeditionService.GetStatus(Player);
+    }
+
+    @if (status.IsActive)
+    {
+        <div class="bounty-board" style="margin-bottom:12px;">
+            <span class="section-lbl" style="margin:0;">active // @status.Zone!.Name</span>
+            <div class="bounty-body">
+                @if (status.CanClaim)
+                {
+                    <span class="bounty-target"><strong>任务完成</strong> — 猫已归来</span>
+                }
+                else
+                {
+                    <span class="bounty-target">ETA <strong>@ExpeditionService.FormatRemaining(status.Remaining)</strong></span>
+                    <span class="hint" style="font-size:9px;">// @status.Zone.Flavor</span>
+                }
+            </div>
+            <button class="g-btn primary" style="margin-top:6px;"
+                    disabled="@(!status.CanClaim)"
+                    @onclick="ClaimAsync">
+                @(status.CanClaim ? "claim(rewards)" : "waiting…")
+            </button>
+        </div>
+    }
+
+    @if (message is not null)
+    {
+        <p class="hint" style="margin-bottom:8px;">// @message</p>
+    }
+
+    <div class="section-lbl">zones // 选择区域</div>
+    @foreach (var zone in ExpeditionCatalog.Zones)
+    {
+        bool locked = Cat.Happiness < zone.MinCatHappiness || Cat.Energy < zone.EnergyCost;
+        <div class="tw" style="margin-bottom:8px;">
+            <div class="tw-header">
+                <span class="tw-icon"></span>
+                @zone.Name
+                <span style="margin-left:auto;font-size:9px;color:#8b949e;">
+                    @zone.DurationMinutes min · -@zone.EnergyCost energy
+                </span>
+            </div>
+            <div class="tw-body" style="font-size:10px;">
+                <p class="hint" style="margin:0 0 6px;">// @zone.Flavor</p>
+                <div class="kv-row">
+                    <span class="k">loot</span>
+                    <span class="v">@zone.PrimaryLoot ×@zone.LootMin-@zone.LootMax · @zone.GoldMin-@zone.GoldMax g</span>
+                </div>
+                <div class="kv-row">
+                    <span class="k">req</span>
+                    <span class="v">happy ≥@zone.MinCatHappiness · energy ≥@zone.EnergyCost</span>
+                </div>
+                <button class="g-btn @(locked ? "" : "primary")" style="margin-top:6px;"
+                        disabled="@(locked || status.IsActive)"
+                        @onclick="() => StartAsync(zone.Id)">
+                    dispatch(@zone.Id)
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+    [Parameter, EditorRequired] public CyberCat Cat { get; set; } = null!;
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private string? message;
+    private System.Threading.Timer? _timer;
+    private int _lastRemainingMinutes = -1;
+    private int _lastRemainingSeconds = -1;
+    private bool _lastCanClaim;
+    private bool _lastIsActive;
+    private string? _prevMessage;
+
+    protected override void OnParametersSet()
+    {
+        SyncExpeditionTimer();
+    }
+
+    protected override bool ShouldRender()
+    {
+        var status = ExpeditionService.GetStatus(Player);
+        if (status.IsActive != _lastIsActive)
+            return true;
+        if (status.CanClaim != _lastCanClaim)
+            return true;
+        if (!status.IsActive)
+            return true;
+        int mins = (int)status.Remaining.TotalMinutes;
+        int secs = status.Remaining.Seconds;
+        if (mins != _lastRemainingMinutes || secs != _lastRemainingSeconds)
+            return true;
+        if (message != _prevMessage)
+            return true;
+        return false;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        var status = ExpeditionService.GetStatus(Player);
+        _lastIsActive = status.IsActive;
+        _lastCanClaim = status.CanClaim;
+        _prevMessage = message;
+        if (status.IsActive)
+        {
+            _lastRemainingMinutes = (int)status.Remaining.TotalMinutes;
+            _lastRemainingSeconds = status.Remaining.Seconds;
+        }
+    }
+
+    private void SyncExpeditionTimer()
+    {
+        var status = ExpeditionService.GetStatus(Player);
+        if (status.IsActive && !status.CanClaim)
+            EnsureTimer();
+        else
+            StopTimer();
+    }
+
+    private void EnsureTimer()
+    {
+        if (_timer is not null) return;
+        _timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
+    }
+
+    private void StopTimer()
+    {
+        _timer?.Dispose();
+        _timer = null;
+    }
+
+    private async Task StartAsync(string zoneId)
+    {
+        var (ok, msg) = await ExpeditionService.StartAsync(Player, Cat, zoneId, HouseBuffs);
+        message = msg;
+        if (ok) await OnChanged.InvokeAsync();
+        SyncExpeditionTimer();
+        StateHasChanged();
+    }
+
+    private async Task ClaimAsync()
+    {
+        var result = await ExpeditionService.TryClaimAsync(Player, Cat, HouseBuffs);
+        message = result.Message;
+        if (result.Success) await OnChanged.InvokeAsync();
+        SyncExpeditionTimer();
+        StateHasChanged();
+    }
+
+    public void Dispose() => StopTimer();
+}

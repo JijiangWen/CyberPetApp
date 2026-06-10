@@ -1,0 +1,270 @@
+@using CyberPetApp.Models
+
+
+
+<div class="section-tw tw">
+
+    <div class="tw-header">
+
+        <span class="tw-icon gold"></span>
+
+        DEX.records · @CaughtCount/@TotalCount (@DexPercent%)
+
+    </div>
+
+    <div class="tw-body">
+
+        <div class="btn-row" style="margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+
+            <span class="hint" style="margin-right:4px;">钓点</span>
+
+            <button class="g-btn @(filterSpot is null ? "primary" : "")" @onclick="() => { filterSpot = null; ApplyFilter(); }">全部</button>
+
+            @foreach (var sn in SpotNames)
+
+            {
+
+                <button class="g-btn @(filterSpot == sn ? "primary" : "")" @onclick="() => { filterSpot = sn; ApplyFilter(); }">@sn</button>
+
+            }
+
+        </div>
+
+        <div class="btn-row" style="margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+
+            <span class="hint" style="margin-right:4px;">稀有度</span>
+
+            <button class="g-btn @(filterRarity is null && !mythOnly ? "primary" : "")" @onclick="() => { filterRarity = null; mythOnly = false; ApplyFilter(); }">全部</button>
+
+            <button class="g-btn @(filterRarity == FishRarity.Common ? "primary" : "")" @onclick="() => { filterRarity = FishRarity.Common; mythOnly = false; ApplyFilter(); }">Common</button>
+
+            <button class="g-btn @(filterRarity == FishRarity.Rare ? "primary" : "")" @onclick="() => { filterRarity = FishRarity.Rare; mythOnly = false; ApplyFilter(); }">Rare</button>
+
+            <button class="g-btn @(filterRarity == FishRarity.Epic ? "primary" : "")" @onclick="() => { filterRarity = FishRarity.Epic; mythOnly = false; ApplyFilter(); }">Epic</button>
+
+            <button class="g-btn @(filterRarity == FishRarity.Legendary && !mythOnly ? "primary" : "")" @onclick="() => { filterRarity = FishRarity.Legendary; mythOnly = false; ApplyFilter(); }">Legendary</button>
+
+            <button class="g-btn @(mythOnly ? "primary" : "")" @onclick="() => { mythOnly = true; filterRarity = null; ApplyFilter(); }">神话</button>
+
+        </div>
+
+        <div class="data-table-wrap">
+
+            <table class="data-table dex-table">
+
+                <thead>
+
+                    <tr><th>鱼种</th><th>钓点</th><th>钓获</th><th>最大体重</th><th>稀有度</th></tr>
+
+                </thead>
+
+                <tbody>
+
+                    @foreach (var entry in FilteredEntries)
+
+                    {
+
+                        <tr class="@(entry.IsCaught && entry.TargetLureRecipeId is not null ? "row-myth" : entry.IsCaught ? "" : "dex-locked row-locked")">
+
+                            <td class="td-name @(entry.TargetLureRecipeId is not null ? "rarity-myth" : "")">
+
+                                @if (entry.IsCaught)
+
+                                {
+
+                                    @entry.FishName
+
+                                }
+
+                                else if (entry.TargetLureDisplayName is not null)
+
+                                {
+
+                                    <span class="dex-unknown rarity-locked">???</span>
+
+                                    <span class="hint dex-hint rarity-locked">需【@entry.TargetLureDisplayName】</span>
+
+                                }
+
+                                else
+
+                                {
+
+                                    <span class="dex-unknown">???</span>
+
+                                }
+
+                            </td>
+
+                            <td>@entry.SpotName</td>
+
+                            <td>@(entry.IsCaught ? $"×{entry.Record!.CatchCount}" : "—")</td>
+
+                            <td>@(entry.IsCaught ? $"{entry.Record!.MaxWeight} kg" : "—")</td>
+
+                            <td>
+
+                                @if (entry.IsCaught && entry.TargetLureRecipeId is not null)
+
+                                {
+
+                                    <span class="rarity-myth">神话</span>
+
+                                }
+
+                                else if (entry.IsCaught)
+
+                                {
+
+                                    <span class="@RarityClass(entry.Record!.BestRarity)">@RarityLabel(entry.Record.BestRarity)</span>
+
+                                }
+
+                                else if (entry.TargetLureRecipeId is not null)
+
+                                {
+
+                                    <span class="rarity-myth dex-rarity-hint">神话?</span>
+
+                                }
+
+                                else
+
+                                {
+
+                                    <span class="@RarityClass(entry.Rarity) dex-rarity-hint">@RarityLabel(entry.Rarity)?</span>
+
+                                }
+
+                            </td>
+
+                        </tr>
+
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+@code {
+
+    [Parameter] public IReadOnlyList<FishDexEntry> Entries { get; set; } = [];
+    [Parameter] public IReadOnlyList<FishCatchRecord> Records { get; set; } = [];
+
+    private IReadOnlyList<FishDexEntry> _resolvedEntries = [];
+    private IReadOnlyList<FishDexEntry> FilteredEntries { get; set; } = [];
+
+    private IReadOnlyList<string> SpotNames { get; set; } = [];
+
+    private int CaughtCount { get; set; }
+
+    private int TotalCount { get; set; }
+
+    private int DexPercent { get; set; }
+
+    private string? filterSpot;
+
+    private FishRarity? filterRarity;
+
+    private bool mythOnly;
+
+    private IReadOnlyList<FishDexEntry>? _lastEntriesRef;
+
+
+
+    private IReadOnlyList<FishDexEntry> ResolveEntries() =>
+        Entries.Count > 0 ? Entries : FishDexCatalog.BuildAll(Records);
+
+    protected override void OnParametersSet()
+
+    {
+
+        var resolved = ResolveEntries();
+        if (ReferenceEquals(_lastEntriesRef, resolved))
+
+            return;
+
+
+
+        _lastEntriesRef = resolved;
+        _resolvedEntries = resolved;
+
+        CaughtCount = resolved.Count(e => e.IsCaught);
+
+        TotalCount = resolved.Count;
+
+        DexPercent = TotalCount > 0 ? (int)Math.Round(100.0 * CaughtCount / TotalCount) : 0;
+
+        SpotNames = resolved.Select(e => e.SpotName).Distinct().OrderBy(s => s).ToList();
+
+        ApplyFilter();
+
+    }
+
+
+
+    private void ApplyFilter()
+
+    {
+
+        IEnumerable<FishDexEntry> q = _resolvedEntries;
+
+        if (filterSpot is not null)
+
+            q = q.Where(e => e.SpotName == filterSpot);
+
+        if (mythOnly)
+
+            q = q.Where(e => e.TargetLureRecipeId is not null);
+
+        else if (filterRarity is not null)
+
+            q = q.Where(e => e.Rarity == filterRarity && e.TargetLureRecipeId is null);
+
+        FilteredEntries = q.ToList();
+
+    }
+
+
+
+    private static string RarityClass(FishRarity r) => r switch
+
+    {
+
+        FishRarity.Rare => "rarity-rare",
+
+        FishRarity.Epic => "rarity-epic",
+
+        FishRarity.Legendary => "rarity-legendary",
+
+        _ => "rarity-common"
+
+    };
+
+
+
+    private static string RarityLabel(FishRarity r) => r switch
+
+    {
+
+        FishRarity.Rare => "Rare",
+
+        FishRarity.Epic => "Epic",
+
+        FishRarity.Legendary => "Legendary",
+
+        _ => "Common"
+
+    };
+
+}
+
+

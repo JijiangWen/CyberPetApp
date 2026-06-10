@@ -1,0 +1,324 @@
+@using CyberPetApp.Models
+
+
+
+@if (PlayerHouse.Rooms.TryGetValue(RoomKey, out var room))
+
+{
+
+    <div class="house-room-panel section-tw tw">
+
+        <div class="tw-header">
+
+            <span class="tw-icon cyan"></span>
+
+            <span>room.detail // @RoomKey</span>
+
+            <span class="hrp-sub">@room.Name</span>
+
+            <span class="titlebar-spacer"></span>
+
+            <button type="button" class="hrp-close" @onclick="OnClose" title="关闭">×</button>
+
+        </div>
+
+
+
+        <div class="tw-body">
+
+            @if (!room.IsUnlocked)
+
+            {
+
+                <div class="hrp-locked-block">
+
+                    <p class="hint">// room locked — 解锁后可购买家具</p>
+
+                    <span class="badge off">LOCKED · @room.UnlockPrice g</span>
+
+                    <button type="button" class="g-btn primary" @onclick="() => OnUnlockRoom.InvokeAsync(room)">
+
+                        unlock(@room.UnlockPrice g)
+
+                    </button>
+
+                </div>
+
+            }
+
+            else
+
+            {
+
+                var installed = room.Furniture.Where(f => f.IsUnlocked).ToList();
+
+                @if (installed.Count > 0)
+
+                {
+
+                    <div class="hrp-section">
+
+                        <span class="section-lbl" style="margin-top:0;">installed // 已安装</span>
+
+                        <div class="hrp-installed-grid">
+
+                            @foreach (var item in installed)
+
+                            {
+
+                                <div class="hrp-installed-chip" title="@item.Description">
+
+                                    <span class="furn-sprite sp-24 @SpriteCatalog.Furniture(item.FurnitureId)"></span>
+
+                                    <span class="hrp-chip-name">@item.Name</span>
+
+                                    @if (item.UpgradeLevel > 0)
+
+                                    {
+
+                                        <span class="hrp-chip-lv">Lv.@item.UpgradeLevel</span>
+
+                                    }
+
+                                </div>
+
+                            }
+
+                        </div>
+
+                    </div>
+
+                }
+
+
+
+                <div class="hrp-section">
+
+                    <span class="section-lbl">shop // 可购买家具</span>
+
+                    <div class="furniture-grid hrp-shop-grid">
+
+                        @foreach (var item in room.Furniture.Where(f => !f.IsUnlocked))
+
+                        {
+
+                            <div class="g-card furniture-card locked">
+
+                                <span class="sprite-frame">
+
+                                    <span class="furn-sprite @SpriteCatalog.Furniture(item.FurnitureId)"></span>
+
+                                </span>
+
+                                <span class="c-name">@item.Name</span>
+
+                                <span class="c-meta">@item.FurnitureId</span>
+
+                                <p class="c-desc">@item.Description</p>
+
+                                @if (!string.IsNullOrEmpty(PassiveLabel(item.FurnitureId)))
+
+                                {
+
+                                    <span class="furniture-bonus-locked">@PassiveLabel(item.FurnitureId)</span>
+
+                                }
+
+                                else if (!string.IsNullOrEmpty(FurnitureCatalog.LockedBonusHint(item.FurnitureId)))
+
+                                {
+
+                                    <span class="furniture-bonus-locked">@FurnitureCatalog.LockedBonusHint(item.FurnitureId)</span>
+
+                                }
+
+                                <span class="c-price">@item.Price g</span>
+
+                                <button type="button" class="g-btn primary shop-btn" style="margin-top:4px;"
+
+                                        disabled="@(Player.Money < item.Price)"
+
+                                        @onclick="() => OnBuy.InvokeAsync(item)">
+
+                                    buy(@item.Price g)
+
+                                </button>
+
+                            </div>
+
+                        }
+
+                        @foreach (var item in room.Furniture.Where(f => f.IsUnlocked && f.UpgradeLevel < EconomySinks.MaxFurnitureUpgradeLevel))
+
+                        {
+
+                            var upCost = EconomySinks.FurnitureUpgradeCost(item);
+
+                            <div class="g-card furniture-card unlocked installed hrp-upgrade-card">
+
+                                <span class="sprite-frame">
+
+                                    <span class="furn-sprite @SpriteCatalog.Furniture(item.FurnitureId)"></span>
+
+                                </span>
+
+                                <span class="c-name">@item.Name</span>
+
+                                <span class="tag on">已安装 · Lv.@item.UpgradeLevel</span>
+
+                                <button type="button" class="g-btn" style="margin-top:4px;"
+
+                                        disabled="@(Player.Money < upCost)"
+
+                                        @onclick="() => OnUpgrade.InvokeAsync(item)">
+
+                                    upgrade(Lv.@(item.UpgradeLevel + 1) · @upCost g)
+
+                                </button>
+
+                            </div>
+
+                        }
+
+                        @if (room.Furniture.All(f => f.IsUnlocked && f.UpgradeLevel >= EconomySinks.MaxFurnitureUpgradeLevel))
+
+                        {
+
+                            <p class="hint">// 该房间家具已全部购买并满级</p>
+
+                        }
+
+                    </div>
+
+                </div>
+
+            }
+
+            @if (ShowAutoCare)
+
+            {
+
+                <HouseAutoCarePanel Feeder="Feeder"
+
+                                    Waterer="Waterer"
+
+                                    NormalFood="NormalFood"
+
+                                    LuxuryFood="LuxuryFood"
+
+                                    HouseBuffs="HouseBuffs"
+
+                                    Backpack="Backpack"
+
+                                    FeederUnlocked="FeederUnlocked"
+
+                                    WatererUnlocked="WatererUnlocked"
+
+                                    PassiveFurniture="PassiveFurniture"
+
+                                    Message="Message"
+
+                                    ShowFeeder="ShowFeeder"
+
+                                    ShowWaterer="ShowWaterer"
+
+                                    ShowPassive="ShowPassive"
+
+                                    OnAddFood="OnAddFood"
+
+                                    OnAddCookedFood="OnAddCookedFood"
+
+                                    OnRemoveFood="OnRemoveFood"
+
+                                    OnAddWater="OnAddWater"
+
+                                    OnRemoveWater="OnRemoveWater" />
+
+            }
+
+        </div>
+
+    </div>
+
+}
+
+
+
+@code {
+
+    [Parameter, EditorRequired] public PlayerHouse PlayerHouse { get; set; } = null!;
+
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string RoomKey { get; set; } = "";
+
+
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnBuy { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnUpgrade { get; set; }
+
+    [Parameter] public EventCallback<Room> OnUnlockRoom { get; set; }
+
+
+
+    [Parameter] public bool ShowAutoCare { get; set; }
+
+    [Parameter] public bool ShowFeeder { get; set; }
+
+    [Parameter] public bool ShowWaterer { get; set; }
+
+    [Parameter] public bool ShowPassive { get; set; }
+
+    [Parameter] public AutoFeeder Feeder { get; set; } = null!;
+
+    [Parameter] public AutoWaterer Waterer { get; set; } = null!;
+
+    [Parameter] public Food NormalFood { get; set; } = null!;
+
+    [Parameter] public Food LuxuryFood { get; set; } = null!;
+
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+
+    [Parameter] public Dictionary<string, int> Backpack { get; set; } = [];
+
+    [Parameter] public bool FeederUnlocked { get; set; }
+
+    [Parameter] public bool WatererUnlocked { get; set; }
+
+    [Parameter] public IReadOnlyList<HouseAutoCarePanel.PassiveFurnitureEntry> PassiveFurniture { get; set; } = [];
+
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback<Food> OnAddFood { get; set; }
+
+    [Parameter] public EventCallback<string> OnAddCookedFood { get; set; }
+
+    [Parameter] public EventCallback OnRemoveFood { get; set; }
+
+    [Parameter] public EventCallback OnAddWater { get; set; }
+
+    [Parameter] public EventCallback OnRemoveWater { get; set; }
+
+
+
+    private static string PassiveLabel(string id)
+
+    {
+
+        if (PassiveCatCare.TryGet(id, out var p))
+
+            return p.ActiveLabel;
+
+        if (PassiveCatCare.UnlocksAutoWaterer(id))
+
+            return "解锁自动饮水器";
+
+        return FurnitureCatalog.BonusTag(id);
+
+    }
+
+}
+

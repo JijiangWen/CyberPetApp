@@ -1,0 +1,105 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="bag" /> BAG.inv</span>
+        <span class="panel-meta">
+            items: @Session.Player!.Backpack.Count
+            &nbsp;·&nbsp;
+            fish: @Session.Player.FishBackpack.Count
+            &nbsp;·&nbsp;
+            total: @TotalCount
+        </span>
+    </div>
+    @if (Session.Player.Backpack.Count == 0 && Session.Player.FishBackpack.Count == 0)
+    {
+        <p class="empty">// inventory empty — buy items or go fishing</p>
+    }
+    else
+    {
+        @if (Session.Player.Backpack.Count > 0)
+        {
+            <div class="section-tw tw">
+                <div class="tw-header">
+                    <span class="tw-icon"></span>
+                    ITEMS.storage
+                </div>
+                <div class="tw-body">
+                    <div class="card-grid">
+                        @foreach (var e in Session.Player.Backpack.OrderBy(x => x.Key))
+                        {
+                            var cookedRecipe = CookBook.RecipeByName(e.Key);
+                            <div class="g-card">
+                                <span class="c-name"><PixelIcon Name="food" /> @e.Key</span>
+                                <span class="c-qty">×@e.Value</span>
+                                @if (cookedRecipe is not null)
+                                {
+                                    <span class="c-meta">@cookedRecipe.InstantEffectLabel</span>
+                                    @if (cookedRecipe.AllBuffs().Any())
+                                    {
+                                        <span class="c-meta" style="color:#3fb950;">Buff：@cookedRecipe.BuffEffectLabel</span>
+                                    }
+                                    <button class="g-btn primary" style="margin-top:4px;"
+                                            @onclick="() => OnFeedCookedFood.InvokeAsync(e.Key)">feed(@e.Key)</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (Session.Player.FishBackpack.Count > 0)
+        {
+            <div class="section-tw tw">
+                <div class="tw-header">
+                    <span class="tw-icon green"></span>
+                    FISH.storage
+                </div>
+                <div class="tw-body">
+                    <div class="card-grid">
+                        @foreach (var fish in Session.Player.FishBackpack)
+                        {
+                            <div class="g-card">
+                                <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                                <span class="c-name">@fish.Name</span>
+                                <span class="c-meta">
+                                    <span class="@RarityClass(fish.Rarity)">@fish.Rarity</span>
+                                    &nbsp;·&nbsp;@fish.SizePercentage%
+                                </span>
+                                <span class="c-meta">@fish.ActualWeight kg</span>
+                                <span class="c-price">估价 @fish.SellPrice g</span>
+                                <button class="g-btn primary" style="margin-top:4px;"
+                                        @onclick="() => OnSellFish.InvokeAsync(fish)">直售 85%(@MarketService.DirectSellPrice(fish) g)</button>
+                                <button class="g-btn" style="margin-top:4px;"
+                                        @onclick="() => OnDisassembleFish.InvokeAsync(fish)">分解 →炼金素材</button>
+                                @{
+                                    int bagListFee = EconomySinks.MarketListingFee(fish.SellPrice);
+                                }
+                                <button class="g-btn" style="margin-top:4px;"
+                                        disabled="@(Session.Player.Money < bagListFee)"
+                                        @onclick="() => OnListFishOnMarket.InvokeAsync(fish)">上架鱼市（摊位费 @bagListFee g）</button>
+                                <button class="g-btn g-btn-sm" style="margin-top:4px;"
+                                        @onclick="OnGoToMarket">前往鱼市 →</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public int TotalCount { get; set; }
+
+    [Parameter] public EventCallback<string> OnFeedCookedFood { get; set; }
+    [Parameter] public EventCallback<Fish> OnSellFish { get; set; }
+    [Parameter] public EventCallback<Fish> OnDisassembleFish { get; set; }
+    [Parameter] public EventCallback<Fish> OnListFishOnMarket { get; set; }
+    [Parameter] public EventCallback OnGoToMarket { get; set; }
+}

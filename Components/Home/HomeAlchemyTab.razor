@@ -1,0 +1,316 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+@inject AlchemyService AlchemyService
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="coin" /> ALCHEMY.lab</span>
+        <span class="panel-meta">gems @PlayerGems.Count · lures @PlayerTargetLures.Count</span>
+    </div>
+
+    <p class="hint">// 消耗传说鱼与派遣材料 · 宝石总加成封顶 +15% · 特殊饵 5 次耐久</p>
+
+    <div class="section-lbl" style="margin-top:8px;">gem.recipes // 镶嵌宝石</div>
+    <div class="card-grid">
+        @foreach (var recipe in AlchemyService.GetGemRecipes())
+        {
+            bool canCraft = CanCraftGem(recipe);
+            var matStatus = AlchemyService.GetMaterialStatus(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            var shortfall = canCraft ? null : AlchemyService.GetCraftShortfall(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            <div class="g-card alchemy-recipe-card @(canCraft ? "unlocked" : "")">
+                <span class="c-name">💎 @recipe.DisplayName</span>
+                <span class="c-meta">@(AlchemyRecipes.GemTypeLabel(recipe.GemType)) · 镶嵌 @(AlchemyRecipes.SlotLabel(recipe.SocketSlot)) · +3~8%</span>
+                <div class="recipe-mats">
+                    @foreach (var line in matStatus)
+                    {
+                        <div class="mat-row @(line.IsSufficient ? "mat-ok" : "mat-short")">
+                            <span class="mat-icon">@AlchemyMaterialIcon(line.Kind)</span>
+                            <span class="mat-label">@line.Label</span>
+                            <span class="mat-qty">@line.Have/@line.Need@(line.Kind == AlchemyMaterialKind.Gold ? "g" : "")</span>
+                        </div>
+                    }
+                </div>
+                @if (shortfall is not null)
+                {
+                    <p class="craft-hint">// @shortfall</p>
+                }
+                <button class="g-btn primary" style="margin-top:4px;" disabled="@(!canCraft)"
+                        title="@shortfall"
+                        @onclick="() => OnCraftGem.InvokeAsync(recipe.Id)">炼制 craft()</button>
+            </div>
+        }
+    </div>
+
+    <div class="section-lbl" style="margin-top:16px;">line.recipes // 炼金鱼线</div>
+    <div class="card-grid">
+        @foreach (var recipe in AlchemyService.GetLineRecipes())
+        {
+            bool canCraft = CanCraftLine(recipe);
+            bool alreadyOwned = Lines.Any(l => l.Name == recipe.OutputLineName);
+            var matStatus = AlchemyService.GetMaterialStatus(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            var shortfall = canCraft ? null : AlchemyService.GetCraftShortfall(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            <div class="g-card alchemy-recipe-card @(canCraft && !alreadyOwned ? "unlocked" : "")">
+                <span class="c-name">🧵 @recipe.DisplayName</span>
+                <span class="c-meta">强度 @recipe.LineStrength kg · 敏锐 @recipe.LineSensitivity · 隐蔽 @((int)(recipe.LineStealth * 100))% · 耐磨 @((int)(recipe.AbrasionResistance * 100))%</span>
+                <div class="recipe-mats">
+                    @foreach (var line in matStatus)
+                    {
+                        <div class="mat-row @(line.IsSufficient ? "mat-ok" : "mat-short")">
+                            <span class="mat-icon">@AlchemyMaterialIcon(line.Kind)</span>
+                            <span class="mat-label">@line.Label</span>
+                            <span class="mat-qty">@line.Have/@line.Need@(line.Kind == AlchemyMaterialKind.Gold ? "g" : "")</span>
+                        </div>
+                    }
+                </div>
+                @if (alreadyOwned)
+                {
+                    <span class="tag on">已拥有</span>
+                }
+                else
+                {
+                    @if (shortfall is not null)
+                    {
+                        <p class="craft-hint">// @shortfall</p>
+                    }
+                    <button class="g-btn primary" style="margin-top:4px;" disabled="@(!canCraft)"
+                            title="@shortfall"
+                            @onclick="() => OnCraftLine.InvokeAsync(recipe.Id)">炼制 craft()</button>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="section-lbl" style="margin-top:16px;">craft.gear // 装备锻造</div>
+    <p class="hint" style="font-size:9px;">// T4+ 炼金主路径 · T6+ 派遣/鱼市 · 全套 T10 约 150~200h + 200万~300万 g</p>
+    <div class="g-tab-row" style="margin:8px 0;flex-wrap:wrap;gap:4px;">
+        @foreach (var craftTier in GearProgressionCatalog.AllTiers)
+        {
+            <button type="button" class="g-btn @(_craftGearTab == craftTier ? "primary" : "")"
+                    style="font-size:9px;padding:2px 8px;"
+                    @onclick="() => SelectCraftGearTab(craftTier)">
+                T@((int)craftTier) @GearProgressionCatalog.TierLabel(craftTier)
+            </button>
+        }
+    </div>
+    <div class="card-grid">
+        @foreach (var recipe in AlchemyService.GetGearCraftRecipes().Where(r => r.Tier == _craftGearTab))
+        {
+            bool unlocked = GearProgressionCatalog.MeetsCraftUnlock(recipe, Session.Player!.FishingLevel, Session.Cat.CatLevel, DexEntries, HasSpotAccess);
+            bool alreadyOwned = recipe.Slot switch
+            {
+                GearCraftSlot.Rod => Rods.Any(r => r.Name == recipe.OutputGearName),
+                GearCraftSlot.Reel => Reels.Any(r => r.Name == recipe.OutputGearName),
+                GearCraftSlot.Line => Lines.Any(l => l.Name == recipe.OutputGearName),
+                GearCraftSlot.Lure => Lures.Any(l => l.Name == recipe.OutputGearName),
+                _ => false
+            };
+            bool canCraft = unlocked && !alreadyOwned && CanCraftGear(recipe);
+            var matStatus = AlchemyService.GetMaterialStatus(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            var shortfall = canCraft ? null : AlchemyService.GetCraftShortfall(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            if (!unlocked)
+            {
+                shortfall = GearProgressionCatalog.UnlockShortfall(
+                    recipe.RequiredFishingLevel, recipe.RequiredCatLevel,
+                    recipe.RequiredDexSpot, recipe.RequiredDexPercent,
+                    recipe.RequiredLicenseSpot, recipe.RequiredOverallDexPercent,
+                    recipe.RequiredMythicCaught, recipe.RequiredAllMythic,
+                    Session.Player.FishingLevel, Session.Cat.CatLevel, DexEntries, HasSpotAccess);
+            }
+            <div class="g-card alchemy-recipe-card @(canCraft ? "unlocked" : "")">
+                <span class="c-name">@(recipe.Slot switch { GearCraftSlot.Rod => "🎣", GearCraftSlot.Reel => "⚙", GearCraftSlot.Line => "🧵", _ => "🪱" }) @recipe.DisplayName</span>
+                <span class="c-meta">[@GearProgressionCatalog.TierLabel(recipe.Tier)] · @recipe.Description</span>
+                <div class="recipe-mats">
+                    @foreach (var line in matStatus)
+                    {
+                        <div class="mat-row @(line.IsSufficient ? "mat-ok" : "mat-short")">
+                            <span class="mat-icon">@AlchemyMaterialIcon(line.Kind)</span>
+                            <span class="mat-label">@line.Label</span>
+                            <span class="mat-qty">@line.Have/@line.Need@(line.Kind == AlchemyMaterialKind.Gold ? "g" : "")</span>
+                        </div>
+                    }
+                </div>
+                @if (alreadyOwned)
+                {
+                    <span class="tag on">已拥有</span>
+                }
+                else if (!unlocked)
+                {
+                    <p class="craft-hint">// 🔒 @shortfall</p>
+                }
+                else if (shortfall is not null)
+                {
+                    <p class="craft-hint">// @shortfall</p>
+                }
+                <button class="g-btn primary" style="margin-top:4px;" disabled="@(!canCraft)"
+                        title="@shortfall"
+                        @onclick="() => OnCraftGear.InvokeAsync(recipe.Id)">锻造 forge()</button>
+            </div>
+        }
+    </div>
+
+    <div class="section-lbl" style="margin-top:16px;">materials.ref // 炼金素材一览</div>
+    <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">
+        @foreach (var mat in AlchemyMaterials.All)
+        {
+            int qty = Session.Player!.Backpack.GetValueOrDefault(mat);
+            <div class="g-card @(qty > 0 ? "unlocked" : "")" style="padding:6px 8px;">
+                <span class="c-name" style="font-size:10px;">📦 @mat</span>
+                <span class="c-meta">×@qty</span>
+                <span class="c-meta" style="font-size:8px;">@AlchemyMaterials.SourceHint(mat)</span>
+            </div>
+        }
+    </div>
+
+    <div class="section-lbl" style="margin-top:16px;">lure.recipes // 特殊路亚饵</div>
+    <div class="card-grid">
+        @foreach (var recipe in AlchemyService.GetTargetLureRecipes())
+        {
+            bool canCraft = CanCraftTargetLure(recipe);
+            var matStatus = AlchemyService.GetMaterialStatus(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            var shortfall = canCraft ? null : AlchemyService.GetCraftShortfall(Session.Player!, recipe.Fish, recipe.Materials, recipe.GoldCost);
+            <div class="g-card alchemy-recipe-card @(canCraft ? "unlocked" : "")">
+                <span class="c-name">🪝 @recipe.DisplayName</span>
+                <span class="c-meta">仅 [@recipe.SpotName] · 目标 @recipe.TargetFishName · ×@recipe.MaxUses</span>
+                <div class="recipe-mats">
+                    @foreach (var line in matStatus)
+                    {
+                        <div class="mat-row @(line.IsSufficient ? "mat-ok" : "mat-short")">
+                            <span class="mat-icon">@AlchemyMaterialIcon(line.Kind)</span>
+                            <span class="mat-label">@line.Label</span>
+                            <span class="mat-qty">@line.Have/@line.Need@(line.Kind == AlchemyMaterialKind.Gold ? "g" : "")</span>
+                        </div>
+                    }
+                </div>
+                @if (shortfall is not null)
+                {
+                    <p class="craft-hint">// @shortfall</p>
+                }
+                <button class="g-btn primary" style="margin-top:4px;" disabled="@(!canCraft)"
+                        title="@shortfall"
+                        @onclick="() => OnCraftTargetLure.InvokeAsync(recipe.Id)">炼制 craft()</button>
+            </div>
+        }
+    </div>
+
+    @if (PlayerGems.Any(g => !g.IsSocketed))
+    {
+        <div class="section-lbl" style="margin-top:16px;">gem.inv // 待镶嵌</div>
+        <div class="card-grid">
+            @foreach (var gem in PlayerGems.Where(g => !g.IsSocketed))
+            {
+                var slot = AlchemyRecipes.GemRecipes.First(r => r.GemType == gem.GemType).SocketSlot;
+                <div class="g-card">
+                    <span class="c-name">💎 @AlchemyRecipes.GemTypeLabel(gem.GemType) +@gem.BonusValue.ToString("P1")</span>
+                    <span class="c-meta">→ @AlchemyRecipes.SlotLabel(slot) · 镶嵌费 @EconomySinks.AlchemySocketFee g</span>
+                    <button class="g-btn primary" style="margin-top:4px;"
+                            disabled="@(Session.Player!.Money < EconomySinks.AlchemySocketFee)"
+                            @onclick="() => OnSocketGem.InvokeAsync((gem.Id, slot))">镶嵌 socket()</button>
+                </div>
+            }
+        </div>
+    }
+
+    @{
+        var socketed = PlayerGems.Where(g => g.IsSocketed).ToList();
+    }
+    @if (socketed.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:16px;">gem.socketed // 已镶嵌</div>
+        <div class="card-grid">
+            @foreach (var gem in socketed)
+            {
+                <div class="g-card unlocked">
+                    <span class="c-name">💎 @AlchemyRecipes.GemTypeLabel(gem.GemType) +@gem.BonusValue.ToString("P1")</span>
+                    <span class="c-meta">@AlchemyRecipes.SlotLabel(gem.SocketedSlot ?? GearGemSlot.Rod)</span>
+                </div>
+            }
+        </div>
+        <p class="hint" style="font-size:9px;">// 抓口 @Session.Loadout.GemBonuses.HookBonus.ToString("P1") · 丝导 @Session.Loadout.GemBonuses.LineBonus.ToString("P1") · 卸力 @Session.Loadout.GemBonuses.DragBonus.ToString("P1") · 幸运 @Session.Loadout.GemBonuses.LuckBonus.ToString("P1") · 钓重 @Session.Loadout.GemBonuses.WeightBonus.ToString("P1")</p>
+    }
+
+    @if (PlayerTargetLures.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:16px;">target.lures // 特殊饵库存</div>
+        <div class="card-grid">
+            @foreach (var tl in PlayerTargetLures)
+            {
+                var def = AlchemyRecipes.FindTargetLure(tl.RecipeId);
+                <div class="g-card @(tl.IsEquipped ? "unlocked" : "")">
+                    <span class="c-name">🪝 @(def?.DisplayName ?? tl.RecipeId)</span>
+                    <span class="c-meta">[@(def?.SpotName ?? "?")] → @(def?.TargetFishName ?? "?") · 剩余 @tl.RemainingUses 次</span>
+                    @if (tl.RemainingUses > 0)
+                    {
+                        if (tl.IsEquipped)
+                        {
+                            <span class="tag on">已装备</span>
+                            <button class="g-btn" style="margin-top:4px;" @onclick="OnUnequipTargetLure">卸下 unequip()</button>
+                        }
+                        else
+                        {
+                            <button class="g-btn primary" style="margin-top:4px;" @onclick="() => OnEquipTargetLure.InvokeAsync(tl.Id)">装备 equip()</button>
+                        }
+                    }
+                    else { <span class="tag off">EMPTY</span> }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Message is not null)
+    {
+        <p class="hint" style="margin-top:8px;">// @Message</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<FishDexEntry> DexEntries { get; set; } = [];
+    [Parameter] public List<PlayerGem> PlayerGems { get; set; } = [];
+    [Parameter] public List<PlayerTargetLure> PlayerTargetLures { get; set; } = [];
+    [Parameter] public List<FishingRod> Rods { get; set; } = [];
+    [Parameter] public List<FishingReel> Reels { get; set; } = [];
+    [Parameter] public List<FishingLine> Lines { get; set; } = [];
+    [Parameter] public List<FishingLure> Lures { get; set; } = [];
+    [Parameter] public Func<string, bool> HasSpotAccess { get; set; } = _ => false;
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback<string> OnCraftGem { get; set; }
+    [Parameter] public EventCallback<string> OnCraftLine { get; set; }
+    [Parameter] public EventCallback<string> OnCraftGear { get; set; }
+    [Parameter] public EventCallback<string> OnCraftTargetLure { get; set; }
+    [Parameter] public EventCallback<(Guid GemId, GearGemSlot Slot)> OnSocketGem { get; set; }
+    [Parameter] public EventCallback<Guid> OnEquipTargetLure { get; set; }
+    [Parameter] public EventCallback OnUnequipTargetLure { get; set; }
+
+    private GearTier _craftGearTab = GearTier.T3;
+
+    private void SelectCraftGearTab(GearTier tier)
+    {
+        _craftGearTab = tier;
+        RequestRender();
+    }
+
+    private bool CanCraftGem(GemAlchemyRecipe recipe) =>
+        Session.Player!.Money >= recipe.GoldCost
+        && recipe.Fish.All(f => AlchemyService.CountFish(Session.Player, f) >= f.Count)
+        && recipe.Materials.All(m => AlchemyService.CountMaterial(Session.Player, m.ItemName) >= m.Count);
+
+    private bool CanCraftTargetLure(TargetLureRecipe recipe) =>
+        Session.Player!.Money >= recipe.GoldCost
+        && recipe.Fish.All(f => AlchemyService.CountFish(Session.Player, f) >= f.Count)
+        && recipe.Materials.All(m => AlchemyService.CountMaterial(Session.Player, m.ItemName) >= m.Count);
+
+    private bool CanCraftLine(LineAlchemyRecipe recipe) =>
+        !Lines.Any(l => l.Name == recipe.OutputLineName)
+        && Session.Player!.Money >= recipe.GoldCost
+        && recipe.Fish.All(f => AlchemyService.CountFish(Session.Player, f) >= f.Count)
+        && recipe.Materials.All(m => AlchemyService.CountMaterial(Session.Player, m.ItemName) >= m.Count);
+
+    private bool CanCraftGear(GearCraftRecipe recipe) =>
+        Session.Player!.Money >= recipe.GoldCost
+        && recipe.Fish.All(f => AlchemyService.CountFish(Session.Player, f) >= f.Count)
+        && recipe.Materials.All(m => AlchemyService.CountMaterial(Session.Player, m.ItemName) >= m.Count);
+}

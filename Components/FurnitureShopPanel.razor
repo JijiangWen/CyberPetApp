@@ -1,0 +1,199 @@
+@using CyberPetApp.Models
+
+
+
+<div class="furniture-shop-wrap">
+
+    <div class="section-lbl">furniture.grid // 家具商店 · 购买后永久生效</div>
+
+    <div class="sub-tab-bar">
+
+        @foreach (var entry in PlayerHouse.Rooms)
+
+        {
+
+            <button type="button"
+
+                    class="sub-tab @(SelectedRoomKey == entry.Key ? "active" : "") @(!entry.Value.IsUnlocked ? "locked" : "")"
+
+                    @onclick="() => OnSelectRoom.InvokeAsync(entry.Key)">
+
+                @entry.Key
+
+            </button>
+
+        }
+
+    </div>
+
+    @if (PlayerHouse.Rooms.TryGetValue(SelectedRoomKey, out var room))
+
+    {
+
+        <div class="room-block @(room.IsUnlocked ? "unlocked" : "locked")">
+
+            <div class="rh">
+
+                <span class="rname">@room.Name</span>
+
+                <span class="badge @(room.IsUnlocked ? "on" : "off")">
+
+                    @(room.IsUnlocked ? "UNLOCKED" : $"LOCKED · {room.UnlockPrice}g")
+
+                </span>
+
+            </div>
+
+            @if (room.IsUnlocked)
+
+            {
+
+                <div class="furniture-grid">
+
+                    @foreach (var item in room.Furniture)
+
+                    {
+
+                        <div class="g-card furniture-card @(item.IsUnlocked ? "unlocked installed" : "locked")">
+
+                            <span class="sprite-frame">
+
+                                <span class="furn-sprite @SpriteCatalog.Furniture(item.FurnitureId)"></span>
+
+                            </span>
+
+                            <span class="c-name">@item.Name</span>
+
+                            <span class="c-meta">@item.FurnitureId</span>
+
+                            <p class="c-desc">@item.Description</p>
+
+                            @if (!string.IsNullOrEmpty(PassiveLabel(item.FurnitureId)))
+
+                            {
+
+                                <span class="furniture-bonus-tag">@PassiveLabel(item.FurnitureId)</span>
+
+                            }
+
+                            else if (!item.IsUnlocked && !string.IsNullOrEmpty(FurnitureCatalog.LockedBonusHint(item.FurnitureId)))
+
+                            {
+
+                                <span class="furniture-bonus-locked">@FurnitureCatalog.LockedBonusHint(item.FurnitureId)</span>
+
+                            }
+
+                            <span class="c-price">@item.Price g</span>
+
+                            @if (item.IsUnlocked)
+
+                            {
+
+                                <span class="tag on">已安装 · 生效中</span>
+
+                                @if (item.UpgradeLevel < EconomySinks.MaxFurnitureUpgradeLevel)
+
+                                {
+
+                                    var upCost = EconomySinks.FurnitureUpgradeCost(item);
+
+                                    <button type="button" class="g-btn" style="margin-top:4px;"
+
+                                            disabled="@(Player.Money < upCost)"
+
+                                            @onclick="() => OnUpgrade.InvokeAsync(item)">
+
+                                        upgrade(Lv.@(item.UpgradeLevel + 1) · @upCost g)
+
+                                    </button>
+
+                                }
+
+                            }
+
+                            else
+
+                            {
+
+                                <span class="tag off">未购买</span>
+
+                                <button type="button" class="g-btn primary shop-btn" style="margin-top:4px;"
+
+                                        disabled="@(Player.Money < item.Price)"
+
+                                        @onclick="() => OnBuy.InvokeAsync(item)">
+
+                                    buy(@item.Price g)
+
+                                </button>
+
+                            }
+
+                        </div>
+
+                    }
+
+                </div>
+
+            }
+
+            else
+
+            {
+
+                <p class="hint">// room locked — purchase to unlock</p>
+
+                <button type="button" class="g-btn primary" @onclick="() => OnUnlockRoom.InvokeAsync(room)">
+
+                    unlock(@room.UnlockPrice g)
+
+                </button>
+
+            }
+
+        </div>
+
+    }
+
+</div>
+
+
+
+@code {
+
+    [Parameter, EditorRequired] public PlayerHouse PlayerHouse { get; set; } = null!;
+
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+
+    [Parameter] public string SelectedRoomKey { get; set; } = "";
+
+    [Parameter] public EventCallback<string> OnSelectRoom { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnBuy { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnUpgrade { get; set; }
+
+    [Parameter] public EventCallback<Room> OnUnlockRoom { get; set; }
+
+
+
+    private static string PassiveLabel(string id)
+
+    {
+
+        if (PassiveCatCare.TryGet(id, out var p))
+
+            return p.ActiveLabel;
+
+        if (PassiveCatCare.UnlocksAutoWaterer(id))
+
+            return "解锁自动饮水器";
+
+        return FurnitureCatalog.BonusTag(id);
+
+    }
+
+}
+
+

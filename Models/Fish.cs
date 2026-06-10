@@ -8,30 +8,30 @@ public enum FishRarity
     Legendary
 }
 
-public class Fish : Food
+public class Fish
 {
-    // ✨ 将 Type 改名为 Rarity，避免和基类的 Type 属性冲突
+    public Guid Id { get; set; }
+    public Guid PlayerId { get; set; }
+    public string Name { get; set; }
     public FishRarity Rarity { get; set; }
-    public double MinWeight { get; set; }
-    public double MaxWeight { get; set; }
+    public int HungerRestore { get; set; }
+    public int EnergyRestore { get; set; }
+    public int HappinessRestore { get; set; }
     public double ActualWeight { get; set; }
+    public double SizePercentage { get; set; }
     public int SellPrice { get; set; }
 
-    public double SizePercentage =>
-        MaxWeight <= MinWeight ? 0 :
-        Math.Round((ActualWeight - MinWeight) / (MaxWeight - MinWeight) * 100, 1);
+    public Fish() => Name = "";
 
-    // 🔨 修正后的构造函数
-    public Fish(string name, int hungerRestore, int energyRestore, int happinessRestore,
-                int sellPrice, FishRarity rarity, double minWeight, double maxWeight, double actualWeight)
-        : base(name, hungerRestore, energyRestore, happinessRestore)
+    public Fish(string name, int hungerRestore, int energyRestore, int happinessRestore, int sellPrice, FishRarity rarity, double actualWeight)
     {
+        Id = Guid.NewGuid();
+        Name = name;
         Rarity = rarity;
-        MinWeight = minWeight;
-        MaxWeight = maxWeight;
-        SellPrice = sellPrice;
+        HungerRestore = hungerRestore;
+        EnergyRestore = energyRestore;
+        HappinessRestore = happinessRestore;
         ActualWeight = actualWeight;
-        // ✨ 记得在构造函数里把爷爷辈的 ItemType 指定为 Food
-        Type = ItemType.Food;
+        SellPrice = sellPrice;
     }
 }

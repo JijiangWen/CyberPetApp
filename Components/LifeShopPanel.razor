@@ -1,0 +1,150 @@
+@using CyberPetApp.Models
+
+
+
+<div class="life-shop-wrap">
+
+    @foreach (var group in ShopItems.GroupBy(i => i.Category))
+
+    {
+
+        <div class="section-lbl">@CategoryLabel(group.Key) // @group.Count() 种商品</div>
+
+        <div class="shop-card-grid">
+
+            @foreach (var item in group)
+
+            {
+
+                var owned = Backpack.GetValueOrDefault(item.Food.Name);
+
+                <div class="g-card unlocked life-shop-card shop-card">
+
+                    <span class="sprite-frame">
+
+                        <span class="item-sprite sp-24 @ItemSpriteClass(item.Food.Name)"></span>
+
+                    </span>
+
+                    <span class="c-name">@item.Food.Name</span>
+                    <span class="c-meta">@(!string.IsNullOrEmpty(item.Hint) ? item.Hint : ItemEffectLabel(item.Food))</span>
+
+                    <span class="c-price">@item.Price g</span>
+
+                    <span class="c-meta">背包 ×@owned</span>
+
+                    <button type="button"
+
+                            class="g-btn primary shop-btn"
+
+                            style="margin-top:4px;"
+
+                            disabled="@(Player.Money < item.Price)"
+
+                            @onclick="() => OnBuyItem.InvokeAsync(item)">
+
+                        buy(@item.Price g)
+
+                    </button>
+
+                </div>
+
+            }
+
+        </div>
+
+    }
+
+    <p class="hint" style="margin-top:8px;">
+
+        // 装粮/装水加工费：喂食器 @EconomySinks.FeederProcessingFee g/份 · 饮水器 @EconomySinks.WatererProcessingFee g/份
+
+    </p>
+
+    @if (Message is not null)
+
+    {
+
+        <p class="hint" style="margin-top:4px;">// @Message</p>
+
+    }
+
+</div>
+
+
+
+@code {
+
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+
+    [Parameter] public List<ShopItem> ShopItems { get; set; } = [];
+
+    [Parameter] public Dictionary<string, int> Backpack { get; set; } = [];
+
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback<ShopItem> OnBuyItem { get; set; }
+
+
+
+    private static string CategoryLabel(string category) => category switch
+
+    {
+
+        "water" => "consumables.water",
+
+        "food" => "consumables.food",
+
+        "treat" => "consumables.treat",
+
+        "drink" => "consumables.drink",
+
+        "craft" => "craft.materials",
+
+        _ => "consumables.misc"
+
+    };
+
+
+
+    private static string ItemSpriteClass(string foodName) => foodName switch
+
+    {
+
+        _ when foodName.Contains("罐头") => "item-can",
+
+        _ when foodName == WaterCatalog.Purified.Name => "item-food",
+
+        _ when foodName.Contains("能量") => "item-can",
+
+        _ when foodName.Contains("猫薄荷") => "item-food",
+
+        _ => "item-food"
+
+    };
+
+
+
+    private static string ItemEffectLabel(Food food)
+
+    {
+
+        if (food.Name == WaterCatalog.Purified.Name)
+
+            return $"口渴 +{WaterCatalog.Purified.ThirstRestore}（饮水器/手动）";
+
+        var parts = new List<string>();
+
+        if (food.HungerRestore > 0) parts.Add($"饱食 +{food.HungerRestore}");
+
+        if (food.EnergyRestore > 0) parts.Add($"精力 +{food.EnergyRestore}");
+
+        if (food.HappinessRestore > 0) parts.Add($"幸福 +{food.HappinessRestore}");
+
+        return parts.Count > 0 ? string.Join(" · ", parts) : food.Description;
+
+    }
+
+}
+
+

@@ -1,0 +1,62 @@
+@using CyberPetApp.Models
+
+<div class="care-vitals-panel">
+    <div class="care-module-title">// care.vitals · 生存状态</div>
+
+    <div class="care-vital-row">
+        <span class="care-vital-label">🍖 饥饿</span>
+        <div class="care-vital-bar" title="饥饿 @Cat.Hunger / @CyberCat.StatMax">
+            <div class="care-vital-fill" style="@FillStyle(Cat.Hunger)"></div>
+        </div>
+        <span class="care-vital-val">@Cat.Hunger</span>
+    </div>
+    <div class="care-vital-row">
+        <span class="care-vital-label">💧 口渴</span>
+        <div class="care-vital-bar" title="口渴 @Cat.Thirst / @CyberCat.StatMax">
+            <div class="care-vital-fill" style="@FillStyle(Cat.Thirst)"></div>
+        </div>
+        <span class="care-vital-val">@Cat.Thirst</span>
+    </div>
+    <div class="care-vital-row">
+        <span class="care-vital-label">♥ 快乐</span>
+        <div class="care-vital-bar" title="快乐 @Cat.Happiness / @CyberCat.StatMax">
+            <div class="care-vital-fill" style="@FillStyle(Cat.Happiness)"></div>
+        </div>
+        <span class="care-vital-val">@Cat.Happiness</span>
+    </div>
+    <div class="care-vital-row">
+        <span class="care-vital-label">⚡ 精力</span>
+        <div class="care-vital-bar" title="精力 @Cat.Energy / @CyberCat.StatMax">
+            <div class="care-vital-fill" style="@FillStyle(Cat.Energy)"></div>
+        </div>
+        <span class="care-vital-val">@Cat.Energy</span>
+    </div>
+
+    @if (ShowLowStateAlert && (Cat.Hunger < 300 || Cat.Energy < 250))
+    {
+        <div class="cat-debuff-alert">
+            // 低状态惩罚：抓口·遛鱼 -10%，等口 +15%
+        </div>
+    }
+    @if (DebuffLines is not null)
+    {
+        @foreach (var line in DebuffLines)
+        {
+            <div class="cat-debuff-line">@line</div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CyberCat Cat { get; set; } = default!;
+    [Parameter] public bool ShowLowStateAlert { get; set; } = true;
+    [Parameter] public IEnumerable<string>? DebuffLines { get; set; }
+
+    private static string FillStyle(int value)
+    {
+        double pct = Math.Clamp(value * 100.0 / CyberCat.StatMax, 0, 100);
+        int hue = (int)Math.Round(pct * 1.2); // 0=红 → 120=绿
+        return FormattableString.Invariant(
+            $"width:{pct:0.#}%;background:linear-gradient(90deg,hsl({hue},72%,38%),hsl({hue},82%,52%))");
+    }
+}

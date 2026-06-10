@@ -1,0 +1,216 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+@inject DailyBountyService DailyBountyService
+
+<div class="content-panel content-panel-stack market-panel">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="shop" /> MARKET.stall · 鱼市</span>
+        <span class="panel-meta">
+            挂单上限 <span class="hl-gold">@MarketListings.Count / @ListingLimit</span>
+            （基础 3 + 摊位券 @Math.Min(StallTickets, MarketService.MaxTicketBonus)）
+        </span>
+    </div>
+
+    @if (DailyBountyService.HasActiveBounty(Session.Player!))
+    {
+        <div class="bounty-board">
+            <span class="section-lbl" style="margin:0;">bounty // 今日高价求购</span>
+            <div class="bounty-body">
+                <span class="bounty-target">求购 <strong>@Session.Player!.DailyBountyFishName</strong></span>
+                <span class="bounty-reward">赏金 <span class="hl-gold">@Session.Player.DailyBountyReward g</span></span>
+                <span class="hint" style="font-size:9px;">// 钓到目标鱼自动领取</span>
+            </div>
+            @{
+                int refreshFee = Session.Player.DailyBountyManualRefreshCount == 0 ? 0 : EconomySinks.BountyRefreshFee;
+            }
+            <button class="g-btn g-btn-sm" style="margin-top:6px;"
+                    disabled="@(Session.Player.Money < refreshFee)"
+                    @onclick="OnRefreshBounty">
+                refresh( @(refreshFee == 0 ? "免费" : $"{refreshFee}g") )
+            </button>
+        </div>
+    }
+    else if (Session.Player!.DailyBountyClaimed)
+    {
+        <p class="hint" style="margin-bottom:8px;">// 今日求购已完成，明日刷新</p>
+    }
+
+    <div class="market-stats">
+        <div class="market-stat">
+            <span class="ms-k">摊位券</span>
+            <span class="ms-v">×@StallTickets</span>
+        </div>
+        <div class="market-stat">
+            <span class="ms-k">待处理报价</span>
+            <span class="ms-v @(PendingOffers>0?"hl-gold":"")">@PendingOffers</span>
+        </div>
+        <div class="market-stat">
+            <span class="ms-k">摊位费</span>
+            <span class="ms-v">max(@EconomySinks.MarketListingFeeMin g, 2%) 不退</span>
+        </div>
+        <div class="market-stat">
+            <span class="ms-k">规则</span>
+            <span class="ms-v">直售 85% · 上架底价 90% · 报价 30min</span>
+        </div>
+    </div>
+
+    @if (Message is not null)
+    {
+        <p class="hint market-msg">// @Message</p>
+    }
+
+    <div class="section-tw tw">
+        <div class="tw-header">
+            <span class="tw-icon gold"></span>
+            LISTINGS.active
+        </div>
+        <div class="tw-body">
+            @if (MarketListings.Count == 0)
+            {
+                <p class="empty">// 暂无挂单 — 在下方从鱼背包选鱼上架，或前往 bag.inv 上架</p>
+            }
+            else
+            {
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>鱼名</th>
+                                <th>稀有度</th>
+                                <th>底价</th>
+                                <th>状态</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var view in MarketListings)
+                            {
+                                var listing = view.Listing;
+                                <tr>
+                                    <td class="td-name">@listing.FishName</td>
+                                    <td><span class="@RarityClass(listing.Rarity)">@RarityLabel(listing.Rarity)</span></td>
+                                    <td class="td-gold">@listing.ListingFloorPrice g</td>
+                                    <td>
+                                        @if (view.PendingOffers.Count == 0)
+                                        {
+                                            <span class="tag off">等待 NPC</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="tag on">@view.PendingOffers.Count 条报价</span>
+                                        }
+                                    </td>
+                                    <td class="td-actions">
+                                        <button class="g-btn g-btn-sm" @onclick="() => OnDelist.InvokeAsync(listing)">下架</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (PendingOffers > 0)
+    {
+        <div class="section-tw tw">
+            <div class="tw-header">
+                <span class="tw-icon"></span>
+                OFFERS.pending
+            </div>
+            <div class="tw-body">
+                <div class="offer-list">
+                    @foreach (var view in MarketListings)
+                    {
+                        @foreach (var offer in view.PendingOffers)
+                        {
+                            <div class="offer-card">
+                                <div class="offer-main">
+                                    <span class="offer-fish">@view.Listing.FishName</span>
+                                    <span class="offer-buyer" title="@MarketService.BuyerDesc(offer.BuyerType)">
+                                        [@MarketService.BuyerLabel(offer.BuyerType)]
+                                    </span>
+                                    <span class="offer-price">@offer.OfferPrice g</span>
+                                </div>
+                                <div class="offer-meta">
+                                    <span>@MarketService.BuyerDesc(offer.BuyerType) · 过期 @OfferExpiryText(offer)</span>
+                                    <span class="hint" style="font-size:9px;">
+                                        还价成功率 @((int)(MarketService.ComputeCounterSuccessRate(Session.Cat.Happiness) * 100))%
+                                    </span>
+                                </div>
+                                <div class="offer-actions">
+                                    <button class="g-btn primary g-btn-sm"
+                                            @onclick="() => OnAcceptOffer.InvokeAsync(offer)">接受</button>
+                                    <button class="g-btn g-btn-sm"
+                                            @onclick="() => OnCounterOffer.InvokeAsync(offer)">
+                                        还价 +10% → @((int)Math.Ceiling(offer.OfferPrice * 1.1)) g
+                                    </button>
+                                    <button class="g-btn danger g-btn-sm"
+                                            @onclick="() => OnRejectOffer.InvokeAsync(offer)">拒绝</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="section-tw tw">
+        <div class="tw-header">
+            <span class="tw-icon green"></span>
+            QUICK.list
+        </div>
+        <div class="tw-body">
+            @if (Session.Player!.FishBackpack.Count == 0)
+            {
+                <p class="empty">// 鱼背包为空 — 先去钓鱼吧</p>
+            }
+            else if (MarketListings.Count >= ListingLimit)
+            {
+                <p class="hint">// 挂单已满 — 打工获取摊位券可提升上限，或先下架现有挂单</p>
+            }
+            else
+            {
+                <div class="card-grid market-quick-grid">
+                    @foreach (var fish in Session.Player.FishBackpack.ToList())
+                    {
+                        <div class="g-card">
+                            <span class="sprite-frame"><span class="fish-sprite sp-32 @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                            <span class="c-name">@fish.Name</span>
+                            <span class="c-meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · 估价 @fish.SellPrice g</span>
+                            @{
+                                int listFee = EconomySinks.MarketListingFee(fish.SellPrice);
+                            }
+                            <button class="g-btn primary" style="margin-top:4px;"
+                                    disabled="@(MarketListings.Count >= ListingLimit || Session.Player.Money < listFee)"
+                                    @onclick="() => OnListFishOnMarket.InvokeAsync(fish)">
+                                上架（摊位费 @listFee g · 底价 @MarketService.MarketFloorPrice(fish) g）
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public List<MarketListingView> MarketListings { get; set; } = [];
+    [Parameter] public int PendingOffers { get; set; }
+    [Parameter] public int StallTickets { get; set; }
+    [Parameter] public int ListingLimit { get; set; }
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback OnRefreshBounty { get; set; }
+    [Parameter] public EventCallback<MarketListing> OnDelist { get; set; }
+    [Parameter] public EventCallback<NpcOffer> OnAcceptOffer { get; set; }
+    [Parameter] public EventCallback<NpcOffer> OnCounterOffer { get; set; }
+    [Parameter] public EventCallback<NpcOffer> OnRejectOffer { get; set; }
+    [Parameter] public EventCallback<Fish> OnListFishOnMarket { get; set; }
+}

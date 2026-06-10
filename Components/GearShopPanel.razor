@@ -1,0 +1,364 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+
+<div class="gear-shop-wrap">
+    @foreach (var tier in _tiers)
+    {
+        var expanded = _expandedTiers.Contains(tier);
+        <div class="section-lbl" style="margin-top:@(tier == GearTier.T1 ? "0" : "16px");cursor:pointer;"
+             @onclick="() => ToggleTier(tier)">
+            @(expanded ? "▼" : "▶") tier.@((int)tier) // @GearProgressionCatalog.TierLabel(tier) · @GearProgressionCatalog.TierHoursHint(tier) · rods
+        </div>
+        @if (expanded)
+        {
+        <div class="data-table-wrap">
+            <table class="data-table gear-table">
+                <thead>
+                    <tr><th>名称</th><th>敏锐</th><th>抛投</th><th>钓重</th><th>Lv</th><th>价格</th><th>耐久</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var spec in GearCatalog.Rods.Where(r => r.Tier == tier))
+                    {
+                        var owned = Rods.FirstOrDefault(r => r.Name == spec.Name);
+                        var unlocked = MeetsUnlock(spec);
+                        <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
+                            <td class="td-name">🎣 @spec.Name</td>
+                            <td>@spec.Sensitivity</td>
+                            <td>@spec.CastRange</td>
+                            <td>@spec.MaxStrength kg</td>
+                            <td>@spec.RequiredLevel</td>
+                            <td>@PriceLabel(spec.Price, spec.CraftOnly)</td>
+                            <td>@(owned is not null ? $"{owned.Durability}/100" : "—")</td>
+                            <td class="td-actions">@RenderRodActions(spec, owned, unlocked)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    }
+
+    @foreach (var tier in _tiers)
+    {
+        var expanded = _expandedTiers.Contains(tier);
+        <div class="section-lbl" style="margin-top:16px;cursor:pointer;" @onclick="() => ToggleTier(tier)">
+            @(expanded ? "▼" : "▶") tier.@((int)tier) // @GearProgressionCatalog.TierLabel(tier) · reels
+        </div>
+        @if (expanded)
+        {
+        <div class="data-table-wrap">
+            <table class="data-table gear-table">
+                <thead>
+                    <tr><th>名称</th><th>卸力</th><th>顺滑</th><th>线杯</th><th>速比</th><th>Lv</th><th>价格</th><th>耐久</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var spec in GearCatalog.Reels.Where(r => r.Tier == tier))
+                    {
+                        var owned = Reels.FirstOrDefault(r => r.Name == spec.Name);
+                        var unlocked = MeetsUnlock(spec);
+                        <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
+                            <td class="td-name">⚙ @spec.Name</td>
+                            <td>@spec.DragPower</td>
+                            <td>@((int)(spec.Smoothness * 100))%</td>
+                            <td>@spec.LineCapacity kg</td>
+                            <td>@spec.GearRatio</td>
+                            <td>@spec.RequiredLevel</td>
+                            <td>@PriceLabel(spec.Price, spec.CraftOnly)</td>
+                            <td>@(owned is not null ? $"{owned.Durability}/100" : "—")</td>
+                            <td class="td-actions">@RenderReelActions(spec, owned, unlocked)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    }
+
+    @foreach (var tier in _tiers)
+    {
+        var expanded = _expandedTiers.Contains(tier);
+        <div class="section-lbl" style="margin-top:16px;cursor:pointer;" @onclick="() => ToggleTier(tier)">
+            @(expanded ? "▼" : "▶") tier.@((int)tier) // @GearProgressionCatalog.TierLabel(tier) · lines
+        </div>
+        @if (expanded)
+        {
+        <div class="data-table-wrap">
+            <table class="data-table gear-table">
+                <thead>
+                    <tr><th>名称</th><th>强度</th><th>敏锐</th><th>隐蔽</th><th>耐磨</th><th>水层</th><th>Lv</th><th>价格</th><th>耐久</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var spec in GearCatalog.Lines.Where(l => l.Tier == tier && l.ShopAvailable))
+                    {
+                        var owned = Lines.FirstOrDefault(l => l.Name == spec.Name);
+                        var unlocked = MeetsUnlock(spec);
+                        <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
+                            <td class="td-name">🧵 @spec.Name</td>
+                            <td>@spec.LineStrength kg</td>
+                            <td>@spec.LineSensitivity</td>
+                            <td>@((int)(spec.LineStealth * 100))%</td>
+                            <td>@((int)(spec.AbrasionResistance * 100))%</td>
+                            <td>@GearCatalog.DepthLabel(spec.TargetDepth)</td>
+                            <td>@spec.RequiredLevel</td>
+                            <td>@PriceLabel(spec.Price, spec.CraftOnly)</td>
+                            <td>@(owned is not null ? $"{owned.Durability}/100" : "—")</td>
+                            <td class="td-actions">@RenderLineActions(spec, owned, unlocked)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    }
+
+    @{
+        var craftedLines = Lines.Where(l => l.IsCrafted).ToList();
+    }
+    @if (craftedLines.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:12px;">lines.crafted // 炼金鱼线</div>
+        <div class="data-table-wrap">
+            <table class="data-table gear-table">
+                <thead>
+                    <tr><th>名称</th><th>强度</th><th>敏锐</th><th>隐蔽</th><th>耐磨</th><th>耐久</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var owned in craftedLines)
+                    {
+                        <tr class="@(owned.IsEquipped ? "row-equipped" : "")">
+                            <td class="td-name">🧵 @owned.Name</td>
+                            <td>@owned.LineStrength kg</td>
+                            <td>@owned.LineSensitivity</td>
+                            <td>@((int)(owned.LineStealth * 100))%</td>
+                            <td>@((int)(owned.AbrasionResistance * 100))%</td>
+                            <td>@owned.Durability/100</td>
+                            <td class="td-actions">@RenderOwnedLineActions(owned)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @foreach (var tier in _tiers)
+    {
+        var expanded = _expandedTiers.Contains(tier);
+        <div class="section-lbl" style="margin-top:16px;cursor:pointer;" @onclick="() => ToggleTier(tier)">
+            @(expanded ? "▼" : "▶") tier.@((int)tier) // @GearProgressionCatalog.TierLabel(tier) · lures
+        </div>
+        @if (expanded)
+        {
+        <div class="data-table-wrap">
+            <table class="data-table gear-table">
+                <thead>
+                    <tr><th>名称</th><th>吸引</th><th>品质+</th><th>水层</th><th>耐久/枚</th><th>Lv</th><th>单价</th><th>库存</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var spec in GearCatalog.Lures.Where(l => l.Tier == tier && l.ShopAvailable))
+                    {
+                        var owned = Lures.FirstOrDefault(l => l.Name == spec.Name);
+                        var unlocked = MeetsUnlock(spec);
+                        <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
+                            <td class="td-name">🪱 @spec.Name</td>
+                            <td>@((int)(spec.Attraction * 100))%</td>
+                            <td>+@((int)(spec.RarityBonus * 100))%</td>
+                            <td>@GearCatalog.DepthLabel(spec.TargetDepth)</td>
+                            <td>@spec.MaxDurability 次</td>
+                            <td>@spec.RequiredLevel</td>
+                            <td>@spec.PackPrice g/×@spec.PackSize</td>
+                            <td>×@(owned?.Quantity ?? 0)@(owned?.IsEquipped == true ? $" ·剩{owned.DurabilityRemaining}" : "")</td>
+                            <td class="td-actions">@RenderLureActions(spec, owned, unlocked)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    }
+
+    @if (Rods.Any(r => r.IsCrafted) || Reels.Any(r => r.IsCrafted) || Lures.Any(l => l.IsCrafted))
+    {
+        <div class="section-lbl" style="margin-top:12px;">gear.crafted // 炼金装备</div>
+        <p class="hint" style="font-size:9px;">
+            @foreach (var r in Rods.Where(x => x.IsCrafted))
+            {
+                <span>🎣 @r.Name @(r.IsEquipped ? "[E]" : "") · </span>
+            }
+            @foreach (var r in Reels.Where(x => x.IsCrafted))
+            {
+                <span>⚙ @r.Name @(r.IsEquipped ? "[E]" : "") · </span>
+            }
+            @foreach (var l in Lures.Where(x => x.IsCrafted))
+            {
+                <span>🪱 @l.Name ×@l.Quantity · </span>
+            }
+        </p>
+    }
+
+    <p class="hint" style="margin-top:10px;font-size:9px;">
+        // T4+ 竿轮线饵主路径：alchemy.lab → craft.gear · 钓点门槛见 loadout
+    </p>
+
+    @if (Message is not null)
+    {
+        <p class="hint" style="margin-top:8px;">// @Message</p>
+    }
+</div>
+
+@code {
+    private static readonly GearTier[] _tiers = GearProgressionCatalog.AllTiers;
+    private readonly HashSet<GearTier> _expandedTiers = [GearTier.T1, GearTier.T2, GearTier.T3];
+
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+    [Parameter] public int CatLevel { get; set; } = 1;
+    [Parameter] public IReadOnlyList<FishDexEntry> DexEntries { get; set; } = [];
+    [Parameter] public List<SpotLicense> SpotLicenses { get; set; } = [];
+    [Parameter] public List<FishingRod> Rods { get; set; } = [];
+    [Parameter] public List<FishingReel> Reels { get; set; } = [];
+    [Parameter] public List<FishingLine> Lines { get; set; } = [];
+    [Parameter] public List<FishingLure> Lures { get; set; } = [];
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback OnGoAlchemy { get; set; }
+    [Parameter] public EventCallback<RodSpec> OnBuyRod { get; set; }
+    [Parameter] public EventCallback<ReelSpec> OnBuyReel { get; set; }
+    [Parameter] public EventCallback<LineSpec> OnBuyLine { get; set; }
+    [Parameter] public EventCallback<LureSpec> OnBuyLure { get; set; }
+    [Parameter] public EventCallback<FishingRod> OnEquipRod { get; set; }
+    [Parameter] public EventCallback<FishingReel> OnEquipReel { get; set; }
+    [Parameter] public EventCallback<FishingLine> OnEquipLine { get; set; }
+    [Parameter] public EventCallback<FishingLure> OnEquipLure { get; set; }
+    [Parameter] public EventCallback<FishingRod> OnRepairRod { get; set; }
+    [Parameter] public EventCallback<FishingReel> OnRepairReel { get; set; }
+    [Parameter] public EventCallback<FishingLine> OnRepairLine { get; set; }
+
+    private bool HasLicense(string spot)
+    {
+        if (!SpotLicenseCatalog.RequiresLicense(spot)) return true;
+        var lic = SpotLicenses.FirstOrDefault(l => l.SpotName == spot);
+        if (lic?.HasPermanent == true) return true;
+        return lic?.RentalPaidDate?.Date == DateTime.UtcNow.Date;
+    }
+
+    private bool MeetsUnlock(RodSpec spec) =>
+        GearProgressionCatalog.MeetsGearUnlock(spec, Player.FishingLevel, CatLevel, DexEntries, HasLicense);
+
+    private bool MeetsUnlock(ReelSpec spec) =>
+        GearProgressionCatalog.MeetsGearUnlock(spec, Player.FishingLevel, CatLevel, DexEntries, HasLicense);
+
+    private bool MeetsUnlock(LineSpec spec) =>
+        GearProgressionCatalog.MeetsGearUnlock(spec, Player.FishingLevel, CatLevel, DexEntries, HasLicense);
+
+    private bool MeetsUnlock(LureSpec spec) =>
+        GearProgressionCatalog.MeetsGearUnlock(spec, Player.FishingLevel, CatLevel, DexEntries, HasLicense);
+
+    private void ToggleTier(GearTier tier)
+    {
+        if (_expandedTiers.Contains(tier)) _expandedTiers.Remove(tier);
+        else _expandedTiers.Add(tier);
+    }
+
+    private string UnlockHint(RodSpec spec) => GearProgressionCatalog.UnlockShortfall(
+        spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent,
+        spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent,
+        spec.RequiredMythicCaught, spec.RequiredAllMythic,
+        Player.FishingLevel, CatLevel, DexEntries, HasLicense);
+
+    private static string PriceLabel(int price, bool craftOnly) => craftOnly ? "需炼金锻造" : price == 0 ? "赠送" : $"{price}g";
+
+    private static string RowClass(bool isEquipped, bool unlocked, bool owned) =>
+        $"{(isEquipped ? "row-equipped" : "")} {(!unlocked && !owned ? "row-locked" : "")}";
+
+    private RenderFragment RenderRodActions(RodSpec spec, FishingRod? owned, bool unlocked) => __builder =>
+    {
+        if (spec.CraftOnly)
+        {
+            <button type="button" class="g-btn link-btn" @onclick="() => OnGoAlchemy.InvokeAsync()">→ craft()</button>
+        }
+        else if (owned is null)
+        {
+            <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.Price)"
+                    @onclick="() => OnBuyRod.InvokeAsync(spec)">
+                @(unlocked ? $"buy({spec.Price}g)" : $"🔒{UnlockHint(spec)}")
+            </button>
+        }
+        else if (!owned.IsEquipped)
+        {
+            <button type="button" class="g-btn" @onclick="() => OnEquipRod.InvokeAsync(owned)">equip()</button>
+        }
+        else { <span class="tag on">EQUIPPED</span> }
+        if (owned?.Durability < 100)
+        {
+            <button type="button" class="g-btn" disabled="@(Player.Money < EconomySinks.GearRepairPartialCost((int)spec.Tier))" @onclick="() => OnRepairRod.InvokeAsync(owned!)">repair</button>
+        }
+    };
+
+    private RenderFragment RenderReelActions(ReelSpec spec, FishingReel? owned, bool unlocked) => __builder =>
+    {
+        if (spec.CraftOnly)
+        {
+            <button type="button" class="g-btn link-btn" @onclick="() => OnGoAlchemy.InvokeAsync()">→ craft()</button>
+        }
+        else if (owned is null)
+        {
+            <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.Price)"
+                    @onclick="() => OnBuyReel.InvokeAsync(spec)">
+                @(unlocked ? $"buy({spec.Price}g)" : $"🔒")
+            </button>
+        }
+        else if (!owned.IsEquipped)
+        {
+            <button type="button" class="g-btn" @onclick="() => OnEquipReel.InvokeAsync(owned)">equip()</button>
+        }
+        else { <span class="tag on">EQUIPPED</span> }
+        if (owned?.Durability < 100)
+        {
+            <button type="button" class="g-btn" disabled="@(Player.Money < EconomySinks.GearRepairPartialCost((int)spec.Tier))" @onclick="() => OnRepairReel.InvokeAsync(owned!)">repair</button>
+        }
+    };
+
+    private RenderFragment RenderLineActions(LineSpec spec, FishingLine? owned, bool unlocked) => __builder =>
+    {
+        if (owned is null)
+        {
+            <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.Price)"
+                    @onclick="() => OnBuyLine.InvokeAsync(spec)">
+                @(unlocked ? $"buy({spec.Price}g)" : $"🔒")
+            </button>
+        }
+        else if (!owned.IsEquipped)
+        {
+            <button type="button" class="g-btn" @onclick="() => OnEquipLine.InvokeAsync(owned)">equip()</button>
+        }
+        else { <span class="tag on">EQUIPPED</span> }
+        if (owned?.Durability < 100)
+        {
+            <button type="button" class="g-btn" disabled="@(Player.Money < EconomySinks.GearRepairPartialCost((int)spec.Tier))" @onclick="() => OnRepairLine.InvokeAsync(owned!)">repair</button>
+        }
+    };
+
+    private RenderFragment RenderOwnedLineActions(FishingLine owned) => __builder =>
+    {
+        if (!owned.IsEquipped)
+        {
+            <button type="button" class="g-btn" @onclick="() => OnEquipLine.InvokeAsync(owned)">equip()</button>
+        }
+        else { <span class="tag on">EQUIPPED</span> }
+        if (owned.Durability < 100)
+        {
+            <button type="button" class="g-btn" disabled="@(Player.Money < EconomySinks.GearRepairPartialCost(GearProgressionCatalog.GetGearTier(owned.Name)))" @onclick="() => OnRepairLine.InvokeAsync(owned)">repair</button>
+        }
+    };
+
+    private RenderFragment RenderLureActions(LureSpec spec, FishingLure? owned, bool unlocked) => __builder =>
+    {
+        <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.PackPrice)"
+                @onclick="() => OnBuyLure.InvokeAsync(spec)">
+            @(unlocked ? "buy" : $"🔒Lv.{spec.RequiredLevel}")
+        </button>
+        if (owned is not null && !owned.IsEquipped && owned.Quantity > 0)
+        {
+            <button type="button" class="g-btn" @onclick="() => OnEquipLure.InvokeAsync(owned)">equip()</button>
+        }
+        else if (owned?.IsEquipped == true) { <span class="tag on">EQUIPPED</span> }
+    };
+}

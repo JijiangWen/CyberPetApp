@@ -1,559 +1,380 @@
 ﻿@page "/"
+@attribute [Authorize]
 @using CyberPetApp.Models
 @using CyberPetApp.Services
+@using System.Security.Claims
 @rendermode InteractiveServer
-@implements IDisposable
+@implements IAsyncDisposable
 
-<PageTitle>CyberPet / Home</PageTitle>
+<PageTitle>CYBERPET OS</PageTitle>
 
-<style>
-    .game-app {
-        font-family: ui-monospace, Consolas, "Courier New", monospace;
-        font-size: 14px;
-        color: #d4d4d4;
-        max-width: 1320px;
-        margin: 0 auto;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    .dev-panel {
-        padding: 1rem;
-        border: 1px solid #333;
-        background: #1e1e1e;
-    }
-    .dev-panel h1, .dev-panel h2 {
-        font-size: 0.95rem;
-        font-weight: normal;
-        margin: 0 0 0.75rem;
-        color: #4ec9b0;
-    }
-    .dev-panel h2 { font-size: 0.85rem; color: #569cd6; }
-    .dev-panel pre {
-        margin: 0 0 1rem;
-        padding: 0.5rem;
-        background: #252526;
-        border: 1px solid #3c3c3c;
-        white-space: pre-wrap;
-        font-size: 12px;
-    }
-    .dev-panel .stat { margin: 0.25rem 0; }
-    .dev-panel .label {
-        color: #9cdcfe;
-        display: inline-block;
-        width: 9ch;
-    }
-    .dev-panel .bar { color: #6a9955; }
-    .dev-panel hr {
-        border: none;
-        border-top: 1px solid #3c3c3c;
-        margin: 0.75rem 0;
-    }
-    .dev-panel .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-    }
-    .dev-panel .actions.col {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .dev-panel .actions button {
-        font-family: inherit;
-        font-size: 12px;
-        padding: 0.3rem 0.55rem;
-        background: #2d2d30;
-        color: #d4d4d4;
-        border: 1px solid #555;
-        cursor: pointer;
-    }
-    .dev-panel .actions button:hover:not(:disabled) { background: #3e3e42; }
-    .dev-panel .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+@if (isLoading || player is null)
+{
+    <div class="loading-screen">
+        <div class="loading-logo">◈ CYBERPET OS</div>
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        <div class="loading-msg">reading save data...</div>
+    </div>
+}
+else
+{
+<CascadingValue Value="gameSession" IsFixed="true">
+<div class="geek-root">
 
-    .status-bar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 1rem 1.5rem;
-        padding: 0.65rem 1rem;
-    }
-    .status-bar .game-title {
-        color: #4ec9b0;
-        font-size: 1rem;
-        margin-right: 0.5rem;
-    }
-    .status-bar .chip {
-        font-size: 12px;
-        padding: 0.15rem 0.45rem;
-        border: 1px solid #3c3c3c;
-        background: #252526;
-    }
-    .status-bar .chip.on { color: #dcdcaa; border-color: #5a5a00; }
-    .status-bar .chip.off { color: #808080; }
-
-    .game-body {
-        display: grid;
-        grid-template-columns: 300px 1fr;
-        gap: 1rem;
-        align-items: start;
-    }
-    .pet-column {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        position: sticky;
-        top: 1rem;
-    }
-    .world-column {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        min-width: 0;
-    }
-
-    .tab-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-    }
-    .tab-btn {
-        font-family: inherit;
-        font-size: 13px;
-        padding: 0.4rem 0.75rem;
-        background: #2d2d30;
-        color: #d4d4d4;
-        border: 1px solid #555;
-        cursor: pointer;
-    }
-    .tab-btn:hover { background: #3e3e42; }
-    .tab-btn.active {
-        background: #252526;
-        border-color: #4ec9b0;
-        color: #4ec9b0;
-    }
-    .tab-btn.locked { opacity: 0.65; }
-    .tab-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .section-panel { min-height: 200px; }
-    .section-header {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-    }
-    .badge {
-        font-size: 12px;
-        padding: 0.1rem 0.35rem;
-        border: 1px solid #3c3c3c;
-    }
-    .badge.on { color: #4ec9b0; border-color: #4ec9b0; }
-    .badge.off { color: #808080; }
-    .badge.work.on { color: #dcdcaa; border-color: #5a5a00; }
-    .badge.fish.on { color: #4fc1ff; border-color: #4fc1ff; }
-
-    .card-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 0.5rem;
-    }
-    .card {
-        padding: 0.5rem;
-        background: #252526;
-        border: 1px solid #3c3c3c;
-        display: flex;
-        flex-direction: column;
-        gap: 0.3rem;
-        font-size: 12px;
-    }
-    .card.unlocked { border-color: #4ec9b0; }
-    .card.locked { opacity: 0.85; }
-    .card.fish-card { border-color: #4fc1ff33; }
-    .card .name { color: #ce9178; }
-    .card .meta { color: #808080; }
-    .card .desc { color: #6a9955; margin: 0; }
-    .card .qty { color: #b5cea8; }
-
-    .room-content {
-        padding: 0.75rem;
-        background: #252526;
-        border: 1px solid #3c3c3c;
-    }
-    .room-content.unlocked { border-color: #569cd6; }
-    .room-content.locked { opacity: 0.8; }
-
-    .hint, .empty {
-        color: #6a9955;
-        font-size: 12px;
-        margin: 0;
-    }
-    .section-title {
-        color: #9cdcfe;
-        font-size: 12px;
-        margin: 0.5rem 0 0.35rem;
-    }
-    .catch-result {
-        margin: 0.75rem 0 0;
-        padding: 0.5rem;
-        background: #252526;
-        border: 1px solid #3c3c3c;
-        font-size: 12px;
-    }
-    .work-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        align-items: flex-start;
-    }
-    .work-info { flex: 1; min-width: 180px; }
-
-    .rarity-common { color: #d4d4d4; }
-    .rarity-rare { color: #4fc1ff; }
-    .rarity-epic { color: #c586c0; }
-    .rarity-legendary { color: #dcdcaa; }
-
-    @@media (max-width: 900px) {
-        .game-body { grid-template-columns: 1fr; }
-        .pet-column { position: static; }
-    }
-</style>
-
-<div class="game-app">
-    <header class="dev-panel status-bar">
-        <span class="game-title">// CyberPet</span>
-        <span class="stat"><span class="label">Money</span> @player.Money</span>
-        <span class="stat"><span class="label">Bag</span> @BackpackTotalCount()</span>
-        <span class="stat"><span class="label">House</span> Lv.@playerHouse.House_Level</span>
-        <span class="chip @(player.IsWorking ? "on" : "off")">
-            @(player.IsWorking ? "WORKING" : "IDLE")
+    <!-- ══ Titlebar ══ -->
+    <div class="titlebar">
+        <div class="titlebar-dots">
+            <span class="dot close"></span>
+            <span class="dot min"></span>
+            <span class="dot max"></span>
+        </div>
+        <span class="titlebar-title">◈ CYBERPET OS</span>
+        <span class="titlebar-sep">│</span>
+        <span class="titlebar-stat"><PixelIcon Name="user" /><span class="v">@username</span></span>
+        <span class="titlebar-sep">·</span>
+        <span class="titlebar-stat"><PixelIcon Name="coin" /><span class="v">@player.Money g</span></span>
+        <span class="titlebar-sep">·</span>
+        <span class="titlebar-stat"><PixelIcon Name="bag" /><span class="v">@BackpackTotalCount()</span></span>
+        <span class="titlebar-sep">·</span>
+        <span class="titlebar-stat"><PixelIcon Name="house" /><span class="v">lv.@playerHouse.House_Level</span></span>
+        <div class="titlebar-spacer"></div>
+        <span class="titlebar-pill @(player.IsWorking ? "active" : "")">
+            @(player.IsWorking ? "⚙ WORKING" : "○ IDLE")
         </span>
-        <span class="chip @(fishingManager.IsFishing ? "on" : "off")">
-            @(fishingManager.IsFishing ? "FISHING" : "—")
+        <span class="titlebar-pill @(fishingManager.IsFishing ? "active" : "")">
+            @(fishingManager.IsFishing ? "◎ FISHING" : "— FISH")
         </span>
-    </header>
+        <form method="post" action="/api/auth/logout" style="margin-left:8px;">
+            <button type="submit" class="g-btn danger" style="height:26px;font-size:10px;padding:0 8px;">logout</button>
+        </form>
+    </div>
 
-    <div class="game-body">
-        <aside class="pet-column">
-            <div class="dev-panel">
-                <h1>// CyberCat</h1>
-                <pre>Name = "@cat.Name"
-@cat.GetMood()</pre>
-                <div class="stat"><span class="label">Hunger</span> <span class="bar">@Bar(cat.Hunger, 100)</span> @cat.Hunger</div>
-                <div class="stat"><span class="label">Thirst</span> <span class="bar">@Bar(cat.Thirst, 100)</span> @cat.Thirst</div>
-                <div class="stat"><span class="label">Energy</span> <span class="bar">@Bar(cat.Energy, 100)</span> @cat.Energy</div>
-                <div class="stat"><span class="label">Happy</span>  <span class="bar">@Bar(cat.Happiness, 100)</span> @cat.Happiness</div>
-                <hr />
-                <div class="actions col">
-                    <button @onclick="() => cat.FeedFood(normalFood)">Feed 普通猫粮</button>
-                    <button @onclick="() => cat.FeedFood(luxuryFood)">Feed 金枪鱼罐头</button>
-                    <button @onclick="() => cat.DrinkWater(20)">DrinkWater(20)</button>
-                    <button @onclick="cat.Stroke">Stroke()</button>
-                    <button @onclick="cat.Sleep">Sleep()</button>
-                </div>
-            </div>
+    <!-- ══ Body ══ -->
+    <div class="geek-body">
 
-            <div class="dev-panel">
-                <h1>// AutoFeeder</h1>
-                <div class="stat"><span class="label">Food</span> <span class="bar">@Bar(feeder.FoodCount, feeder.MaxFoodCount)</span> @feeder.FoodCount/@feeder.MaxFoodCount</div>
-                <hr />
-                <div class="actions col">
-                    <button @onclick="() => feeder.AddFoodFromBackpack(player, normalFood)">Add 普通猫粮</button>
-                    <button @onclick="() => feeder.AddFoodFromBackpack(player, luxuryFood)">Add 金枪鱼罐头</button>
-                    <button @onclick="() => feeder.RemoveLastFood()">RemoveLastFood()</button>
-                </div>
-            </div>
-
-            <div class="dev-panel">
-                <h1>// Shop</h1>
-                <div class="actions col">
-                    @foreach (var item in shop.ShopItems)
-                    {
-                        <button @onclick="() => player.BuyItem(item)">
-                            Buy @item.Food.Name (@item.Price)
-                        </button>
-                    }
-                </div>
-            </div>
+        <!-- ═ Sidebar ═ -->
+        <aside class="sidebar">
+            <CatCareSidebar Vitals="catVitalsSnapshot"
+                            Player="player"
+                            DebuffLines="_sidebarDebuffLines"
+                            PassiveSummary="PassiveCareSummaryLines()"
+                            ActiveFoodBuffs="activeFoodBuffs"
+                            HasFood="HasBackpackFood"
+                            OnFeed="FeedShopFood"
+                            OnDrink="ManualDrinkWater"
+                            OnStroke="ManualStroke"
+                            OnSleep="ManualSleep"
+                            OnTreat="TreatCat" />
         </aside>
 
-        <main class="world-column">
-            <nav class="tab-bar">
-                <button type="button" class="tab-btn @(activeSection == "house" ? "active" : "")" @onclick='() => SelectSection("house")'>家园</button>
-                <button type="button" class="tab-btn @(activeSection == "fishing" ? "active" : "")" @onclick='() => SelectSection("fishing")'>钓鱼</button>
-                <button type="button" class="tab-btn @(activeSection == "work" ? "active" : "")" @onclick='() => SelectSection("work")'>工地</button>
-                <button type="button" class="tab-btn @(activeSection == "backpack" ? "active" : "")" @onclick='() => SelectSection("backpack")'>背包</button>
-            </nav>
+        <!-- ═ Main area ═ -->
+        <div class="main-area">
 
-            @if (activeSection == "house")
+            @if (catchBroadcast is not null)
             {
-                <div class="dev-panel section-panel">
-                    <div class="section-header">
-                        <h1>// PlayerHouse</h1>
-                        <span class="meta">Rooms @UnlockedRoomCount()/@playerHouse.Rooms.Count · Furniture @UnlockedFurnitureCount()/@TotalFurnitureCount()</span>
-                    </div>
-                    <div class="tab-bar">
-                        @foreach (var entry in playerHouse.Rooms)
-                        {
-                            <button type="button"
-                                    class="tab-btn @(selectedRoomKey == entry.Key ? "active" : "") @(!entry.Value.IsUnlocked ? "locked" : "")"
-                                    @onclick="() => SelectRoom(entry.Key)">
-                                @entry.Key
-                            </button>
-                        }
-                    </div>
-                    @if (playerHouse.Rooms.TryGetValue(selectedRoomKey, out var selectedRoom))
-                    {
-                        <div class="room-content @(selectedRoom.IsUnlocked ? "unlocked" : "locked")">
-                            <div class="section-header">
-                                <h2>// @selectedRoom.Name</h2>
-                                <span class="badge @(selectedRoom.IsUnlocked ? "on" : "off")">
-                                    @(selectedRoom.IsUnlocked ? "UNLOCKED" : $"LOCKED · {selectedRoom.UnlockPrice}g")
-                                </span>
-                            </div>
-                            @if (selectedRoom.IsUnlocked)
-                            {
-                                <div class="card-grid">
-                                    @foreach (var item in selectedRoom.Furniture)
-                                    {
-                                        <div class="card @(item.IsUnlocked ? "unlocked" : "locked")">
-                                            <span class="name">@item.Name</span>
-                                            <span class="meta">@item.Id · @item.Price gold</span>
-                                            <p class="desc">@item.Description</p>
-                                            <span class="badge @(item.IsUnlocked ? "on" : "off")">
-                                                @(item.IsUnlocked ? "UNLOCKED" : "LOCKED")
-                                            </span>
-                                            @if (!item.IsUnlocked)
-                                            {
-                                                <div class="actions">
-                                                    <button @onclick="() => playerHouse.BuyFurniture(player, item)">
-                                                        Buy (@item.Price)
-                                                    </button>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <p class="hint">// unlock room to place furniture</p>
-                                <div class="actions">
-                                    <button @onclick="() => playerHouse.UnlockRoom(player, selectedRoom)">
-                                        Unlock @selectedRoom.Name (@selectedRoom.UnlockPrice)
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    }
+                <div class="catch-broadcast @(catchBroadcastMyth ? "myth" : catchBroadcastLegendary ? "legendary" : "")">
+                    <span class="cb-icon">@(catchBroadcastMyth ? "☆" : catchBroadcastLegendary ? "✦" : "◎")</span>
+                    <span class="cb-text">@catchBroadcast</span>
+                    <button class="cb-dismiss" @onclick="DismissCatchBroadcast">×</button>
                 </div>
             }
-            else if (activeSection == "fishing")
+            @if (offlineMessage is not null)
             {
-                <div class="dev-panel section-panel">
-                    <div class="section-header">
-                        <h1>// Fishing</h1>
-                        <span class="badge fish @(fishingManager.IsFishing ? "on" : "off")">
-                            @(fishingManager.IsFishing ? "FISHING" : "IDLE")
+                <div class="offline-banner">
+                    // @offlineMessage
+                    <span class="offline-cap-hint"> · 离线补偿上限 1 小时 / @OfflineCompensationService.MaxOfflineTicks tick（不含钓鱼）</span>
+                </div>
+            }
+
+            <div class="tab-strip tab-strip-grouped">
+                <div class="tab-group tab-group-core">
+                    <span class="tab-group-label">核心</span>
+                    <button class="g-tab @(activeSection=="house"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("house")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="house" />
+                        <span class="tab-text">
+                            <span class="tab-cn">家园</span>
+                            <span class="tab-en">home.room</span>
                         </span>
-                    </div>
-                    @if (fishingManager.IsFishing)
-                    {
-                        <div class="stat"><span class="label">Spot</span> @fishingManager.CurrentSpot?.Name</div>
-                        <div class="stat"><span class="label">Wait</span> @fishingManager.RemainingTicks tick × @FishingManager.TickIntervalSeconds s</div>
-                        <hr />
-                    }
-                    <div class="tab-bar">
-                        @foreach (var entry in fishingManager.FishingSpots)
-                        {
-                            <button type="button"
-                                    class="tab-btn @(selectedSpotKey == entry.Key ? "active" : "")"
-                                    disabled="@fishingManager.IsFishing"
-                                    @onclick="() => SelectSpot(entry.Key)">
-                                @entry.Key
-                            </button>
-                        }
-                    </div>
-                    @if (fishingManager.FishingSpots.TryGetValue(selectedSpotKey, out var selectedSpot))
-                    {
-                        <div class="stat"><span class="label">Time</span> @selectedSpot.FishingTime tick × @FishingManager.TickIntervalSeconds s = @(selectedSpot.FishingTime * FishingManager.TickIntervalSeconds)s</div>
-                        <div class="stat"><span class="label">Level</span> Lv.@selectedSpot.RequiredLevel</div>
-                        <div class="card-grid">
-                            @foreach (var fish in selectedSpot.FishTable)
-                            {
-                                <div class="card">
-                                    <span class="name">@fish.Name</span>
-                                    <span class="meta">@fish.MinWeight–@fish.MaxWeight kg</span>
-                                    <span class="meta">+@fish.HungerRestore hunger</span>
-                                </div>
-                            }
-                        </div>
-                        <div class="actions">
-                            <button disabled="@fishingManager.IsFishing" @onclick="() => StartFishing(selectedSpot)">
-                                StartFishing("@selectedSpot.Name")
-                            </button>
-                        </div>
-                    }
-                    @if (fishingManager.LastCaughtFish is Fish lastFish)
-                    {
-                        <p class="catch-result">
-                            // last catch:
-                            <span class="name">@lastFish.Name</span>
-                            · <span class="@RarityClass(lastFish.Rarity)">@lastFish.Rarity</span>
-                            · @(lastFish.ActualWeight)kg (@(lastFish.SizePercentage)%)
-                            · sell @lastFish.SellPrice gold
-                        </p>
-                    }
+                    </button>
                 </div>
-            }
-            else if (activeSection == "work")
-            {
-                <div class="dev-panel section-panel">
-                    <div class="section-header">
-                        <h1>// @workingPlace.Name</h1>
-                        <span class="badge work @(player.IsWorking ? "on" : "off")">
-                            @(player.IsWorking ? "WORKING" : "IDLE")
+                <div class="tab-group tab-group-activity">
+                    <span class="tab-group-label">活动</span>
+                    <button class="g-tab @(activeSection=="fishing"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("fishing")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="fish" />
+                        <span class="tab-text">
+                            <span class="tab-cn">钓鱼</span>
+                            <span class="tab-en">fishing.spot</span>
                         </span>
-                    </div>
-                    <div class="work-row">
-                        <div class="work-info">
-                            <div class="stat"><span class="label">Income</span> +2 / tick</div>
-                            <div class="stat"><span class="label">Money</span> @player.Money</div>
-                            <p class="hint">// toggle work to earn gold while cat auto-ticks</p>
-                        </div>
-                        <div class="actions">
-                            <button @onclick="ToggleWork">
-                                @(player.IsWorking ? "StopWork()" : "StartWork()")
-                            </button>
-                        </div>
-                    </div>
+                    </button>
+                    <button class="g-tab @(activeSection=="work"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("work")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="hammer" />
+                        <span class="tab-text">
+                            <span class="tab-cn">打工</span>
+                            <span class="tab-en">work.proc</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="expedition"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("expedition")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="cat" />
+                        <span class="tab-text">
+                            <span class="tab-cn">派遣</span>
+                            <span class="tab-en">exped.dispatch</span>
+                        </span>
+                    </button>
+                    <button class="g-tab market-tab @(activeSection=="market"?"active":"") @(PendingOfferCount()>0?"has-offers":"")"
+                            @onclick='()=>SelectSectionAsync("market")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="shop" />
+                        <span class="tab-text">
+                            <span class="tab-cn">鱼市</span>
+                            <span class="tab-en">market.stall</span>
+                        </span>
+                        @if (PendingOfferCount() > 0)
+                        {
+                            <span class="tab-badge">@PendingOfferCount()</span>
+                        }
+                    </button>
                 </div>
-            }
-            else if (activeSection == "backpack")
+                <div class="tab-group tab-group-growth">
+                    <span class="tab-group-label">成长</span>
+                    <button class="g-tab @(activeSection=="gear"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("gear")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="rod" />
+                        <span class="tab-text">
+                            <span class="tab-cn">装备</span>
+                            <span class="tab-en">gear.loadout</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="cooking"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("cooking")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="food" />
+                        <span class="tab-text">
+                            <span class="tab-cn">烹饪</span>
+                            <span class="tab-en">cook.lab</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="alchemy"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("alchemy")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="coin" />
+                        <span class="tab-text">
+                            <span class="tab-cn">炼金</span>
+                            <span class="tab-en">alchemy.lab</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="lifeshop"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("lifeshop")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="shop" />
+                        <span class="tab-text">
+                            <span class="tab-cn">生活商店</span>
+                            <span class="tab-en">shop.market</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="milestones"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("milestones")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="coin" />
+                        <span class="tab-text">
+                            <span class="tab-cn">里程碑</span>
+                            <span class="tab-en">mile.stone</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="backpack"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("backpack")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="bag" />
+                        <span class="tab-text">
+                            <span class="tab-cn">背包</span>
+                            <span class="tab-en">bag.inv</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-scroll">
+            @switch (activeSection)
             {
-                <div class="dev-panel section-panel">
-                    <div class="section-header">
-                        <h1>// Backpack</h1>
-                        <span class="meta">Items @player.Backpack.Count · Fish @player.FishBackpack.Count · Total @BackpackTotalCount()</span>
-                    </div>
-                    @if (player.Backpack.Count == 0 && player.FishBackpack.Count == 0)
-                    {
-                        <p class="empty">// empty — buy from Shop or go fishing</p>
-                    }
-                    else
-                    {
-                        @if (player.Backpack.Count > 0)
-                        {
-                            <p class="section-title">// items</p>
-                            <div class="card-grid">
-                                @foreach (var entry in player.Backpack.OrderBy(e => e.Key))
-                                {
-                                    <div class="card">
-                                        <span class="name">@entry.Key</span>
-                                        <span class="qty">x@(entry.Value)</span>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        @if (player.FishBackpack.Count > 0)
-                        {
-                            <p class="section-title">// fish</p>
-                            <div class="card-grid">
-                                @foreach (var fish in player.FishBackpack)
-                                {
-                                    <div class="card fish-card">
-                                        <span class="name">@fish.Name</span>
-                                        <span class="meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · @(fish.SizePercentage)% size</span>
-                                        <span class="meta">@(fish.ActualWeight)kg · @fish.SellPrice gold</span>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    }
-                </div>
+                case "house":
+                <HomeHouseTab HouseBuffs="GetHouseBuffs()"
+                              CatState="@CatState()"
+                              NormalFood="normalFood"
+                              LuxuryFood="luxuryFood"
+                              FeedMessage="feedMessage"
+                              OnBuy="BuyFurniture"
+                              OnUpgrade="UpgradeFurniture"
+                              OnUnlockRoom="UnlockRoom"
+                              OnAddFood="AddFoodToFeeder"
+                              OnAddCookedFood="AddCookedFoodToFeeder"
+                              OnRemoveFood="RemoveLastFromFeeder"
+                              OnAddWater="AddPurifiedWaterToWaterer"
+                              OnRemoveWater="RemoveLastFromWaterer" />
+                break;
+                case "fishing":
+                <HomeFishingTab IsActive="@(activeSection == "fishing")"
+                                TickGeneration="tickGeneration"
+                                CatBuffLines="FishingCatBuffLines"
+                                Username="username"
+                                DexEntries="_fishDexCache"
+                                FishingBlockMessage="fishingBlockMessage"
+                                SpotLicenseMessage="spotLicenseMessage"
+                                TopFishLeaderboard="topFishLeaderboard"
+                                TopLevelLeaderboard="topLevelLeaderboard"
+                                ServerFishingStats="serverFishingStats"
+                                LeaderboardRefreshing="leaderboardRefreshing"
+                                HasSpotAccess="HasSpotAccess"
+                                OnStartFishing="StartFishingAsync"
+                                OnStopFishing="StopFishing"
+                                OnPaySpotRental="PaySpotRental"
+                                OnBuySpotPermanent="BuySpotPermanent"
+                                OnRefreshLeaderboard="RefreshLeaderboardManualAsync" />
+                break;
+                case "gear":
+                <HomeGearTab IsActive="@(activeSection == "gear")"
+                             TickGeneration="tickGeneration"
+                             DexEntries="_fishDexCache"
+                             PlayerGems="playerGems"
+                             PlayerTargetLures="playerTargetLures"
+                             Rods="myRods"
+                             Reels="myReels"
+                             Lines="myLines"
+                             Lures="myLures"
+                             GearMessage="gearMessage"
+                             OnSocketGem="HandleLoadoutSocketGem"
+                             OnEquipTargetLure="EquipTargetLureForGear"
+                             OnUnequipTargetLure="UnequipTargetLureForGear"
+                             OnGoAlchemy="GoAlchemyFromGear"
+                             OnBuyRod="BuyRod"
+                             OnBuyReel="BuyReel"
+                             OnBuyLine="BuyLine"
+                             OnBuyLure="BuyLure"
+                             OnEquipRod="EquipRod"
+                             OnEquipReel="EquipReel"
+                             OnEquipLine="EquipLine"
+                             OnEquipLure="EquipLure"
+                             OnRepairRod="RepairRodPartial"
+                             OnRepairReel="RepairReelPartial"
+                             OnRepairLine="RepairLinePartial" />
+                break;
+                case "cooking":
+                <HomeCookingTab IsActive="@(activeSection == "cooking")"
+                                TickGeneration="tickGeneration"
+                                Message="cookMessage"
+                                OnCookAll="CookAll"
+                                OnCookFish="CookFishFromTab" />
+                break;
+                case "alchemy":
+                <HomeAlchemyTab IsActive="@(activeSection == "alchemy")"
+                                TickGeneration="tickGeneration"
+                                DexEntries="_fishDexCache"
+                                PlayerGems="playerGems"
+                                PlayerTargetLures="playerTargetLures"
+                                Rods="myRods"
+                                Reels="myReels"
+                                Lines="myLines"
+                                Lures="myLures"
+                                HasSpotAccess="HasSpotAccess"
+                                Message="alchemyMessage"
+                                OnCraftGem="CraftGem"
+                                OnCraftLine="CraftLine"
+                                OnCraftGear="CraftGear"
+                                OnCraftTargetLure="CraftTargetLure"
+                                OnSocketGem="SocketGemFromTab"
+                                OnEquipTargetLure="EquipTargetLure"
+                                OnUnequipTargetLure="UnequipTargetLure" />
+                break;
+                case "lifeshop":
+                <HomeLifeShopTab IsActive="@(activeSection == "lifeshop")"
+                                 TickGeneration="tickGeneration"
+                                 Shop="shop"
+                                 Message="lifeShopMessage"
+                                 OnBuyItem="BuyShopItem" />
+                break;
+                case "expedition":
+                <HomeExpeditionTab IsActive="@(activeSection == "expedition")"
+                                   TickGeneration="tickGeneration"
+                                   HouseBuffs="GetHouseBuffs()"
+                                   OnChanged="RefreshAfterExpeditionAsync" />
+                break;
+                case "work":
+                <HomeWorkTab IsActive="@(activeSection == "work")"
+                             TickGeneration="tickGeneration"
+                             WorkingPlace="workingPlace"
+                             WorkGoldPerTick="@EffectiveWorkGoldPerTick()"
+                             StallTicketTicks="@EffectiveStallTicketTicks()"
+                             StallTickets="@StallTicketCount()"
+                             WorkJobHint="@WorkJobHint()"
+                             OnSelectJob="SelectWorkJob"
+                             OnToggleWork="ToggleWork" />
+                break;
+                case "market":
+                <HomeMarketTab IsActive="@(activeSection == "market")"
+                               TickGeneration="tickGeneration"
+                               MarketListings="marketListings"
+                               PendingOffers="@PendingOfferCount()"
+                               StallTickets="@StallTicketCount()"
+                               ListingLimit="@MarketListingLimit()"
+                               Message="marketMessage"
+                               OnRefreshBounty="RefreshBounty"
+                               OnDelist="DelistFish"
+                               OnAcceptOffer="AcceptOffer"
+                               OnCounterOffer="CounterOffer"
+                               OnRejectOffer="RejectOffer"
+                               OnListFishOnMarket="ListFishOnMarket" />
+                break;
+                case "milestones":
+                <HomeMilestonesTab IsActive="@(activeSection == "milestones")"
+                                   TickGeneration="tickGeneration"
+                                   AchievementViews="achievementViews"
+                                   MilestoneUnlockIds="milestoneUnlockIds"
+                                   GraduationPercent="@GetGraduationPercent()"
+                                   Message="milestoneMessage"
+                                   OnGoToLeaderboard="GoToLeaderboardAsync"
+                                   OnClaimAchievement="ClaimAchievement"
+                                   OnBuyMilestoneItem="BuyMilestoneItem" />
+                break;
+                case "backpack":
+                <HomeBackpackTab IsActive="@(activeSection == "backpack")"
+                                 TickGeneration="tickGeneration"
+                                 TotalCount="@BackpackTotalCount()"
+                                 OnFeedCookedFood="FeedCookedFood"
+                                 OnSellFish="SellFish"
+                                 OnDisassembleFish="DisassembleFish"
+                                 OnListFishOnMarket="ListFishOnMarket"
+                                 OnGoToMarket="GoToMarketFromBackpack" />
+                break;
+
             }
-        </main>
+
+            </div><!-- content-scroll -->
+        </div><!-- main-area -->
+    </div><!-- geek-body -->
+
+    <!-- ══ Status bar ══ -->
+    <div class="statusbar">
+        <span class="sb-item">◈ CYBERPET OS</span>
+        <span class="sb-sep">│</span>
+        <span class="sb-item">utf-8</span>
+        <span class="sb-sep">│</span>
+        <span class="sb-item">@(player.IsWorking ? "⚙ work: on" : "○ work: off")</span>
+        <span class="sb-sep">│</span>
+        <span class="sb-item">@(fishingManager.IsFishing ? "◎ fishing: on" : "— fishing: off")</span>
+        <div class="sb-right">
+            <span class="sb-item">tab: @SectionTabLabel(activeSection)</span>
+            <span class="sb-sep">│</span>
+            <span class="sb-item"><span class="sb-key">鱼市</span> @(PendingOfferCount()>0?$"待处理 {PendingOfferCount()} 条":"")</span>
+        </div>
     </div>
+
 </div>
-
-@code {
-    private CyberCat cat = new CyberCat();
-    private AutoFeeder feeder = new AutoFeeder();
-    private Shop shop = new Shop();
-    private Player player = new Player();
-    private WorkingPlace workingPlace = new WorkingPlace();
-    private PlayerHouse playerHouse = new PlayerHouse();
-    private FishingManager fishingManager = new FishingManager();
-    private string selectedRoomKey = "";
-    private string selectedSpotKey = "";
-    private string activeSection = "house";
-
-    private Food normalFood = new Food("普通猫粮", 15, 2, 2);
-    private Food luxuryFood = new Food("金枪鱼罐头", 35, 15, 5);
-
-    private void ToggleWork() => workingPlace.ToggleWork(player);
-    private void SelectRoom(string roomKey) => selectedRoomKey = roomKey;
-    private void SelectSpot(string spotKey) => selectedSpotKey = spotKey;
-    private void SelectSection(string section) => activeSection = section;
-    private void StartFishing(FishingSpot spot) => fishingManager.StartFishing(spot, player);
-
-    private static string RarityClass(FishRarity rarity) => rarity switch
-    {
-        FishRarity.Rare => "rarity-rare",
-        FishRarity.Epic => "rarity-epic",
-        FishRarity.Legendary => "rarity-legendary",
-        _ => "rarity-common"
-    };
-
-    private int BackpackTotalCount() =>
-        player.Backpack.Values.Sum() + player.FishBackpack.Count;
-
-    private int UnlockedRoomCount() =>
-        playerHouse.Rooms.Values.Count(r => r.IsUnlocked);
-
-    private int TotalFurnitureCount() =>
-        playerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
-
-    private int UnlockedFurnitureCount() =>
-        playerHouse.Rooms.Values.SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);
-
-    private static string Bar(int value, int max)
-    {
-        var percentage = (double)value / max;
-        var filled = Math.Clamp((int)Math.Round(percentage * 10), 0, 10);
-        return new string('#', filled) + new string('.', 10 - filled);
-    }
-
-    private System.Timers.Timer? gameTimer;
-
-    protected override void OnInitialized()
-    {
-        selectedRoomKey = playerHouse.Rooms.Keys.First();
-        selectedSpotKey = fishingManager.FishingSpots.Keys.First();
-        fishingManager.OnChanged = () => InvokeAsync(StateHasChanged);
-
-        gameTimer = new System.Timers.Timer(2000);
-        gameTimer.Elapsed += OnTimerElapsed;
-        gameTimer.Start();
-    }
-
-    private void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        cat.Tick();
-        if (player.IsWorking) player.Money += 2;
-        feeder.CheckAndFeed(cat);
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        if (gameTimer != null)
-        {
-            gameTimer.Stop();
-            gameTimer.Elapsed -= OnTimerElapsed;
-            gameTimer.Dispose();
-        }
-        fishingManager.Dispose();
-    }
+</CascadingValue>
 }

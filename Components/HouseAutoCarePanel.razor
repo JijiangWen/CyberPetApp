@@ -1,0 +1,185 @@
+@using CyberPetApp.Models
+
+<div class="auto-care-module">
+    <div class="auto-care-head">
+        <span class="section-lbl">auto.care // 智能护理模块</span>
+        <span class="auto-care-meta">tick: 2s · daemon</span>
+    </div>
+
+    @if (ShowFeeder)
+    {
+    @* ── 智能喂食站 ── *@
+    <div class="auto-care-unit @(FeederUnlocked ? "active" : "locked")">
+        <div class="auto-care-unit-head">
+            <PixelIcon Name="bowl" />
+            <span class="auto-care-title">智能喂食站</span>
+            <span class="tag @(FeederUnlocked ? "on" : "off")">@(FeederUnlocked ? "ONLINE" : "LOCKED")</span>
+        </div>
+        @if (FeederUnlocked)
+        {
+            <div class="s-row">
+                <span class="s-label">food</span>
+                <code class="abar abar-food">@ProgressBar(Feeder.FoodCount, Feeder.MaxFoodCount)</code>
+                <span class="s-val">@Feeder.FoodCount/@Feeder.MaxFoodCount</span>
+            </div>
+            <p class="hint auto-care-hint">
+                // 饥饿&lt;600 或精力&lt;400 自动喂食 · 装粮 @EconomySinks.FeederProcessingFee g/份 · 容量 @Feeder.MaxFoodCount（基础10@(HouseBuffs.FeederExtraSlots > 0 ? $" +家具{HouseBuffs.FeederExtraSlots}" : "")）
+            </p>
+            <div class="auto-care-slots">
+                @for (int i = 0; i < Feeder.MaxFoodCount; i++)
+                {
+                    var food = i < Feeder.Foods.Count ? Feeder.Foods[i] : null;
+                    <div class="auto-care-slot @(food is not null ? "filled" : "empty")">
+                        <span class="slot-idx">@i.ToString("D2")</span>
+                        @if (food is not null)
+                        {
+                            <span class="slot-item">@food.Name</span>
+                            <span class="slot-meta">♥@food.HungerRestore ⚡@food.EnergyRestore</span>
+                        }
+                        else
+                        {
+                            <span class="slot-empty">EMPTY</span>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="btn-group auto-care-actions">
+                <button type="button" class="g-btn" disabled="@(!HasBackpackFood(NormalFood.Name))"
+                        @onclick="() => OnAddFood.InvokeAsync(NormalFood)">
+                    <span class="item-sprite sp-24 item-food"></span>add(普通猫粮)
+                </button>
+                <button type="button" class="g-btn" disabled="@(!HasBackpackFood(LuxuryFood.Name))"
+                        @onclick="() => OnAddFood.InvokeAsync(LuxuryFood)">
+                    <span class="item-sprite sp-24 item-can"></span>add(金枪鱼罐头)
+                </button>
+                @foreach (var cooked in CookBook.Recipes.Where(r => r.AllowAutoFeeder))
+                {
+                    <button type="button" class="g-btn" disabled="@(!HasBackpackFood(cooked.FoodName))"
+                            @onclick="() => OnAddCookedFood.InvokeAsync(cooked.FoodName)">
+                        add(@cooked.FoodName)
+                    </button>
+                }
+                <button type="button" class="g-btn" @onclick="OnRemoveFood">remove(last)</button>
+            </div>
+        }
+        else
+        {
+            <p class="auto-care-locked-hint">// 购买 <strong>智能喂食站</strong> 家具后解锁</p>
+        }
+    </div>
+    }
+
+    @if (ShowWaterer)
+    {
+    @* ── 宠物饮水泉 ── *@
+    <div class="auto-care-unit @(WatererUnlocked ? "active" : "locked")">
+        <div class="auto-care-unit-head">
+            <PixelIcon Name="bowl" />
+            <span class="auto-care-title">宠物饮水泉</span>
+            <span class="tag @(WatererUnlocked ? "on" : "off")">@(WatererUnlocked ? "ONLINE" : "LOCKED")</span>
+        </div>
+        @if (WatererUnlocked)
+        {
+            <div class="s-row">
+                <span class="s-label">water</span>
+                <code class="abar abar-thirst">@ProgressBar(Waterer.WaterCount, Waterer.MaxWaterCount)</code>
+                <span class="s-val">@Waterer.WaterCount/@Waterer.MaxWaterCount</span>
+            </div>
+            <p class="hint auto-care-hint">
+                // 口渴&lt;600 自动补水 · 槽空自来水 +@WaterCatalog.Tap.ThirstRestore/2s · 纯净水 +@WaterCatalog.Purified.ThirstRestore · 装水 @EconomySinks.WatererProcessingFee g/份
+            </p>
+            <div class="auto-care-slots">
+                @for (int i = 0; i < Waterer.MaxWaterCount; i++)
+                {
+                    var water = i < Waterer.Waters.Count ? Waterer.Waters[i] : null;
+                    <div class="auto-care-slot @(water is not null ? "filled" : "empty")">
+                        <span class="slot-idx">@i.ToString("D2")</span>
+                        @if (water is not null)
+                        {
+                            <span class="slot-item">@water.Name</span>
+                            <span class="slot-meta">💧+@water.ThirstRestore</span>
+                        }
+                        else
+                        {
+                            <span class="slot-empty">EMPTY</span>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="btn-group auto-care-actions">
+                <button type="button" class="g-btn" disabled="@(!HasBackpackWater())"
+                        @onclick="OnAddWater">add(纯净水)</button>
+                <button type="button" class="g-btn" @onclick="OnRemoveWater">remove(last)</button>
+            </div>
+        }
+        else
+        {
+            <p class="auto-care-locked-hint">// 购买 <strong>宠物饮水泉</strong> 家具后解锁</p>
+        }
+    </div>
+    }
+
+    @if (ShowPassive)
+    {
+    @* ── 被动家具 ── *@
+    @foreach (var entry in PassiveFurniture)
+    {
+        <div class="auto-care-unit passive @(entry.Unlocked ? "active" : "locked")">
+            <div class="auto-care-unit-head">
+                <PixelIcon Name="cat" />
+                <span class="auto-care-title">@entry.DisplayName</span>
+                <span class="tag @(entry.Unlocked ? "on" : "off")">@(entry.Unlocked ? "生效中" : "LOCKED")</span>
+            </div>
+            @if (entry.Unlocked && entry.PassiveLabel is not null)
+            {
+                <p class="hint auto-care-hint">// passive: @((MarkupString)entry.PassiveLabel)</p>
+            }
+            else if (!entry.Unlocked)
+            {
+                <p class="auto-care-locked-hint">// 购买 <strong>@entry.DisplayName</strong> 家具后解锁</p>
+            }
+        </div>
+    }
+    }
+
+    @if (Message is not null)
+    {
+        <p class="hint auto-care-msg">// @Message</p>
+    }
+</div>
+
+@code {
+    public record PassiveFurnitureEntry(string FurnitureId, string DisplayName, bool Unlocked, string? PassiveLabel);
+
+    [Parameter, EditorRequired] public AutoFeeder Feeder { get; set; } = null!;
+    [Parameter, EditorRequired] public AutoWaterer Waterer { get; set; } = null!;
+    [Parameter, EditorRequired] public Food NormalFood { get; set; } = null!;
+    [Parameter, EditorRequired] public Food LuxuryFood { get; set; } = null!;
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public Dictionary<string, int> Backpack { get; set; } = [];
+    [Parameter] public bool FeederUnlocked { get; set; }
+    [Parameter] public bool WatererUnlocked { get; set; }
+    [Parameter] public IReadOnlyList<PassiveFurnitureEntry> PassiveFurniture { get; set; } = [];
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool ShowFeeder { get; set; } = true;
+    [Parameter] public bool ShowWaterer { get; set; } = true;
+    [Parameter] public bool ShowPassive { get; set; } = true;
+
+    [Parameter] public EventCallback<Food> OnAddFood { get; set; }
+    [Parameter] public EventCallback<string> OnAddCookedFood { get; set; }
+    [Parameter] public EventCallback OnRemoveFood { get; set; }
+    [Parameter] public EventCallback OnAddWater { get; set; }
+    [Parameter] public EventCallback OnRemoveWater { get; set; }
+
+    private bool HasBackpackFood(string name) =>
+        Backpack.GetValueOrDefault(name) > 0;
+
+    private bool HasBackpackWater() =>
+        Backpack.GetValueOrDefault(WaterCatalog.Purified.Name) > 0;
+
+    private static string ProgressBar(int value, int max, int width = 10)
+    {
+        var filled = Math.Clamp((int)Math.Round((double)value / Math.Max(1, max) * width), 0, width);
+        return new string('█', filled) + new string('░', width - filled);
+    }
+}

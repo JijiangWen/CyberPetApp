@@ -1,0 +1,83 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="coin" /> MILE.stone</span>
+        <span class="panel-meta">points: @Session.Player!.MilestonePoints pt · balance: @Session.Player.Money g</span>
+        <button type="button" class="g-btn link-btn" style="margin-left:auto;font-size:9px;"
+                @onclick="OnGoToLeaderboard">查看排行榜 →</button>
+    </div>
+    <p class="hint" style="font-size:9px;margin-bottom:8px;">// 完成成就领取点数 → 商店兑换永久 buff（另需金币）</p>
+    <p class="hint" style="font-size:9px;margin-bottom:8px;">
+        // 终极毕业进度 @GraduationPercent%（T10四槽 + 图鉴95% + 全神话鱼 · 目标 ~500h）
+    </p>
+
+    <div class="section-lbl">achievements // 里程碑成就</div>
+    <div class="card-grid">
+        @foreach (var av in AchievementViews)
+        {
+            <div class="g-card @(av.Completed ? "unlocked" : "")">
+                <span class="c-name">@av.Def.Title</span>
+                <span class="c-meta">@av.Def.Desc</span>
+                <span class="c-meta">进度 @Math.Min(av.CurrentValue, av.Def.Target)/@av.Def.Target · 奖励 @av.Def.PointReward pt</span>
+                @if (av.Completed && !av.Row.RewardClaimed)
+                {
+                    <button class="g-btn primary" style="margin-top:4px;" @onclick="() => OnClaimAchievement.InvokeAsync(av.Def.Id)">claim(+@av.Def.PointReward pt)</button>
+                }
+                else if (av.Row.RewardClaimed)
+                {
+                    <span class="tag on">CLAIMED</span>
+                }
+                else
+                {
+                    <span class="tag off">进行中</span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="section-lbl" style="margin-top:16px;">shop // 里程碑商店</div>
+    <div class="card-grid">
+        @foreach (var item in MilestoneCatalog.ShopItems)
+        {
+            var owned = MilestoneUnlockIds.Contains(item.Id);
+            <div class="g-card @(owned ? "unlocked" : "")">
+                <span class="c-name">@item.Title</span>
+                <span class="c-meta">@item.Desc</span>
+                <span class="c-meta">@item.BuffSummary</span>
+                <span class="c-price">@item.PointCost pt + @item.GoldCost g</span>
+                @if (owned)
+                {
+                    <span class="tag on">已兑换</span>
+                }
+                else
+                {
+                    <button class="g-btn primary" style="margin-top:4px;"
+                            disabled="@(Session.Player.MilestonePoints < item.PointCost || Session.Player.Money < item.GoldCost)"
+                            @onclick="() => OnBuyMilestoneItem.InvokeAsync(item.Id)">
+                        redeem(@item.PointCost pt · @item.GoldCost g)
+                    </button>
+                }
+            </div>
+        }
+    </div>
+    @if (Message is not null)
+    {
+        <p class="hint" style="margin-top:8px;">// @Message</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public List<AchievementView> AchievementViews { get; set; } = [];
+    [Parameter] public HashSet<string> MilestoneUnlockIds { get; set; } = [];
+    [Parameter] public double GraduationPercent { get; set; }
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback OnGoToLeaderboard { get; set; }
+    [Parameter] public EventCallback<string> OnClaimAchievement { get; set; }
+    [Parameter] public EventCallback<string> OnBuyMilestoneItem { get; set; }
+}

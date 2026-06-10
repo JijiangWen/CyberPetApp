@@ -1,0 +1,137 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inherits ComponentBase
+
+<div class="house-floor-wrap">
+    @if (_roomsDataHint is not null)
+    {
+        <p class="hint house-floor-data-hint">// @_roomsDataHint</p>
+    }
+
+    <HouseFloorPlan PlayerHouse="PlayerHouse"
+                    SelectedRoomKey="_selectedRoomKey"
+                    HouseBuffs="HouseBuffs"
+                    MaintenanceFee="MaintenanceFee"
+                    MaintenanceOverdue="MaintenanceOverdue"
+                    CatState="CatState"
+                    OnSelectRoom="SelectRoom" />
+
+    @if (!string.IsNullOrEmpty(_selectedRoomKey))
+    {
+        <HouseRoomPanel PlayerHouse="PlayerHouse"
+                        Player="Player"
+                        RoomKey="_selectedRoomKey"
+                        OnClose="CloseRoomPanel"
+                        OnBuy="OnBuy"
+                        OnUpgrade="OnUpgrade"
+                        OnUnlockRoom="OnUnlockRoom"
+                        ShowAutoCare="RoomHasAutoCare(_selectedRoomKey)"
+                        ShowFeeder="@(_selectedRoomKey == PlayerHouse.RoomKeys.Kitchen)"
+                        ShowWaterer="@(_selectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
+                        ShowPassive="@(_selectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
+                        Feeder="Feeder"
+                        Waterer="Waterer"
+                        NormalFood="NormalFood"
+                        LuxuryFood="LuxuryFood"
+                        HouseBuffs="HouseBuffs"
+                        Backpack="Backpack"
+                        FeederUnlocked="HasAutoFeederUnit()"
+                        WatererUnlocked="HasWaterDispenser()"
+                        PassiveFurniture="PassiveFurnitureForRoom(_selectedRoomKey)"
+                        Message="FeedMessage"
+                        OnAddFood="OnAddFood"
+                        OnAddCookedFood="OnAddCookedFood"
+                        OnRemoveFood="OnRemoveFood"
+                        OnAddWater="OnAddWater"
+                        OnRemoveWater="OnRemoveWater" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerHouse PlayerHouse { get; set; } = null!;
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public int MaintenanceFee { get; set; }
+    [Parameter] public bool MaintenanceOverdue { get; set; }
+    [Parameter] public string CatState { get; set; } = "content";
+    [Parameter] public AutoFeeder Feeder { get; set; } = null!;
+    [Parameter] public AutoWaterer Waterer { get; set; } = null!;
+    [Parameter] public Food NormalFood { get; set; } = null!;
+    [Parameter] public Food LuxuryFood { get; set; } = null!;
+    [Parameter] public Dictionary<string, int> Backpack { get; set; } = [];
+    [Parameter] public string? FeedMessage { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnBuy { get; set; }
+    [Parameter] public EventCallback<Furniture> OnUpgrade { get; set; }
+    [Parameter] public EventCallback<Room> OnUnlockRoom { get; set; }
+    [Parameter] public EventCallback<Food> OnAddFood { get; set; }
+    [Parameter] public EventCallback<string> OnAddCookedFood { get; set; }
+    [Parameter] public EventCallback OnRemoveFood { get; set; }
+    [Parameter] public EventCallback OnAddWater { get; set; }
+    [Parameter] public EventCallback OnRemoveWater { get; set; }
+
+    private string _selectedRoomKey = "";
+    private string? _roomsDataHint;
+
+    protected override void OnParametersSet()
+    {
+        _roomsDataHint = ValidateRooms(PlayerHouse);
+    }
+
+    private static string? ValidateRooms(PlayerHouse house)
+    {
+        if (house.Rooms.Count == 0)
+            return "房屋数据为空，请重新登录";
+
+        var expected = new[]
+        {
+            PlayerHouse.RoomKeys.LivingRoom,
+            PlayerHouse.RoomKeys.Kitchen,
+            PlayerHouse.RoomKeys.Bedroom,
+            PlayerHouse.RoomKeys.Bathroom,
+            PlayerHouse.RoomKeys.Garden
+        };
+
+        var missing = expected.Where(k => !house.Rooms.ContainsKey(k)).ToList();
+        return missing.Count > 0
+            ? $"缺少房间数据：{string.Join("、", missing)}（请联系管理员或重新登录）"
+            : null;
+    }
+
+    private static bool RoomHasAutoCare(string roomKey) =>
+        roomKey is PlayerHouse.RoomKeys.Kitchen or PlayerHouse.RoomKeys.LivingRoom;
+
+    private void SelectRoom(string key)
+    {
+        _selectedRoomKey = key;
+        StateHasChanged();
+    }
+
+    private void CloseRoomPanel()
+    {
+        _selectedRoomKey = "";
+        StateHasChanged();
+    }
+
+    private bool HasAutoFeederUnit() =>
+        PlayerHouse.Rooms.Values.SelectMany(r => r.Furniture)
+            .Any(f => f.IsUnlocked && f.FurnitureId == "AutoFeederUnit");
+
+    private bool HasWaterDispenser() =>
+        PlayerHouse.Rooms.Values.SelectMany(r => r.Furniture)
+            .Any(f => f.IsUnlocked && PassiveCatCare.UnlocksAutoWaterer(f.FurnitureId));
+
+    private List<HouseAutoCarePanel.PassiveFurnitureEntry> PassiveFurnitureForRoom(string roomKey) =>
+        PlayerHouse.Rooms.Values
+            .SelectMany(r => r.Furniture)
+            .Where(f => PassiveCatCare.TryGet(f.FurnitureId, out _))
+            .Select(f =>
+            {
+                PassiveCatCare.TryGet(f.FurnitureId, out var def);
+                return new HouseAutoCarePanel.PassiveFurnitureEntry(
+                    f.FurnitureId, f.Name, f.IsUnlocked, f.IsUnlocked ? def.ActiveLabel : null);
+            })
+            .Where(e => PlayerHouse.Rooms.TryGetValue(roomKey, out var room)
+                        && room.Furniture.Any(f => f.FurnitureId == e.FurnitureId))
+            .ToList();
+}

@@ -1,0 +1,46 @@
+@page "/login"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<PageTitle>CYBERPET OS · login</PageTitle>
+
+<div class="auth-screen">
+    <div class="auth-card">
+        <div class="auth-card-header">
+            <span class="dot close"></span>
+            <span class="dot min"></span>
+            <span class="dot max"></span>
+            &nbsp; auth.login — CYBERPET OS
+        </div>
+        <div class="auth-card-body">
+            <div class="auth-logo-line">
+                <img class="auth-cat" src="/assets/cat-portrait.png?v=4" alt="CyberPet" />
+                <div class="auth-logo-ascii">◈ CYBERPET</div>
+                <div class="auth-logo-sub">terminal · v1.0.0 · authenticate</div>
+            </div>
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <div class="auth-error">@Error</div>
+            }
+            <form method="post" action="/api/auth/login">
+                <div class="auth-field">
+                    <label>username</label>
+                    <input name="username" required autocomplete="username" />
+                </div>
+                <div class="auth-field">
+                    <label>password</label>
+                    <input name="password" type="password" required autocomplete="current-password" />
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" class="g-btn primary" style="padding:8px 18px;">exec(login)</button>
+                    <a href="/register" class="auth-link">→ register</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+}

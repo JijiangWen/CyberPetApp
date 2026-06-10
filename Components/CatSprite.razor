@@ -1,0 +1,13 @@
+@using CyberPetApp.Models
+@* State-driven pixel cat — transparent PNG from wwwroot/assets/cat *@
+
+<img class="cat-sprite cat-@State"
+     src="@CatSpriteCatalog.ImagePath(State)"
+     width="@Size" height="@Size"
+     alt="cat @State"
+     role="img" />
+
+@code {
+    [Parameter] public string State { get; set; } = "content";
+    [Parameter] public int Size { get; set; } = 132;
+}

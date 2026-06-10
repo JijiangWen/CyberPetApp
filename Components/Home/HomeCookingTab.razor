@@ -1,0 +1,90 @@
+@using CyberPetApp.Models
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="food" /> COOK.lab</span>
+        <span class="panel-meta">raw fish: @Session.Player!.FishBackpack.Count</span>
+    </div>
+
+    <div class="s-row">
+        <span class="s-label">cook.lv @Session.Player.CookingLevel</span>
+        <code class="abar abar-hunger">@ABar(Session.Player.CookingXp, Player.XpToNext(Session.Player.CookingLevel))</code>
+        <span class="s-val" style="font-size:10px;">@Session.Player.CookingXp/@Player.XpToNext(Session.Player.CookingLevel)</span>
+    </div>
+
+    <div class="section-lbl" style="margin-top:8px;">recipes // 食谱（稀有度 · 即时 · Buff · 加工费）</div>
+    <div class="card-grid">
+        @foreach (var recipe in CookBook.Recipes)
+        {
+            bool unlocked = Session.Player.CookingLevel >= recipe.RequiredCookingLevel;
+            int fee = CookBook.ProcessingFee(recipe.Input);
+            <div class="g-card @(unlocked ? "unlocked" : "locked")">
+                <span class="c-name">🍳 @recipe.FoodName</span>
+                <span class="c-meta"><span class="@RarityClass(recipe.Input)">@recipe.Input</span> 鱼 ×1 · 加工费 @fee g</span>
+                <span class="c-meta">即时：@recipe.InstantEffectLabel</span>
+                <span class="c-meta">Buff：@recipe.BuffEffectLabel</span>
+                <span class="c-meta">+@recipe.Xp cook xp</span>
+                <span class="tag @(unlocked ? "on" : "off")">@(unlocked ? "UNLOCKED" : $"需 Lv.{recipe.RequiredCookingLevel}")</span>
+                @if (!recipe.AllowAutoFeeder)
+                {
+                    <span class="tag off" style="margin-top:2px;">手动喂食</span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="btn-row" style="margin-top:12px;">
+        <button class="g-btn primary" @onclick="() => OnCookAll.InvokeAsync(false)">CookAll(全部默认食谱)</button>
+        <button class="g-btn" @onclick="() => OnCookAll.InvokeAsync(true)">CookAll(仅普通→生鱼片)</button>
+    </div>
+    @if (Message is not null)
+    {
+        <p class="hint" style="margin-top:8px;">// @Message</p>
+    }
+
+    @if (Session.Player.FishBackpack.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:16px;">raw fish // 选鱼下锅</div>
+        <div class="card-grid">
+            @foreach (var fish in Session.Player.FishBackpack.ToList())
+            {
+                var defaultRecipe = CookBook.DefaultFor(fish.Rarity);
+                var recipes = CookBook.RecipesFor(fish.Rarity)
+                    .Where(r => Session.Player.CookingLevel >= r.RequiredCookingLevel).ToList();
+                <div class="g-card">
+                    <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                    <span class="c-name">@fish.Name</span>
+                    <span class="c-meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · @fish.ActualWeight kg</span>
+                    @if (recipes.Count == 0)
+                    {
+                        <button class="g-btn" disabled>需烹饪 Lv.@defaultRecipe.RequiredCookingLevel</button>
+                    }
+                    else
+                    {
+                        @foreach (var recipe in recipes)
+                        {
+                            <button class="g-btn primary" style="margin-top:4px;"
+                                    @onclick="() => OnCookFish.InvokeAsync((fish, recipe.RecipeId))">
+                                cook(→@recipe.FoodName, @(CookBook.ProcessingFee(fish.Rarity))g)
+                            </button>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="empty" style="margin-top:12px;">// no raw fish — go idle fishing first</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback<bool> OnCookAll { get; set; }
+    [Parameter] public EventCallback<(Fish fish, string recipeId)> OnCookFish { get; set; }
+}

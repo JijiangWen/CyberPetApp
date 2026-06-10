@@ -1,0 +1,347 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="fish" /> FISHING.spot</span>
+        <span class="badge fish @(Session.FishingManager.IsFishing?"on":"off")">
+            @FishingStateBadge(Session.FishingManager)
+        </span>
+    </div>
+
+    <div class="section-tw tw">
+        <div class="tw-header">
+            <span class="tw-icon"></span>
+            <PixelIcon Name="fish" />
+            STATUS.loadout
+        </div>
+        <div class="tw-body">
+            <div class="cat-buff-box buff-panel">
+                <span class="section-lbl" style="margin:0 0 4px;">cat.buff // 猫咪状态加成</span>
+                @foreach (var line in CatBuffLines)
+                {
+                    <div class="buff-line @(line.Contains("饥饿") || line.Contains("疲劳") ? "debuff" : line.Contains("无钓鱼") ? "neutral" : "buff")">@line</div>
+                }
+            </div>
+            <div class="cat-buff-box buff-panel" style="margin-top:6px;">
+                <span class="section-lbl" style="margin:0 0 4px;">cat.stats // Lv.@Session.Cat.CatLevel 属性公式</span>
+                <CatFishingStatsPanel Cat="Session.Cat" ShowSummary="true" />
+            </div>
+            <div class="s-row">
+                <span class="s-label">fish.lv @Session.Player!.FishingLevel</span>
+                <code class="abar abar-energy">@ABar(Session.Player.FishingXp, Player.XpToNext(Session.Player.FishingLevel))</code>
+                <span class="s-val" style="font-size:10px;">@Session.Player.FishingXp/@Player.XpToNext(Session.Player.FishingLevel)</span>
+            </div>
+            <div class="gear-brief">
+                <span class="gb-item">🎣 @Session.Loadout.RodName ·抛投@Session.Loadout.CastRange <code class="abar abar-energy">@ABar(Session.Loadout.RodDurability, 100)</code></span>
+                <span class="gb-item">⚙ @Session.Loadout.ReelName ·线杯@Session.Loadout.LineCapacity kg <code class="abar abar-hunger">@ABar(Session.Loadout.ReelDurability, 100)</code></span>
+                <span class="gb-item">🧵 @Session.Loadout.LineName ·强度@Session.Loadout.LineStrength kg ·承重@Session.Loadout.EffectiveWeightLimit.ToString("0.#") kg <code class="abar abar-energy">@ABar(Session.Loadout.LineDurability, 100)</code></span>
+                <span class="gb-item @(Session.Loadout.LureQuantity == 0 ? "gb-empty" : "")">🪱 @Session.Loadout.LureName @GearCatalog.DepthLabel(Session.Loadout.LureDepth)层 ·耐久@Session.Loadout.LureDurabilityRemaining ×@Session.Loadout.LureQuantity</span>
+            </div>
+            @if (!Session.Loadout.MeetsGearLevel)
+            {
+                <p class="hint" style="margin-top:4px;">// 装备等级不足：需要钓鱼 Lv.@Session.Loadout.MinGearRequiredLevel（当前 Lv.@Session.Player.FishingLevel）</p>
+            }
+            @if (Session.Loadout.SpotGearEffectiveness < 1.0)
+            {
+                <p class="hint gear-loadout-warn" style="margin-top:4px;">
+                    // 竿阶 T@Session.Loadout.RodGearTier 低于钓点门槛 · 抓口/起鱼 ×@Session.Loadout.SpotGearEffectiveness.ToString("0.##") — 升级装备或炼金锻造
+                </p>
+            }
+        </div>
+    </div>
+
+    <FishingStatusPanel Manager="Session.FishingManager" />
+
+    <div class="section-tw tw">
+        <div class="tw-header">
+            <span class="tw-icon"></span>
+            钓点选择
+        </div>
+        <div class="tw-body">
+            @foreach (var group in FishingSpotCatalog.RegionGroups())
+            {
+                var regionMeta = FishingSpotCatalog.RegionFor(group.SpotNames[0]);
+                <div class="section-lbl" style="margin:8px 0 4px;">@group.Label · @regionMeta.UnlockHint · T@(regionMeta.MinRodTier)竿</div>
+                <div class="sub-tab-bar">
+                    @foreach (var key in group.SpotNames)
+                    {
+                        if (!Session.FishingManager.FishingSpots.TryGetValue(key, out var entry)) { continue; }
+                        var needsLic = SpotLicenseCatalog.RequiresLicense(key);
+                        var hasLic = HasSpotAccess(key);
+                        var locked = Session.Player.FishingLevel < entry.RequiredLevel || (needsLic && !hasLic);
+                        var fishN = entry.FishTable.Count;
+                        <button class="sub-tab @(selectedSpotKey==key?"active":"") @(locked ? "locked" : "")"
+                                disabled="@Session.FishingManager.IsFishing"
+                                @onclick="()=>SelectSpot(key)"
+                                title="@entry.Description">
+                            @entry.Name ×@entry.PriceMultiplier.ToString("0.0") · @(fishN)种
+                            @(Session.Player.FishingLevel < entry.RequiredLevel ? $" 🔒Lv.{entry.RequiredLevel}" : needsLic && !hasLic ? " 🔒许可" : "")
+                        </button>
+                    }
+                </div>
+            }
+            @if (Session.FishingManager.FishingSpots.TryGetValue(selectedSpotKey, out var spot))
+            {
+                var spotLic = Session.SpotLicenses.FirstOrDefault(l => l.SpotName == spot.Name);
+                var spotNeedsLic = SpotLicenseCatalog.RequiresLicense(spot.Name);
+                var spotHasAccess = !spotNeedsLic || HasSpotAccess(spot.Name);
+                <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div class="kv-row"><span class="k">区域</span><span class="v">@FishingSpotCatalog.RegionFor(spot.Name).Label</span></div>
+                    <div class="kv-row"><span class="k">等级</span><span class="v">Lv.@spot.RequiredLevel</span></div>
+                    <div class="kv-row"><span class="k">竿阶</span><span class="v">≥T@GearProgressionCatalog.SpotMinRodTierFor(spot.Name)</span></div>
+                    <div class="kv-row"><span class="k">鱼种</span><span class="v">@spot.FishTable.Count 种</span></div>
+                    <div class="kv-row"><span class="k">水层</span><span class="v">@GearCatalog.DepthLabel(spot.PrimaryDepth)层主水层</span></div>
+                    <div class="kv-row"><span class="k">售价</span><span class="v">×@spot.PriceMultiplier · 抛竿 @EconomySinks.CastFeeForSpot(spot.Name)g</span></div>
+                    <div class="kv-row"><span class="k">代表鱼</span><span class="v">@string.Join(" · ", FishingSpotCatalog.PreviewFish(spot.Name))</span></div>
+                    @if (!string.IsNullOrEmpty(spot.Description))
+                    {
+                        <div class="kv-row" style="flex:1 1 100%;"><span class="k">背景</span><span class="v hint">@spot.Description</span></div>
+                    }
+                    @if (spotNeedsLic)
+                    {
+                        <div class="kv-row"><span class="k">许可</span><span class="v">@SpotLicenseService.AccessStatus(spotLic, spot.Name)</span></div>
+                        <div class="kv-row"><span class="k">费用</span><span class="v">@SpotLicenseCatalog.LicenseHint(spot.Name)</span></div>
+                    }
+                </div>
+                @if (spotNeedsLic)
+                {
+                    <div class="btn-row" style="margin-bottom:12px;">
+                        @if (spotLic?.HasPermanent != true)
+                        {
+                            <button class="g-btn"
+                                    disabled="@(Session.Player.Money < EconomySinks.SpotDailyRentalCost(spot.Name))"
+                                    @onclick="()=>OnPaySpotRental.InvokeAsync(spot.Name)">
+                                日租 @EconomySinks.SpotDailyRentalCost(spot.Name)g
+                            </button>
+                            <button class="g-btn primary"
+                                    disabled="@(Session.Player.Money < EconomySinks.SpotPermanentLicenseCost(spot.Name))"
+                                    @onclick="()=>OnBuySpotPermanent.InvokeAsync(spot.Name)">
+                                永久证 @EconomySinks.SpotPermanentLicenseCost(spot.Name)g
+                            </button>
+                        }
+                    </div>
+                    @if (SpotLicenseMessage is not null)
+                    {
+                        <p class="hint" style="margin-bottom:8px;">// @SpotLicenseMessage</p>
+                    }
+                }
+                var previewNames = FishingSpotCatalog.PreviewFish(spot.Name).ToHashSet();
+                var displayFish = showAllSpotFish
+                    ? spot.FishTable
+                    : spot.FishTable.Where(f => previewNames.Contains(f.Name) || f.TargetLureRecipeId is not null).ToList();
+                var hiddenTargets = TargetFishCatalog.HiddenFishForSpot(spot.Name);
+                var lureReady = Session.Loadout.TargetLureMatchesSpot(spot.Name);
+                @if (hiddenTargets.Count > 0)
+                {
+                    <div class="hint" style="margin:6px 0 10px;font-size:9px;">
+                        // 隐藏种：
+                        @foreach (var ht in hiddenTargets)
+                        {
+                            var lureDef = AlchemyRecipes.FindTargetLure(ht.TargetLureRecipeId!);
+                            var caught = Session.FishRecords.Any(r => r.FishName == ht.Name);
+                            <span class="@(caught ? "rarity-myth" : "rarity-locked")">
+                                @(caught ? ht.Name : $"???（需 {lureDef?.DisplayName ?? "?"}）")
+                            </span>
+                            @if (ht != hiddenTargets[^1])
+                            {
+                                <span> · </span>
+                            }
+                        }
+                        @if (!lureReady)
+                        {
+                            <span> — 装备对应特殊饵方可入池</span>
+                        }
+                    </div>
+                }
+                <div class="card-grid">
+                    @foreach (var fish in displayFish)
+                    {
+                        var isHidden = fish.TargetLureRecipeId is not null;
+                        var lureDef = isHidden ? AlchemyRecipes.FindTargetLure(fish.TargetLureRecipeId!) : null;
+                        var caughtHidden = isHidden && Session.FishRecords.Any(r => r.FishName == fish.Name);
+                        <div class="g-card @(isHidden ? "target-fish-card" : "")">
+                            <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity) @(isHidden && !caughtHidden ? "sprite-locked" : "")"></span></span>
+                            <span class="c-name @(isHidden ? "rarity-myth" : "")">@(isHidden && !caughtHidden ? "???" : fish.Name)</span>
+                            <span class="c-meta @(isHidden ? "rarity-myth" : RarityClass(fish.Rarity))">
+                                @(isHidden ? "神话" : RarityLabel(fish.Rarity))
+                                @(isHidden && !caughtHidden ? $" · 需 {lureDef?.DisplayName}" : $" · {fish.MinWeight}–{fish.MaxWeight} kg")
+                            </span>
+                            @if (!isHidden || caughtHidden)
+                            {
+                                <span class="c-meta">@GearCatalog.DepthLabel(fish.PreferredDepth)层 · 精明@((int)(fish.Wariness*100))% · 爆发@((int)(fish.Power*100))%</span>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (spot.FishTable.Count > previewNames.Count)
+                {
+                    <button class="g-btn" style="margin-top:8px;" @onclick="ToggleShowAllSpotFish">
+                        @(showAllSpotFish ? "收起鱼种列表" : $"查看全部 {spot.FishTable.Count} 种鱼")
+                    </button>
+                }
+                <p class="hint" style="margin-top:8px;font-size:9px;">
+                    // 抛竿费随钓点 3~42g/次 · 切线 @EconomySinks.LineRepairFee g · 高阶钓点额外耐久消耗
+                </p>
+                @if (FishingBlockMessage is not null)
+                {
+                    <p class="hint" style="margin-top:8px;">// @FishingBlockMessage</p>
+                }
+                <div class="btn-row" style="margin-top:12px;">
+                    @if (Session.FishingManager.IsFishing)
+                    {
+                        <button class="g-btn" @onclick="OnStopFishing">StopFishing()</button>
+                    }
+                    else if (Session.Player.FishingLevel < spot.RequiredLevel)
+                    {
+                        <button class="g-btn" disabled>需要钓鱼 Lv.@spot.RequiredLevel</button>
+                    }
+                    else if (spotNeedsLic && !spotHasAccess)
+                    {
+                        <button class="g-btn" disabled>需购买钓点许可证或日租</button>
+                    }
+                    else if (!Session.Loadout.MeetsGearLevel)
+                    {
+                        <button class="g-btn" disabled>装备需钓鱼 Lv.@Session.Loadout.MinGearRequiredLevel</button>
+                    }
+                    else
+                    {
+                        <button class="g-btn primary"
+                                disabled="@(Session.Player.Money < EconomySinks.CastFeeForSpot(spot.Name))"
+                                @onclick="()=>OnStartFishing.InvokeAsync(spot)">
+                            StartIdleFishing("@spot.Name" · @EconomySinks.CastFeeForSpot(spot.Name) g)
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <FishDexPanel Entries="DexEntries" Records="Session.FishRecords" />
+    @if (Session.FishingManager.LastCaughtFish is Fish last)
+    {
+        <div class="catch-line">
+            <span class="fish-sprite sp-24 sp-inline @FishSpriteClass(last.Name, last.Rarity)"></span>
+            last_catch = {
+            <span class="cname">@last.Name</span>,
+            <span class="@RarityClass(last.Rarity)">@last.Rarity</span>,
+            @last.ActualWeight kg, @last.SizePercentage%,
+            sell: <span style="color:var(--gold)">@last.SellPrice g</span>
+            }
+        </div>
+    }
+    <div id="leaderboard" class="section-tw tw" style="margin-top:12px;">
+        <div class="tw-header">
+            <span class="tw-icon green"></span>
+            LEADERBOARD.global
+            <button type="button" class="g-btn g-btn-sm" style="margin-left:auto;"
+                    disabled="@LeaderboardRefreshing"
+                    @onclick="OnRefreshLeaderboard">refresh</button>
+        </div>
+        <div class="tw-body">
+            @if (ServerFishingStats is not null)
+            {
+                <p class="hint" style="font-size:9px;margin-bottom:6px;">
+                    // 协作战报：全服累计钓获 @ServerFishingStats.TotalCatches 条 · 传说 @ServerFishingStats.LegendaryCatches 条 · 活跃钓手 @ServerFishingStats.ActiveFishers 人
+                </p>
+            }
+            @if (TopFishLeaderboard.Count > 0)
+            {
+                <div class="section-lbl" style="margin:4px 0;">最大单鱼 Top@(TopFishLeaderboard.Count)</div>
+                <div class="data-table-wrap">
+                    <table class="data-table dex-table">
+                        <thead>
+                            <tr><th>#</th><th>玩家</th><th>鱼种</th><th>体重</th></tr>
+                        </thead>
+                        <tbody>
+                            @{ int fishRank = 1; }
+                            @foreach (var entry in TopFishLeaderboard)
+                            {
+                                <tr class="@(entry.Username == Username ? "row-equipped" : "")">
+                                    <td>@fishRank</td>
+                                    <td class="td-name">@entry.Username</td>
+                                    <td>@entry.FishName</td>
+                                    <td>@entry.Weight kg</td>
+                                </tr>
+                                fishRank++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (TopLevelLeaderboard.Count > 0)
+            {
+                <div class="section-lbl" style="margin:8px 0 4px;">钓鱼等级 Top@(TopLevelLeaderboard.Count)</div>
+                <div class="data-table-wrap">
+                    <table class="data-table dex-table">
+                        <thead>
+                            <tr><th>#</th><th>玩家</th><th>Lv</th><th>累计钓获</th></tr>
+                        </thead>
+                        <tbody>
+                            @{ int lvlRank = 1; }
+                            @foreach (var entry in TopLevelLeaderboard)
+                            {
+                                <tr class="@(entry.Username == Username ? "row-equipped" : "")">
+                                    <td>@lvlRank</td>
+                                    <td class="td-name">@entry.Username</td>
+                                    <td>@entry.FishingLevel</td>
+                                    <td>@entry.TotalCatches</td>
+                                </tr>
+                                lvlRank++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (TopFishLeaderboard.Count == 0 && TopLevelLeaderboard.Count == 0)
+            {
+                <p class="empty">// 暂无排行数据 — 钓一条鱼上榜吧</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+    [Inject] private SpotLicenseService SpotLicenseService { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<string> CatBuffLines { get; set; } = [];
+    [Parameter] public IReadOnlyList<FishDexEntry> DexEntries { get; set; } = [];
+    [Parameter] public string Username { get; set; } = "";
+    [Parameter] public bool LeaderboardRefreshing { get; set; }
+    [Parameter] public string? FishingBlockMessage { get; set; }
+    [Parameter] public string? SpotLicenseMessage { get; set; }
+    [Parameter] public List<FishLeaderboardEntry> TopFishLeaderboard { get; set; } = [];
+    [Parameter] public List<LevelLeaderboardEntry> TopLevelLeaderboard { get; set; } = [];
+    [Parameter] public ServerFishingStats? ServerFishingStats { get; set; }
+    [Parameter] public Func<string, bool> HasSpotAccess { get; set; } = _ => false;
+
+    [Parameter] public EventCallback<FishingSpot> OnStartFishing { get; set; }
+    [Parameter] public EventCallback OnStopFishing { get; set; }
+    [Parameter] public EventCallback<string> OnPaySpotRental { get; set; }
+    [Parameter] public EventCallback<string> OnBuySpotPermanent { get; set; }
+    [Parameter] public EventCallback OnRefreshLeaderboard { get; set; }
+
+    private string selectedSpotKey = "";
+    private bool showAllSpotFish;
+
+    protected override void OnInitialized()
+    {
+        if (Session.FishingManager.FishingSpots.Count > 0 && string.IsNullOrEmpty(selectedSpotKey))
+            selectedSpotKey = Session.FishingManager.FishingSpots.Keys.First();
+    }
+
+    private void SelectSpot(string k)
+    {
+        selectedSpotKey = k;
+        showAllSpotFish = false;
+        RequestRender();
+    }
+
+    private void ToggleShowAllSpotFish()
+    {
+        showAllSpotFish = !showAllSpotFish;
+        RequestRender();
+    }
+}

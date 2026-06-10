@@ -1,0 +1,154 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+
+<div class="house-floor-plan">
+
+    <div class="house-floor-hud">
+        <div class="house-passive-hud">
+            <span class="hud-lbl">house.passive</span>
+            <div class="hud-buff-scroll">
+                @foreach (var line in HouseBuffs.SummaryLines.Take(4))
+                {
+                    <span class="hud-buff-chip @(line.Contains("暂无") ? "neutral" : "")">@line</span>
+                }
+                @if (HouseBuffs.SummaryLines.Count > 4)
+                {
+                    <span class="hud-buff-chip muted">+@(HouseBuffs.SummaryLines.Count - 4) more</span>
+                }
+            </div>
+        </div>
+        <div class="house-maint-tag @(MaintenanceOverdue ? "overdue" : "")" title="每日维护费">
+            <span class="maint-lbl">maint</span>
+            <span class="maint-val">@MaintenanceFee g/日</span>
+            @if (MaintenanceOverdue)
+            {
+                <span class="maint-warn">OVERDUE</span>
+            }
+        </div>
+    </div>
+
+    <div class="section-lbl house-map-lbl">house.map // 俯瞰 · 点击房间进入</div>
+
+    <div class="floor-grid">
+        @foreach (var row in PlayerHouse.RoomKeys.FloorRows)
+        {
+            <div class="floor-row">
+                @foreach (var key in row)
+                {
+                    @if (PlayerHouse.Rooms.TryGetValue(key, out var room))
+                    {
+                        var isSelected = SelectedRoomKey == key;
+                        var installed = room.Furniture.Where(f => f.IsUnlocked).ToList();
+                        <button type="button"
+                                class="floor-room @(room.IsUnlocked ? "unlocked" : "locked") @(isSelected ? "selected" : "")"
+                                @onclick="() => OnSelectRoom.InvokeAsync(key)">
+                            <span class="floor-room-label">@key</span>
+                            <span class="floor-room-sub">@room.Name</span>
+                            @if (!room.IsUnlocked)
+                            {
+                                <span class="floor-lock">🔒 @room.UnlockPrice g</span>
+                            }
+                            else
+                            {
+                                <div class="floor-furn-layer">
+                                    @foreach (var item in installed.Take(6))
+                                    {
+                                        <span class="furn-sprite sp-24 @SpriteCatalog.Furniture(item.FurnitureId)"
+                                              title="@item.Name"></span>
+                                    }
+                                    @if (installed.Count > 6)
+                                    {
+                                        <span class="floor-furn-more">+@(installed.Count - 6)</span>
+                                    }
+                                </div>
+                                @if (isSelected && ShowCat)
+                                {
+                                    <div class="floor-cat">
+                                        <CatSprite State="@CatState" Size="64" />
+                                    </div>
+                                }
+                            }
+                            <span class="floor-room-corner"></span>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="floor-room floor-room-missing" title="房间数据缺失">
+                            <span class="floor-room-label">@key</span>
+                            <span class="floor-room-sub hint">// 数据缺失</span>
+                        </div>
+                    }
+                }
+            </div>
+        }
+        @{
+            var gardenKey = PlayerHouse.RoomKeys.Garden;
+        }
+        @if (PlayerHouse.Rooms.TryGetValue(gardenKey, out var garden))
+        {
+            var gardenSelected = SelectedRoomKey == gardenKey;
+            <div class="floor-row floor-row-garden">
+                <button type="button"
+                        class="floor-room floor-room-wide @(garden.IsUnlocked ? "unlocked" : "locked") @(gardenSelected ? "selected" : "")"
+                        @onclick="() => OnSelectRoom.InvokeAsync(gardenKey)">
+                    <span class="floor-room-label">@gardenKey</span>
+                    <span class="floor-room-sub">@garden.Name</span>
+                    @if (!garden.IsUnlocked)
+                    {
+                        <span class="floor-lock">🔒 @garden.UnlockPrice g</span>
+                    }
+                    else
+                    {
+                        <div class="floor-furn-layer">
+                            @foreach (var item in garden.Furniture.Where(f => f.IsUnlocked))
+                            {
+                                <span class="furn-sprite sp-24 @SpriteCatalog.Furniture(item.FurnitureId)"
+                                      title="@item.Name"></span>
+                            }
+                        </div>
+                        @if (gardenSelected && ShowCat)
+                        {
+                            <div class="floor-cat">
+                                <CatSprite State="@CatState" Size="64" />
+                            </div>
+                        }
+                    }
+                    <span class="floor-room-corner"></span>
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="floor-row floor-row-garden">
+                <div class="floor-room floor-room-wide floor-room-missing">
+                    <span class="floor-room-label">@gardenKey</span>
+                    <span class="floor-room-sub hint">// 数据缺失</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="house-floor-meta">
+        <span>rooms @UnlockedRooms/@TotalRooms</span>
+        <span>·</span>
+        <span>furniture @UnlockedFurniture/@TotalFurniture</span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerHouse PlayerHouse { get; set; } = null!;
+    [Parameter] public string SelectedRoomKey { get; set; } = "";
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public int MaintenanceFee { get; set; }
+    [Parameter] public bool MaintenanceOverdue { get; set; }
+    [Parameter] public string CatState { get; set; } = "content";
+    [Parameter] public bool ShowCat { get; set; } = true;
+    [Parameter] public EventCallback<string> OnSelectRoom { get; set; }
+
+    private int TotalRooms => PlayerHouse.Rooms.Count;
+    private int UnlockedRooms => PlayerHouse.Rooms.Values.Count(r => r.IsUnlocked);
+    private int TotalFurniture => PlayerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
+    private int UnlockedFurniture => PlayerHouse.Rooms.Values
+        .SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);
+
+}

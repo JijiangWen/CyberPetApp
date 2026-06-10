@@ -1,0 +1,63 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@using static CyberPetApp.Components.Home.HomeUiHelpers
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="hammer" /> WORK.proc · @WorkingPlace.Name</span>
+        <span class="badge work @(Session.Player!.IsWorking?"on":"off")">
+            @(Session.Player.IsWorking ? "RUNNING" : "STOPPED")
+        </span>
+    </div>
+
+    <div class="section-lbl">jobs // 切换工种</div>
+    <div class="sub-tab-bar">
+        @foreach (WorkJobType job in Enum.GetValues<WorkJobType>())
+        {
+            bool canSelect = WorkingPlace.CanSelectJob(job, Session.Player, Session.Cat);
+            bool needsFee = WorkingPlace.NeedsUnlockFee(job, Session.Player);
+            int unlockFee = EconomySinks.WorkJobUnlockFee(job);
+            <button class="sub-tab @(WorkingPlace.Job==job?"active":"") @(!canSelect?"locked":"")"
+                    disabled="@(!canSelect || Session.Player.IsWorking || (needsFee && Session.Player.Money < unlockFee))"
+                    @onclick="() => OnSelectJob.InvokeAsync(job)">
+                @WorkingPlace.JobLabel(job)@(!canSelect ? $" 🔒{WorkingPlace.JobLockReason(job)}" : needsFee ? $" · {unlockFee}g" : "")
+            </button>
+        }
+    </div>
+
+    <div class="work-grid">
+        <div>
+            <div class="kv-row"><span class="k">income</span><span class="v"><PixelIcon Name="coin" /> +@WorkGoldPerTick / tick</span></div>
+            @if (WorkingPlace.HappinessPerTick > 0)
+            {
+                <div class="kv-row"><span class="k">bonus</span><span class="v">猫幸福 +@WorkingPlace.HappinessPerTick / tick</span></div>
+            }
+            <div class="kv-row"><span class="k">balance</span><span class="v"><span class="item-sprite sp-24 sp-inline item-pouch"></span> @Session.Player.Money g</span></div>
+            <div class="kv-row"><span class="k">摊位券</span><span class="v">×@StallTickets · 挂单上限 +@Math.Min(StallTickets, MarketService.MaxTicketBonus)</span></div>
+            <div class="s-row" style="margin-top:6px;">
+                <span class="s-label">ticket</span>
+                <code class="abar abar-energy">@ABar(WorkingPlace.WorkTickCount, StallTicketTicks)</code>
+                <span class="s-val" style="font-size:10px;">@WorkingPlace.WorkTickCount/@StallTicketTicks tick</span>
+            </div>
+            <p class="hint" style="margin-top:8px;">// @WorkJobHint · 非工地首次切换需培训费（猫咖 @EconomySinks.CatCafeUnlockFee g / 鱼市 @EconomySinks.FishMarketPorterUnlockFee g）</p>
+        </div>
+        <button class="g-btn @(Session.Player.IsWorking?"":"primary")" style="height:36px;"
+                @onclick="OnToggleWork">
+            @(Session.Player.IsWorking ? "kill(work)" : "exec(work)")
+        </button>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public WorkingPlace WorkingPlace { get; set; } = null!;
+    [Parameter] public int WorkGoldPerTick { get; set; }
+    [Parameter] public int StallTicketTicks { get; set; }
+    [Parameter] public int StallTickets { get; set; }
+    [Parameter] public string WorkJobHint { get; set; } = "";
+
+    [Parameter] public EventCallback<WorkJobType> OnSelectJob { get; set; }
+    [Parameter] public EventCallback OnToggleWork { get; set; }
+}

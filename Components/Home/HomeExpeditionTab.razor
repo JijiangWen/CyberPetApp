@@ -1,0 +1,14 @@
+@using CyberPetApp.Models
+@inherits HomeTabBase
+
+<ExpeditionPanel Player="Session.Player!"
+                 Cat="Session.Cat"
+                 HouseBuffs="HouseBuffs"
+                 OnChanged="OnChanged" />
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+}

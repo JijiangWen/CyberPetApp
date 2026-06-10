@@ -1,0 +1,104 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="rod" /> GEAR.module</span>
+        <span class="panel-meta">balance: @Session.Player!.Money g · fishing Lv.@Session.Player.FishingLevel</span>
+    </div>
+    <div class="sub-tab-bar">
+        <button type="button" class="sub-tab @(gearSubTab=="loadout"?"active":"")" @onclick="SelectLoadoutTab">
+            gear.loadout · 当前装配
+        </button>
+        <button type="button" class="sub-tab @(gearSubTab=="shop"?"active":"")" @onclick="SelectShopTab">
+            gear.shop · 渔具商店
+        </button>
+    </div>
+    @if (gearSubTab == "loadout")
+    {
+        <GearLoadoutPanel Player="Session.Player"
+                          Loadout="Session.Loadout"
+                          PlayerGems="PlayerGems"
+                          PlayerTargetLures="PlayerTargetLures"
+                          Message="GearMessage"
+                          OnSocketGem="OnSocketGem"
+                          OnEquipTargetLure="OnEquipTargetLure"
+                          OnUnequipTargetLure="OnUnequipTargetLure"
+                          OnGoAlchemy="OnGoAlchemy"
+                          OnGoShop="GoGearShop" />
+    }
+    else
+    {
+        <GearShopPanel Player="Session.Player"
+                       CatLevel="Session.Cat.CatLevel"
+                       DexEntries="DexEntries"
+                       SpotLicenses="Session.SpotLicenses"
+                       Rods="Rods"
+                       Reels="Reels"
+                       Lines="Lines"
+                       Lures="Lures"
+                       Message="GearMessage"
+                       OnGoAlchemy="OnGoAlchemy"
+                       OnBuyRod="OnBuyRod"
+                       OnBuyReel="OnBuyReel"
+                       OnBuyLine="OnBuyLine"
+                       OnBuyLure="OnBuyLure"
+                       OnEquipRod="OnEquipRod"
+                       OnEquipReel="OnEquipReel"
+                       OnEquipLine="OnEquipLine"
+                       OnEquipLure="OnEquipLure"
+                       OnRepairRod="OnRepairRod"
+                       OnRepairReel="OnRepairReel"
+                       OnRepairLine="OnRepairLine" />
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<FishDexEntry> DexEntries { get; set; } = [];
+    [Parameter] public List<PlayerGem> PlayerGems { get; set; } = [];
+    [Parameter] public List<PlayerTargetLure> PlayerTargetLures { get; set; } = [];
+    [Parameter] public List<FishingRod> Rods { get; set; } = [];
+    [Parameter] public List<FishingReel> Reels { get; set; } = [];
+    [Parameter] public List<FishingLine> Lines { get; set; } = [];
+    [Parameter] public List<FishingLure> Lures { get; set; } = [];
+    [Parameter] public string? GearMessage { get; set; }
+
+    [Parameter] public EventCallback<(Guid GemId, GearGemSlot Slot)> OnSocketGem { get; set; }
+    [Parameter] public EventCallback<Guid> OnEquipTargetLure { get; set; }
+    [Parameter] public EventCallback OnUnequipTargetLure { get; set; }
+    [Parameter] public EventCallback OnGoAlchemy { get; set; }
+    [Parameter] public EventCallback<RodSpec> OnBuyRod { get; set; }
+    [Parameter] public EventCallback<ReelSpec> OnBuyReel { get; set; }
+    [Parameter] public EventCallback<LineSpec> OnBuyLine { get; set; }
+    [Parameter] public EventCallback<LureSpec> OnBuyLure { get; set; }
+    [Parameter] public EventCallback<FishingRod> OnEquipRod { get; set; }
+    [Parameter] public EventCallback<FishingReel> OnEquipReel { get; set; }
+    [Parameter] public EventCallback<FishingLine> OnEquipLine { get; set; }
+    [Parameter] public EventCallback<FishingLure> OnEquipLure { get; set; }
+    [Parameter] public EventCallback<FishingRod> OnRepairRod { get; set; }
+    [Parameter] public EventCallback<FishingReel> OnRepairReel { get; set; }
+    [Parameter] public EventCallback<FishingLine> OnRepairLine { get; set; }
+
+    private string gearSubTab = "loadout";
+
+    private void SelectLoadoutTab()
+    {
+        gearSubTab = "loadout";
+        RequestRender();
+    }
+
+    private void SelectShopTab()
+    {
+        gearSubTab = "shop";
+        RequestRender();
+    }
+
+    private void GoGearShop()
+    {
+        gearSubTab = "shop";
+        RequestRender();
+    }
+}

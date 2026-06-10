@@ -1,0 +1,22 @@
+@using CyberPetApp.Models
+@inherits HomeTabBase
+
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="shop" /> SHOP.market · 生活商店</span>
+        <span class="panel-meta">balance: @Session.Player!.Money g</span>
+    </div>
+    <LifeShopPanel Player="Session.Player"
+                   ShopItems="Shop.ShopItems"
+                   Backpack="Session.Player.Backpack"
+                   Message="Message"
+                   OnBuyItem="OnBuyItem" />
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public Shop Shop { get; set; } = null!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback<ShopItem> OnBuyItem { get; set; }
+}

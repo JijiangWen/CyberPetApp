@@ -1,0 +1,367 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+
+<div class="gear-loadout-wrap">
+    @if (!Loadout.MeetsGearLevel)
+    {
+        <p class="hint gear-loadout-warn">// 装备等级不足：需要钓鱼 Lv.@Loadout.MinGearRequiredLevel（当前 Lv.@Loadout.FishingLevel）</p>
+    }
+
+    <div class="section-lbl">loadout // 当前装配 · 四槽位（竿|轮|线|饵）</div>
+    <div class="gear-loadout-grid gear-loadout-grid-4">
+        @{
+            var rodGem = GetSocketedGem(GearGemSlot.Rod);
+            var rodLow = Loadout.RodDurability < EconomySinks.DurabilityLowThreshold;
+            var rodPct = Math.Clamp(Loadout.RodDurability, 0, 100);
+        }
+        <div class="slot-card slot-rod section-tw tw">
+            <div class="tw-header"><span class="tw-icon green"></span>鱼竿 // 🎣 @Loadout.RodName</div>
+            <div class="tw-body slot-card-body">
+                <div class="kv-row"><span class="k">敏锐</span><span class="v">@Loadout.Sensitivity.ToString("0.#")</span></div>
+                <div class="kv-row"><span class="k">抛投</span><span class="v">@Loadout.CastRange</span></div>
+                <div class="kv-row"><span class="k">钓重</span><span class="v">@Loadout.MaxStrength kg</span></div>
+                <div class="kv-row">
+                    <span class="k">耐久</span>
+                    <span class="v">
+                        <div class="durability-bar @(rodLow ? "low" : "")"><div class="durability-fill" style="width:@(rodPct)%"></div></div>
+                        @Loadout.RodDurability/100
+                    </span>
+                </div>
+                <div class="gem-socket inline @(rodGem is not null ? "filled" : "empty")">
+                    @if (rodGem is not null)
+                    {
+                        <span>💎 @AlchemyRecipes.GemTypeLabel(rodGem.GemType) +@rodGem.BonusValue.ToString("P1")</span>
+                    }
+                    else { <span>宝石槽 · 空</span> }
+                </div>
+            </div>
+        </div>
+
+        @{
+            var reelGem = GetSocketedGem(GearGemSlot.Reel);
+            var reelLow = Loadout.ReelDurability < EconomySinks.DurabilityLowThreshold;
+            var reelPct = Math.Clamp(Loadout.ReelDurability, 0, 100);
+        }
+        <div class="slot-card slot-reel section-tw tw">
+            <div class="tw-header"><span class="tw-icon green"></span>卷线器 // ⚙ @Loadout.ReelName</div>
+            <div class="tw-body slot-card-body">
+                <div class="kv-row"><span class="k">卸力</span><span class="v">@Loadout.DragPower.ToString("0.#")</span></div>
+                <div class="kv-row"><span class="k">顺滑</span><span class="v">@((int)(Loadout.Smoothness * 100))%</span></div>
+                <div class="kv-row"><span class="k">线杯</span><span class="v">@Loadout.LineCapacity kg</span></div>
+                <div class="kv-row"><span class="k">速比</span><span class="v">@Loadout.GearRatio.ToString("0.#")</span></div>
+                <div class="kv-row">
+                    <span class="k">耐久</span>
+                    <span class="v">
+                        <div class="durability-bar @(reelLow ? "low" : "")"><div class="durability-fill" style="width:@(reelPct)%"></div></div>
+                        @Loadout.ReelDurability/100
+                    </span>
+                </div>
+                <div class="gem-socket inline @(reelGem is not null ? "filled" : "empty")">
+                    @if (reelGem is not null)
+                    {
+                        <span>💎 @AlchemyRecipes.GemTypeLabel(reelGem.GemType) +@reelGem.BonusValue.ToString("P1")</span>
+                    }
+                    else { <span>宝石槽 · 空</span> }
+                </div>
+            </div>
+        </div>
+
+        @{
+            var lineGem = GetSocketedGem(GearGemSlot.Line);
+            var lineLow = Loadout.LineDurability < EconomySinks.DurabilityLowThreshold;
+            var linePct = Math.Clamp(Loadout.LineDurability, 0, 100);
+        }
+        <div class="slot-card slot-line section-tw tw">
+            <div class="tw-header"><span class="tw-icon green"></span>鱼线 // 🧵 @Loadout.LineName</div>
+            <div class="tw-body slot-card-body">
+                <div class="kv-row"><span class="k">强度</span><span class="v">@Loadout.LineStrength kg · 承重下限 @Loadout.EffectiveWeightLimit.ToString("0.#") kg</span></div>
+                <div class="kv-row"><span class="k">敏锐</span><span class="v">@Loadout.LineSensitivity.ToString("0.#")</span></div>
+                <div class="kv-row"><span class="k">隐蔽</span><span class="v">@((int)(Loadout.LineStealth * 100))%</span></div>
+                <div class="kv-row"><span class="k">耐磨</span><span class="v">@((int)(Loadout.AbrasionResistance * 100))%</span></div>
+                <div class="kv-row"><span class="k">水层</span><span class="v">@GearCatalog.DepthLabel(Loadout.LineDepth)层</span></div>
+                <div class="kv-row">
+                    <span class="k">耐久</span>
+                    <span class="v">
+                        <div class="durability-bar @(lineLow ? "low" : "")"><div class="durability-fill" style="width:@(linePct)%"></div></div>
+                        @Loadout.LineDurability/100
+                    </span>
+                </div>
+                <div class="gem-socket inline @(lineGem is not null ? "filled" : "empty")">
+                    @if (lineGem is not null)
+                    {
+                        <span>💎 @AlchemyRecipes.GemTypeLabel(lineGem.GemType) +@lineGem.BonusValue.ToString("P1")</span>
+                    }
+                    else { <span>宝石槽 · 空</span> }
+                </div>
+            </div>
+        </div>
+
+        @{
+            var lureGem = GetSocketedGem(GearGemSlot.Lure);
+            var lureMax = GearCatalog.FindLure(Loadout.LureName)?.MaxDurability ?? 20;
+            var lurePct = lureMax > 0 ? Math.Clamp((int)Math.Round(100.0 * Loadout.LureDurabilityRemaining / lureMax), 0, 100) : 0;
+            var lureLow = Loadout.LureDurabilityRemaining <= lureMax / 4;
+        }
+        <div class="slot-card slot-lure section-tw tw">
+            <div class="tw-header"><span class="tw-icon green"></span>拟饵 // 🪱 @Loadout.LureName</div>
+            <div class="tw-body slot-card-body">
+                <div class="kv-row"><span class="k">吸引</span><span class="v">@((int)(Loadout.Attraction * 100))%</span></div>
+                <div class="kv-row"><span class="k">品质+</span><span class="v">+@((int)(Loadout.RarityBonus * 100))%</span></div>
+                <div class="kv-row"><span class="k">水层</span><span class="v">@GearCatalog.DepthLabel(Loadout.LureDepth)层</span></div>
+                <div class="kv-row"><span class="k">库存</span><span class="v">×@Loadout.LureQuantity</span></div>
+                <div class="kv-row">
+                    <span class="k">耐久</span>
+                    <span class="v">
+                        <div class="durability-bar @(lureLow ? "low" : "")"><div class="durability-fill" style="width:@(lurePct)%"></div></div>
+                        @Loadout.LureDurabilityRemaining/@lureMax
+                    </span>
+                </div>
+                <div class="gem-socket inline @(lureGem is not null ? "filled" : "empty")">
+                    @if (lureGem is not null)
+                    {
+                        <span>💎 @AlchemyRecipes.GemTypeLabel(lureGem.GemType) +@lureGem.BonusValue.ToString("P1")</span>
+                    }
+                    else { <span>宝石槽 · 空</span> }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-lbl" style="margin-top:14px;">gem.sockets // 宝石总览</div>
+    <div class="gem-socket-row">
+        @foreach (var slot in _allSlots)
+        {
+            var gem = GetSocketedGem(slot);
+            <div class="gem-socket @(gem is not null ? "filled" : "empty")">
+                <span class="gem-socket-label">@AlchemyRecipes.SlotLabel(slot)</span>
+                @if (gem is not null)
+                {
+                    <span class="gem-socket-gem">💎 @AlchemyRecipes.GemTypeLabel(gem.GemType)</span>
+                    <span class="gem-socket-bonus">+@gem.BonusValue.ToString("P1")</span>
+                }
+                else { <span class="gem-socket-empty">空槽</span> }
+            </div>
+        }
+    </div>
+    <p class="hint" style="font-size:9px;margin-top:4px;">
+        // 汇总：抓口 @Loadout.GemBonuses.HookBonus.ToString("P1") · 丝导 @Loadout.GemBonuses.LineBonus.ToString("P1") · 卸力 @Loadout.GemBonuses.DragBonus.ToString("P1") · 幸运 @Loadout.GemBonuses.LuckBonus.ToString("P1") · 钓重 @Loadout.GemBonuses.WeightBonus.ToString("P1")
+    </p>
+
+    @{
+        var looseGems = PlayerGems.Where(g => !g.IsSocketed).ToList();
+    }
+    @if (looseGems.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:10px;">gem.inv // 背包未镶嵌 · @EconomySinks.AlchemySocketFee g/次</div>
+        <div class="card-grid gem-inv-grid">
+            @foreach (var gem in looseGems)
+            {
+                var slot = AlchemyRecipes.GemRecipes.First(r => r.GemType == gem.GemType).SocketSlot;
+                var hasOld = GetSocketedGem(slot) is not null;
+                <button type="button" class="g-card gem-inv-card @(Player.Money >= EconomySinks.AlchemySocketFee ? "unlocked" : "")"
+                        disabled="@(Player.Money < EconomySinks.AlchemySocketFee)"
+                        @onclick="() => TrySocket(gem)">
+                    <span class="c-name">💎 @AlchemyRecipes.GemTypeLabel(gem.GemType) +@gem.BonusValue.ToString("P1")</span>
+                    <span class="c-meta">→ @AlchemyRecipes.SlotLabel(slot)</span>
+                    @if (hasOld) { <span class="c-meta cmp-down">⚠ 替换时旧宝石销毁</span> }
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="hint" style="margin-top:8px;">// 无待镶嵌宝石 — <button type="button" class="link-btn" @onclick="OnGoAlchemy">→ 炼金 alchemy.lab</button></p>
+    }
+
+    @if (_showReplaceConfirm && _pendingGem is not null && _pendingSlot is not null)
+    {
+        var old = GetSocketedGem(_pendingSlot.Value)!;
+        <div class="gem-replace-confirm section-tw tw">
+            <div class="tw-header"><span class="tw-icon gold"></span>socket.confirm // 替换确认</div>
+            <div class="tw-body">
+                <p class="hint" style="margin:0 0 8px;">
+                    旧宝石【@AlchemyRecipes.GemTypeLabel(old.GemType) +@old.BonusValue.ToString("P1")】将被<strong>永久销毁</strong>，
+                    镶嵌【@AlchemyRecipes.GemTypeLabel(_pendingGem.GemType) +@_pendingGem.BonusValue.ToString("P1")】至 @(AlchemyRecipes.SlotLabel(_pendingSlot.Value))？
+                </p>
+                <div class="btn-row">
+                    <button type="button" class="g-btn primary" @onclick="ConfirmPendingSocket">确认镶嵌</button>
+                    <button type="button" class="g-btn" @onclick="CancelPendingSocket">取消</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="section-lbl" style="margin-top:14px;">target.lure // 特殊路亚饵</div>
+    <div class="section-tw tw target-lure-box">
+        <div class="tw-header"><span class="tw-icon green"></span>special.bait</div>
+        <div class="tw-body">
+            @if (Loadout.HasActiveTargetLure)
+            {
+                var def = AlchemyRecipes.FindTargetLure(Loadout.ActiveTargetLureRecipeId!);
+                <div class="kv-row"><span class="k">激活</span><span class="v">🪝 @(def?.DisplayName ?? Loadout.ActiveTargetLureRecipeId)</span></div>
+                <div class="kv-row"><span class="k">剩余</span><span class="v">@Loadout.ActiveTargetLureUses 次</span></div>
+                <div class="kv-row"><span class="k">目标鱼</span><span class="v">@(def?.TargetFishName ?? "?")</span></div>
+                <div class="kv-row"><span class="k">有效钓点</span><span class="v">[@(def?.SpotName ?? "?")]</span></div>
+                <button type="button" class="g-btn" style="margin-top:6px;" @onclick="OnUnequipTargetLure">卸下特殊饵</button>
+            }
+            else
+            {
+                <p class="hint" style="margin:0;">// 未装备特殊饵</p>
+            }
+            @{
+                var spareLures = PlayerTargetLures.Where(t => t.RemainingUses > 0 && !t.IsEquipped).ToList();
+            }
+            @if (spareLures.Count > 0)
+            {
+                <div class="section-lbl" style="margin:10px 0 6px;font-size:9px;">切换库存</div>
+                @foreach (var tl in spareLures)
+                {
+                    var def = AlchemyRecipes.FindTargetLure(tl.RecipeId);
+                    <button type="button" class="g-btn primary" style="margin:0 6px 6px 0;"
+                            @onclick="() => OnEquipTargetLure.InvokeAsync(tl.Id)">
+                        equip(@(def?.DisplayName ?? tl.RecipeId) · @(tl.RemainingUses)次)
+                    </button>
+                }
+            }
+            else if (!Loadout.HasActiveTargetLure)
+            {
+                <p class="hint" style="margin:6px 0 0;font-size:9px;">// 在 <button type="button" class="link-btn" @onclick="OnGoAlchemy">alchemy.lab</button> 炼制</p>
+            }
+        </div>
+    </div>
+
+    @{
+        var rodCmp = GetRodCompare();
+        var reelCmp = GetReelCompare();
+        var lineCmp = GetLineCompare();
+        var lureCmp = GetLureCompare();
+    }
+    @if (rodCmp.next is not null || reelCmp.next is not null || lineCmp.next is not null || lureCmp.next is not null)
+    {
+        <div class="section-lbl" style="margin-top:14px;">compare // 与商店下一档对比</div>
+        <div class="gear-compare-panel">
+            @if (rodCmp.next is not null && rodCmp.current is not null)
+            {
+                <div class="gear-compare-block">
+                    <span class="gear-compare-title">鱼竿 → @rodCmp.next.Name</span>
+                    <span class="gear-compare-stat"><span class="k">敏锐</span> @rodCmp.current.Sensitivity.ToString("0.#") → @rodCmp.next.Sensitivity.ToString("0.#") <span class="@CmpClass(rodCmp.current.Sensitivity, rodCmp.next.Sensitivity)">@CmpArrow(rodCmp.current.Sensitivity, rodCmp.next.Sensitivity)</span></span>
+                    <span class="gear-compare-stat"><span class="k">抛投</span> @rodCmp.current.CastRange → @rodCmp.next.CastRange <span class="@CmpClass(rodCmp.current.CastRange, rodCmp.next.CastRange)">@CmpArrow(rodCmp.current.CastRange, rodCmp.next.CastRange)</span></span>
+                    <span class="gear-compare-stat"><span class="k">钓重</span> @rodCmp.current.MaxStrength.ToString("0.#") → @rodCmp.next.MaxStrength.ToString("0.#") <span class="@CmpClass(rodCmp.current.MaxStrength, rodCmp.next.MaxStrength)">@CmpArrow(rodCmp.current.MaxStrength, rodCmp.next.MaxStrength)</span></span>
+                </div>
+            }
+            @if (reelCmp.next is not null && reelCmp.current is not null)
+            {
+                <div class="gear-compare-block">
+                    <span class="gear-compare-title">卷线器 → @reelCmp.next.Name</span>
+                    <span class="gear-compare-stat"><span class="k">卸力</span> @reelCmp.current.DragPower.ToString("0.#") → @reelCmp.next.DragPower.ToString("0.#") <span class="@CmpClass(reelCmp.current.DragPower, reelCmp.next.DragPower)">@CmpArrow(reelCmp.current.DragPower, reelCmp.next.DragPower)</span></span>
+                    <span class="gear-compare-stat"><span class="k">顺滑</span> @((int)(reelCmp.current.Smoothness * 100))% → @((int)(reelCmp.next.Smoothness * 100))% <span class="@CmpClass(reelCmp.current.Smoothness, reelCmp.next.Smoothness)">@CmpArrow(reelCmp.current.Smoothness, reelCmp.next.Smoothness)</span></span>
+                    <span class="gear-compare-stat"><span class="k">线杯</span> @reelCmp.current.LineCapacity.ToString("0.#") → @reelCmp.next.LineCapacity.ToString("0.#") <span class="@CmpClass(reelCmp.current.LineCapacity, reelCmp.next.LineCapacity)">@CmpArrow(reelCmp.current.LineCapacity, reelCmp.next.LineCapacity)</span></span>
+                    <span class="gear-compare-stat"><span class="k">速比</span> @reelCmp.current.GearRatio.ToString("0.#") → @reelCmp.next.GearRatio.ToString("0.#") <span class="@CmpClass(reelCmp.current.GearRatio, reelCmp.next.GearRatio)">@CmpArrow(reelCmp.current.GearRatio, reelCmp.next.GearRatio)</span></span>
+                </div>
+            }
+            @if (lineCmp.next is not null && lineCmp.current is not null)
+            {
+                <div class="gear-compare-block">
+                    <span class="gear-compare-title">鱼线 → @lineCmp.next.Name</span>
+                    <span class="gear-compare-stat"><span class="k">强度</span> @lineCmp.current.LineStrength.ToString("0.#") → @lineCmp.next.LineStrength.ToString("0.#") <span class="@CmpClass(lineCmp.current.LineStrength, lineCmp.next.LineStrength)">@CmpArrow(lineCmp.current.LineStrength, lineCmp.next.LineStrength)</span></span>
+                    <span class="gear-compare-stat"><span class="k">敏锐</span> @lineCmp.current.LineSensitivity.ToString("0.#") → @lineCmp.next.LineSensitivity.ToString("0.#") <span class="@CmpClass(lineCmp.current.LineSensitivity, lineCmp.next.LineSensitivity)">@CmpArrow(lineCmp.current.LineSensitivity, lineCmp.next.LineSensitivity)</span></span>
+                    <span class="gear-compare-stat"><span class="k">隐蔽</span> @((int)(lineCmp.current.LineStealth * 100))% → @((int)(lineCmp.next.LineStealth * 100))% <span class="@CmpClass(lineCmp.current.LineStealth, lineCmp.next.LineStealth)">@CmpArrow(lineCmp.current.LineStealth, lineCmp.next.LineStealth)</span></span>
+                    <span class="gear-compare-stat"><span class="k">耐磨</span> @((int)(lineCmp.current.AbrasionResistance * 100))% → @((int)(lineCmp.next.AbrasionResistance * 100))% <span class="@CmpClass(lineCmp.current.AbrasionResistance, lineCmp.next.AbrasionResistance)">@CmpArrow(lineCmp.current.AbrasionResistance, lineCmp.next.AbrasionResistance)</span></span>
+                </div>
+            }
+            @if (lureCmp.next is not null && lureCmp.current is not null)
+            {
+                <div class="gear-compare-block">
+                    <span class="gear-compare-title">拟饵 → @lureCmp.next.Name</span>
+                    <span class="gear-compare-stat"><span class="k">吸引</span> @((int)(lureCmp.current.Attraction * 100))% → @((int)(lureCmp.next.Attraction * 100))% <span class="@CmpClass(lureCmp.current.Attraction, lureCmp.next.Attraction)">@CmpArrow(lureCmp.current.Attraction, lureCmp.next.Attraction)</span></span>
+                    <span class="gear-compare-stat"><span class="k">品质+</span> @((int)(lureCmp.current.RarityBonus * 100))% → @((int)(lureCmp.next.RarityBonus * 100))% <span class="@CmpClass(lureCmp.current.RarityBonus, lureCmp.next.RarityBonus)">@CmpArrow(lureCmp.current.RarityBonus, lureCmp.next.RarityBonus)</span></span>
+                </div>
+            }
+        </div>
+        <p class="hint" style="font-size:9px;margin-top:4px;">// <span class="cmp-up">↑</span> 优于当前 · <span class="cmp-down">↓</span> 低于当前</p>
+    }
+
+    <div class="gear-loadout-links">
+        <button type="button" class="link-btn" @onclick="OnGoAlchemy">→ 炼金 alchemy.lab</button>
+        <button type="button" class="link-btn" @onclick="OnGoShop">→ 渔具商店 gear.shop</button>
+    </div>
+
+    @if (Message is not null)
+    {
+        <p class="hint" style="margin-top:8px;">// @Message</p>
+    }
+</div>
+
+@code {
+    private static readonly GearGemSlot[] _allSlots = [GearGemSlot.Rod, GearGemSlot.Reel, GearGemSlot.Line, GearGemSlot.Lure];
+
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+    [Parameter, EditorRequired] public FishingLoadout Loadout { get; set; } = null!;
+    [Parameter] public List<PlayerGem> PlayerGems { get; set; } = [];
+    [Parameter] public List<PlayerTargetLure> PlayerTargetLures { get; set; } = [];
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback<(Guid GemId, GearGemSlot Slot)> OnSocketGem { get; set; }
+    [Parameter] public EventCallback<Guid> OnEquipTargetLure { get; set; }
+    [Parameter] public EventCallback OnUnequipTargetLure { get; set; }
+    [Parameter] public EventCallback OnGoAlchemy { get; set; }
+    [Parameter] public EventCallback OnGoShop { get; set; }
+
+    private PlayerGem? _pendingGem;
+    private GearGemSlot? _pendingSlot;
+    private bool _showReplaceConfirm;
+
+    private PlayerGem? GetSocketedGem(GearGemSlot slot) =>
+        PlayerGems.FirstOrDefault(g => g.IsSocketed && g.SocketedSlot == slot);
+
+    private void TrySocket(PlayerGem gem)
+    {
+        var slot = AlchemyRecipes.GemRecipes.First(r => r.GemType == gem.GemType).SocketSlot;
+        if (GetSocketedGem(slot) is not null)
+        {
+            _pendingGem = gem;
+            _pendingSlot = slot;
+            _showReplaceConfirm = true;
+        }
+        else
+            _ = OnSocketGem.InvokeAsync((gem.Id, slot));
+    }
+
+    private async Task ConfirmPendingSocket()
+    {
+        if (_pendingGem is null || _pendingSlot is null) return;
+        await OnSocketGem.InvokeAsync((_pendingGem.Id, _pendingSlot.Value));
+        CancelPendingSocket();
+    }
+
+    private void CancelPendingSocket()
+    {
+        _pendingGem = null;
+        _pendingSlot = null;
+        _showReplaceConfirm = false;
+    }
+
+    private (RodSpec? current, RodSpec? next) GetRodCompare() =>
+        CatalogCompare(GearCatalog.Rods, Loadout.RodName, r => r.Name);
+
+    private (ReelSpec? current, ReelSpec? next) GetReelCompare() =>
+        CatalogCompare(GearCatalog.Reels, Loadout.ReelName, r => r.Name);
+
+    private (LineSpec? current, LineSpec? next) GetLineCompare() =>
+        CatalogCompare(GearCatalog.Lines, Loadout.LineName, l => l.Name);
+
+    private (LureSpec? current, LureSpec? next) GetLureCompare() =>
+        CatalogCompare(GearCatalog.Lures, Loadout.LureName, l => l.Name);
+
+    private static (T? current, T? next) CatalogCompare<T>(List<T> list, string name, Func<T, string> getName)
+    {
+        var idx = list.FindIndex(x => getName(x) == name);
+        if (idx < 0) return (default, idx + 1 < list.Count ? list[idx + 1] : default);
+        return (list[idx], idx + 1 < list.Count ? list[idx + 1] : default);
+    }
+
+    private static string CmpClass(double cur, double nxt) =>
+        nxt > cur ? "cmp-up" : nxt < cur ? "cmp-down" : "cmp-same";
+
+    private static string CmpArrow(double cur, double nxt) =>
+        nxt > cur ? "↑" : nxt < cur ? "↓" : "=";
+}

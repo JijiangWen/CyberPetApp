@@ -1,0 +1,363 @@
+@using CyberPetApp.Models
+
+@using CyberPetApp.Services
+
+
+
+<div class="care-sidebar">
+
+
+
+    <!-- CyberCat -->
+
+    <div class="tw care-module">
+
+        <div class="tw-header">
+
+            <span class="tw-icon"></span>
+
+            <PixelIcon Name="cat" />
+
+            CYBERCAT.status
+
+        </div>
+
+        <div class="tw-body">
+
+            <div class="pc-stage">
+
+                <CatSprite State="@Vitals.CatState" />
+
+            </div>
+
+
+
+            <div style="font-size:11px;color:#8b949e;margin-bottom:8px;text-align:center;">
+
+                <span style="color:#e6edf3;">@Vitals.Name</span>
+
+                &nbsp;·&nbsp;
+
+                <span style="color:#58a6ff;">Lv.@Vitals.CatLevel</span>
+
+                &nbsp;·&nbsp;
+
+                <span style="color:#bc8cff;">@Vitals.CatMoodText</span>
+
+            </div>
+
+
+
+            <div class="s-row">
+
+                <span class="s-label">cat.xp</span>
+
+                <code class="abar abar-energy">@ProgressBar(Vitals.CatXp, Vitals.XpToNext)</code>
+
+                <span class="s-val" style="font-size:10px;">@Vitals.CatXp/@Vitals.XpToNext</span>
+
+            </div>
+
+
+
+            <div class="tw-div"></div>
+
+
+
+            <div class="s-row">
+
+                <span class="s-label">hunger</span>
+
+                <code class="abar abar-hunger">@ABar(Vitals.Hunger)</code>
+
+                <span class="s-val">@Vitals.Hunger</span>
+
+            </div>
+
+            <div class="s-row">
+
+                <span class="s-label">thirst</span>
+
+                <code class="abar abar-thirst">@ABar(Vitals.Thirst)</code>
+
+                <span class="s-val">@Vitals.Thirst</span>
+
+            </div>
+
+            <div class="s-row">
+
+                <span class="s-label">energy</span>
+
+                <code class="abar abar-energy">@ABar(Vitals.Energy)</code>
+
+                <span class="s-val">@Vitals.Energy</span>
+
+            </div>
+
+            <div class="s-row">
+
+                <span class="s-label">happy</span>
+
+                <code class="abar abar-happy">@ABar(Vitals.Happiness)</code>
+
+                <span class="s-val">@Vitals.Happiness</span>
+
+            </div>
+
+
+
+            @if (DebuffLines?.Count > 0)
+
+            {
+
+                <div class="tw-div"></div>
+
+                @foreach (var line in DebuffLines)
+
+                {
+
+                    <div class="cat-debuff-line">@line</div>
+
+                }
+
+            }
+
+
+
+            @if (PassiveSummary.Count > 0)
+
+            {
+
+                <div class="care-passive-block">
+
+                    <div class="care-passive-title">// passive.care</div>
+
+                    @foreach (var line in PassiveSummary)
+
+                    {
+
+                        <div>@line</div>
+
+                    }
+
+                </div>
+
+            }
+
+
+
+            @foreach (var fb in ActiveFoodBuffs)
+
+            {
+
+                <div class="care-buff-line">// buff · @fb.DisplayLabel · @FormatBuffRemaining(fb.ExpiresAt)</div>
+
+            }
+
+
+
+            @if (Vitals.Message is not null)
+
+            {
+
+                <p class="hint" style="margin-bottom:6px;">// @Vitals.Message</p>
+
+            }
+
+
+
+            <div class="tw-div"></div>
+
+            <div class="care-module-title">// manual.emergency</div>
+
+
+
+            <div class="btn-group care-emergency-btns">
+
+                <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(premiumFood.Name))"
+
+                        @onclick="() => OnFeed.InvokeAsync(premiumFood)">高级猫粮</button>
+
+                <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(catnipFood.Name))"
+
+                        @onclick="() => OnFeed.InvokeAsync(catnipFood)">猫薄荷</button>
+
+                <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(energyDrink.Name))"
+
+                        @onclick="() => OnFeed.InvokeAsync(energyDrink)">能量饮</button>
+
+                <button type="button" class="g-btn g-btn-sm" @onclick="OnDrink">饮水</button>
+
+                <button type="button" class="g-btn g-btn-sm" @onclick="OnStroke">抚摸</button>
+
+                <button type="button" class="g-btn g-btn-sm" @onclick="OnSleep">睡觉</button>
+
+                <button type="button" class="g-btn g-btn-sm"
+
+                        disabled="@(!Vitals.CanTreat || Player.Money < EconomySinks.CatTreatFee)"
+
+                        @onclick="OnTreat">治疗</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+</div>
+
+
+
+@code {
+
+    private static readonly Food normalFood  = new("普通猫粮", 15, 2, 2);
+
+    private static readonly Food premiumFood = new("高级猫粮", 25, 5, 3);
+
+    private static readonly Food catnipFood  = new("猫薄荷包", 0, 0, 50);
+
+    private static readonly Food energyDrink = new("能量饮料", 0, 40, 0);
+
+
+
+    [Parameter, EditorRequired] public CatVitalsSnapshot Vitals { get; set; }
+
+    [Parameter, EditorRequired] public Player   Player { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<string>?          DebuffLines    { get; set; }
+
+    [Parameter] public IReadOnlyList<string>          PassiveSummary { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<ActiveCatBuff>   ActiveFoodBuffs { get; set; } = [];
+
+    [Parameter] public Func<string, bool> HasFood { get; set; } = _ => false;
+
+    [Parameter] public EventCallback<Food> OnFeed   { get; set; }
+
+    [Parameter] public EventCallback       OnDrink  { get; set; }
+
+    [Parameter] public EventCallback       OnStroke { get; set; }
+
+    [Parameter] public EventCallback       OnSleep  { get; set; }
+
+    [Parameter] public EventCallback       OnTreat  { get; set; }
+
+
+
+    private CatVitalsSnapshot _prevVitals;
+
+    private IReadOnlyList<string>? _prevDebuffLines;
+
+    private int _prevPassiveHash;
+
+    private int _prevBuffCount;
+
+
+
+    protected override bool ShouldRender()
+
+    {
+
+        if (Vitals != _prevVitals)
+
+            return true;
+
+        if (!ReferenceEquals(DebuffLines, _prevDebuffLines))
+
+            return true;
+
+        if (GetPassiveHash() != _prevPassiveHash)
+
+            return true;
+
+        if (ActiveFoodBuffs.Count != _prevBuffCount)
+
+            return true;
+
+        return false;
+
+    }
+
+
+
+    protected override void OnParametersSet()
+
+    {
+
+        _prevVitals = Vitals;
+
+        _prevDebuffLines = DebuffLines;
+
+        _prevPassiveHash = GetPassiveHash();
+
+        _prevBuffCount = ActiveFoodBuffs.Count;
+
+    }
+
+
+
+    private int GetPassiveHash()
+
+    {
+
+        unchecked
+
+        {
+
+            int h = PassiveSummary.Count;
+
+            foreach (var line in PassiveSummary)
+
+                h = h * 31 + (line?.GetHashCode() ?? 0);
+
+            return h;
+
+        }
+
+    }
+
+
+
+    private static string ABar(int value, int max = 1000, int w = 10)
+
+    {
+
+        var f = Math.Clamp((int)Math.Round((double)value / max * w), 0, w);
+
+        return new string('█', f) + new string('░', w - f);
+
+    }
+
+
+
+    private static string ProgressBar(int value, int max, int w = 10)
+
+    {
+
+        var f = Math.Clamp((int)Math.Round((double)value / Math.Max(1, max) * w), 0, w);
+
+        return new string('█', f) + new string('░', w - f);
+
+    }
+
+
+
+    private static string FormatBuffRemaining(DateTime expiresAt)
+
+    {
+
+        var remaining = expiresAt - DateTime.UtcNow;
+
+        if (remaining <= TimeSpan.Zero) return "已结束";
+
+        if (remaining.TotalHours >= 1) return $"{(int)remaining.TotalHours}h{remaining.Minutes}m";
+
+        return $"{Math.Max(1, (int)remaining.TotalMinutes)}m";
+
+    }
+
+}
+
+

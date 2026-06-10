@@ -1,0 +1,49 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inject MaintenanceService MaintenanceService
+
+<div class="content-panel house-floor-layout">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="house" /> HOME.room</span>
+        <span class="panel-meta">俯瞰格局 · 点选房间管理家具</span>
+    </div>
+    <HouseFloorView PlayerHouse="Session.PlayerHouse"
+                    Player="Session.Player!"
+                    HouseBuffs="HouseBuffs"
+                    MaintenanceFee="MaintenanceService.CalculateFee(Session.PlayerHouse, Session.Player!.MaintenanceOverdue)"
+                    MaintenanceOverdue="Session.Player.MaintenanceOverdue"
+                    CatState="@CatState"
+                    Feeder="Session.Feeder"
+                    Waterer="Session.Waterer"
+                    NormalFood="NormalFood"
+                    LuxuryFood="LuxuryFood"
+                    Backpack="Session.Player.Backpack"
+                    FeedMessage="FeedMessage"
+                    OnBuy="OnBuy"
+                    OnUpgrade="OnUpgrade"
+                    OnUnlockRoom="OnUnlockRoom"
+                    OnAddFood="OnAddFood"
+                    OnAddCookedFood="OnAddCookedFood"
+                    OnRemoveFood="OnRemoveFood"
+                    OnAddWater="OnAddWater"
+                    OnRemoveWater="OnRemoveWater" />
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public string CatState { get; set; } = "";
+    [Parameter] public Food NormalFood { get; set; } = null!;
+    [Parameter] public Food LuxuryFood { get; set; } = null!;
+    [Parameter] public string? FeedMessage { get; set; }
+
+    [Parameter] public EventCallback<Furniture> OnBuy { get; set; }
+    [Parameter] public EventCallback<Furniture> OnUpgrade { get; set; }
+    [Parameter] public EventCallback<Room> OnUnlockRoom { get; set; }
+    [Parameter] public EventCallback<Food> OnAddFood { get; set; }
+    [Parameter] public EventCallback<string> OnAddCookedFood { get; set; }
+    [Parameter] public EventCallback OnRemoveFood { get; set; }
+    [Parameter] public EventCallback OnAddWater { get; set; }
+    [Parameter] public EventCallback OnRemoveWater { get; set; }
+}
