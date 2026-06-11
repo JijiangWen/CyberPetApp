@@ -81,7 +81,7 @@ public class CyberCat
     /// <summary>背景 tick 计数（2s/次）；满 300 次 ≈10 分钟四维各 -1，仅作挂机/离线缓慢衰减。</summary>
     public int BackgroundTickCount { get; set; }
 
-    public const int BackgroundTicksPerDecay = 300;
+    public const int BackgroundTicksPerDecay = 10;
 
     /// <summary>极慢被动衰减：每 ≈10 分钟四维各 -1（家具倍率仍生效）。</summary>
     public void Tick(HouseBuffs buffs = default)

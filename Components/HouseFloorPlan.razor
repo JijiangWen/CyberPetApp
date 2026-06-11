@@ -41,7 +41,7 @@
                         var installed = room.Furniture.Where(f => f.IsUnlocked).ToList();
                         <button type="button"
                                 class="floor-room @(room.IsUnlocked ? "unlocked" : "locked") @(isSelected ? "selected" : "")"
-                                @onclick="() => OnSelectRoom.InvokeAsync(key)">
+                                @onclick="() => SelectRoom(key)">
                             <span class="floor-room-label">@key</span>
                             <span class="floor-room-sub">@room.Name</span>
                             @if (!room.IsUnlocked)
@@ -90,7 +90,7 @@
             <div class="floor-row floor-row-garden">
                 <button type="button"
                         class="floor-room floor-room-wide @(garden.IsUnlocked ? "unlocked" : "locked") @(gardenSelected ? "selected" : "")"
-                        @onclick="() => OnSelectRoom.InvokeAsync(gardenKey)">
+                        @onclick="() => SelectRoom(gardenKey)">
                     <span class="floor-room-label">@gardenKey</span>
                     <span class="floor-room-sub">@garden.Name</span>
                     @if (!garden.IsUnlocked)
@@ -150,5 +150,11 @@
     private int TotalFurniture => PlayerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
     private int UnlockedFurniture => PlayerHouse.Rooms.Values
         .SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);
+
+    private async Task SelectRoom(string key)
+    {
+        Console.WriteLine($"[HOUSE-DEBUG][HouseFloorPlan] click key='{key}' SelectedRoomKey='{SelectedRoomKey}' HasOnSelect={OnSelectRoom.HasDelegate}");
+        await OnSelectRoom.InvokeAsync(key);
+    }
 
 }

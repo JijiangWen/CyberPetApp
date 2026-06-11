@@ -54,7 +54,8 @@ else
 
         <!-- ═ Sidebar ═ -->
         <aside class="sidebar">
-            <CatCareSidebar Vitals="catVitalsSnapshot"
+            <CatCareSidebar @key="tickGeneration"
+                            Vitals="catVitalsSnapshot"
                             Player="player"
                             DebuffLines="_sidebarDebuffLines"
                             PassiveSummary="PassiveCareSummaryLines()"
@@ -217,7 +218,8 @@ else
                               OnAddCookedFood="AddCookedFoodToFeeder"
                               OnRemoveFood="RemoveLastFromFeeder"
                               OnAddWater="AddPurifiedWaterToWaterer"
-                              OnRemoveWater="RemoveLastFromWaterer" />
+                              OnRemoveWater="RemoveLastFromWaterer"
+                              @bind-SelectedRoomKey="CurrentSelectedRoomKey" />
                 break;
                 case "fishing":
                 <HomeFishingTab IsActive="@(activeSection == "fishing")"

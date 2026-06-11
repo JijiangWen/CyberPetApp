@@ -9,26 +9,26 @@
     }
 
     <HouseFloorPlan PlayerHouse="PlayerHouse"
-                    SelectedRoomKey="_selectedRoomKey"
+                    SelectedRoomKey="@EffectiveSelectedRoomKey"
                     HouseBuffs="HouseBuffs"
                     MaintenanceFee="MaintenanceFee"
                     MaintenanceOverdue="MaintenanceOverdue"
                     CatState="CatState"
                     OnSelectRoom="SelectRoom" />
 
-    @if (!string.IsNullOrEmpty(_selectedRoomKey))
+    @if (!string.IsNullOrEmpty(EffectiveSelectedRoomKey))
     {
         <HouseRoomPanel PlayerHouse="PlayerHouse"
                         Player="Player"
-                        RoomKey="_selectedRoomKey"
+                        RoomKey="@EffectiveSelectedRoomKey"
                         OnClose="CloseRoomPanel"
                         OnBuy="OnBuy"
                         OnUpgrade="OnUpgrade"
                         OnUnlockRoom="OnUnlockRoom"
-                        ShowAutoCare="RoomHasAutoCare(_selectedRoomKey)"
-                        ShowFeeder="@(_selectedRoomKey == PlayerHouse.RoomKeys.Kitchen)"
-                        ShowWaterer="@(_selectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
-                        ShowPassive="@(_selectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
+                        ShowAutoCare="@RoomHasAutoCare(EffectiveSelectedRoomKey)"
+                        ShowFeeder="@(EffectiveSelectedRoomKey == PlayerHouse.RoomKeys.Kitchen)"
+                        ShowWaterer="@(EffectiveSelectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
+                        ShowPassive="@(EffectiveSelectedRoomKey == PlayerHouse.RoomKeys.LivingRoom)"
                         Feeder="Feeder"
                         Waterer="Waterer"
                         NormalFood="NormalFood"
@@ -37,7 +37,7 @@
                         Backpack="Backpack"
                         FeederUnlocked="HasAutoFeederUnit()"
                         WatererUnlocked="HasWaterDispenser()"
-                        PassiveFurniture="PassiveFurnitureForRoom(_selectedRoomKey)"
+                        PassiveFurniture="@PassiveFurnitureForRoom(EffectiveSelectedRoomKey)"
                         Message="FeedMessage"
                         OnAddFood="OnAddFood"
                         OnAddCookedFood="OnAddCookedFood"
@@ -69,13 +69,19 @@
     [Parameter] public EventCallback OnRemoveFood { get; set; }
     [Parameter] public EventCallback OnAddWater { get; set; }
     [Parameter] public EventCallback OnRemoveWater { get; set; }
+    [Parameter] public string? SelectedRoomKey { get; set; }
+    [Parameter] public EventCallback<string> SelectedRoomKeyChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSelectRoom { get; set; }
+    [Parameter] public EventCallback OnCloseRoom { get; set; }
 
     private string _selectedRoomKey = "";
     private string? _roomsDataHint;
+    private string EffectiveSelectedRoomKey => SelectedRoomKey ?? _selectedRoomKey;
 
     protected override void OnParametersSet()
     {
         _roomsDataHint = ValidateRooms(PlayerHouse);
+        Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] OnParametersSet SelectedRoomKey='{SelectedRoomKey}' local='{_selectedRoomKey}' effective='{EffectiveSelectedRoomKey}' rooms={PlayerHouse.Rooms.Count} hint='{_roomsDataHint}' HasChanged={SelectedRoomKeyChanged.HasDelegate} HasOnSelect={OnSelectRoom.HasDelegate}");
     }
 
     private static string? ValidateRooms(PlayerHouse house)
@@ -101,16 +107,54 @@
     private static bool RoomHasAutoCare(string roomKey) =>
         roomKey is PlayerHouse.RoomKeys.Kitchen or PlayerHouse.RoomKeys.LivingRoom;
 
-    private void SelectRoom(string key)
+    private async Task SelectRoom(string key)
     {
-        _selectedRoomKey = key;
-        StateHasChanged();
+        Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] SelectRoom received key='{key}' before SelectedRoomKey='{SelectedRoomKey}' local='{_selectedRoomKey}' effective='{EffectiveSelectedRoomKey}'");
+
+        if (OnSelectRoom.HasDelegate)
+        {
+            Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] invoking OnSelectRoom('{key}')");
+            await OnSelectRoom.InvokeAsync(key);
+        }
+        else
+        {
+            Console.WriteLine("[HOUSE-DEBUG][HouseFloorView] OnSelectRoom has no delegate");
+        }
+
+        if (SelectedRoomKeyChanged.HasDelegate)
+        {
+            Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] invoking SelectedRoomKeyChanged('{key}')");
+            await SelectedRoomKeyChanged.InvokeAsync(key);
+        }
+        else
+        {
+            Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] no SelectedRoomKeyChanged delegate, setting local _selectedRoomKey='{key}'");
+            _selectedRoomKey = key;
+            StateHasChanged();
+        }
     }
 
-    private void CloseRoomPanel()
+    private async Task CloseRoomPanel()
     {
-        _selectedRoomKey = "";
-        StateHasChanged();
+        Console.WriteLine($"[HOUSE-DEBUG][HouseFloorView] CloseRoomPanel before SelectedRoomKey='{SelectedRoomKey}' local='{_selectedRoomKey}' effective='{EffectiveSelectedRoomKey}'");
+
+        if (OnCloseRoom.HasDelegate)
+        {
+            Console.WriteLine("[HOUSE-DEBUG][HouseFloorView] invoking OnCloseRoom()");
+            await OnCloseRoom.InvokeAsync();
+        }
+
+        if (SelectedRoomKeyChanged.HasDelegate)
+        {
+            Console.WriteLine("[HOUSE-DEBUG][HouseFloorView] invoking SelectedRoomKeyChanged('')");
+            await SelectedRoomKeyChanged.InvokeAsync("");
+        }
+        else if (!OnCloseRoom.HasDelegate)
+        {
+            Console.WriteLine("[HOUSE-DEBUG][HouseFloorView] no close delegate, clearing local _selectedRoomKey");
+            _selectedRoomKey = "";
+            StateHasChanged();
+        }
     }
 
     private bool HasAutoFeederUnit() =>

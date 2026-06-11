@@ -53,6 +53,16 @@ public partial class Home : IAsyncDisposable
     private int tickGeneration;
     private bool _titlebarFishingOn;
     private string activeSection = "fishing";
+    private string currentSelectedRoomKey = "";
+    private string CurrentSelectedRoomKey
+    {
+        get => currentSelectedRoomKey;
+        set
+        {
+            Console.WriteLine($"[HOUSE-DEBUG][Home] CurrentSelectedRoomKey set old='{currentSelectedRoomKey}' new='{value}' activeSection='{activeSection}'");
+            currentSelectedRoomKey = value;
+        }
+    }
 
     private Food normalFood = new Food("普通猫粮", 15, 2, 2);
     private Food luxuryFood = new Food("金枪鱼罐头", 35, 15, 5);
@@ -232,6 +242,7 @@ public partial class Home : IAsyncDisposable
     {
         cat.DrinkWater(20);
         TryRefreshSidebarVitals();
+        tickGeneration++;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -239,6 +250,7 @@ public partial class Home : IAsyncDisposable
     {
         cat.Stroke();
         TryRefreshSidebarVitals();
+        tickGeneration++;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -246,6 +258,7 @@ public partial class Home : IAsyncDisposable
     {
         cat.Sleep(GetHouseBuffs());
         TryRefreshSidebarVitals();
+        tickGeneration++;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -280,7 +293,7 @@ public partial class Home : IAsyncDisposable
     private int PendingOfferCount() => marketListings.Sum(v => v.PendingOffers.Count);
 
     private Task GoToMarketFromBackpack() => SelectSectionAsync("market");
-    // ?? ????F??? / ?? / ??? ??
+    // Reload gear panel
     private async Task ReloadGearPanelAsync()
     {
         if (player is null) return;
@@ -619,7 +632,7 @@ public partial class Home : IAsyncDisposable
     private Task CookFishFromTab((Fish fish, string recipeId) args) =>
         CookFish(args.fish, args.recipeId);
 
-    // ?? ??? ??
+    // Reload alchemy panel
     private async Task ReloadAlchemyAsync()
     {
         if (player is null) return;
