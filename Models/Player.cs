@@ -13,6 +13,10 @@ public class Player
 
     public Dictionary<string, int> Backpack { get; set; } = [];
     public List<Fish> FishBackpack { get; set; } = [];
+    public int FishBackpackCapacity { get; set; } = EconomySinks.FishBackpackBaseCapacity;
+
+    public bool IsFishBackpackFull => FishBackpack.Count >= FishBackpackCapacity;
+    public bool HasFishBackpackSpace => FishBackpack.Count < FishBackpackCapacity;
     public List<ShopItem> Items { get; set; } = [];
     public bool IsWorking { get; set; }
     public WorkJobType SelectedWorkJob { get; set; } = WorkJobType.Construction;

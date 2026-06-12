@@ -6,7 +6,7 @@ namespace CyberPetApp.Models;
 /// <code>
 /// | 阶段      | 累计目标 | 里程碑摘要              |
 /// |-----------|---------|-------------------------|
-/// | T1~T3     | ~40h    | 静溪/雾海熟练           |
+/// | T1~T3     | ~40h    | 镇外溪流/雾海熟练           |
 /// | T4~T6     | ~160h   | 引渠+派遣素材           |
 /// | T7~T8     | ~310h   | 冰湾+鱼市回收           |
 /// | T9~T10    | ~500h   | 远礁+神话+终极锻造      |
@@ -18,7 +18,7 @@ public static class EconomySinks
     public const int MarketListingFeeMin = 5;
     public const double MarketListingFeeRate = 0.02;
 
-    // 钓鱼：静溪基础抛竿费；高阶钓点按阶递增
+    // 钓鱼：镇外溪流基础抛竿费；高阶钓点按阶递增
     public const int CastFeeBase = 3;
     public const int LineRepairFee = 8;
 
@@ -125,10 +125,10 @@ public static class EconomySinks
 
     public static int SpotPermanentLicenseCost(string spotName) => spotName switch
     {
-        "雾海深渊" => DeepSeaPermanentLicense,
-        "芦苇湾" => ReedBayPermanentLicense,
-        "夜光引渠" => NeonCanalPermanentLicense,
-        "暗涌裂谷" => RiftValleyPermanentLicense,
+        "近海礁石" => DeepSeaPermanentLicense,
+        "芦苇湿地" => ReedBayPermanentLicense,
+        "地下暗河" => NeonCanalPermanentLicense,
+        "深水海湾" => RiftValleyPermanentLicense,
         "极光冰湾" => GlacierNetPermanentLicense,
         "沉船墓场" => WreckGravePermanentLicense,
         "珊瑚暗流" => CoralReefPermanentLicense,
@@ -141,10 +141,10 @@ public static class EconomySinks
 
     public static int SpotDailyRentalCost(string spotName) => spotName switch
     {
-        "雾海深渊" => DeepSeaDailyRental,
-        "芦苇湾" => ReedBayDailyRental,
-        "夜光引渠" => NeonCanalDailyRental,
-        "暗涌裂谷" => RiftValleyDailyRental,
+        "近海礁石" => DeepSeaDailyRental,
+        "芦苇湿地" => ReedBayDailyRental,
+        "地下暗河" => NeonCanalDailyRental,
+        "深水海湾" => RiftValleyDailyRental,
         "极光冰湾" => GlacierNetDailyRental,
         "沉船墓场" => WreckGraveDailyRental,
         "珊瑚暗流" => CoralReefDailyRental,
@@ -165,11 +165,11 @@ public static class EconomySinks
         "沉船墓场" => 35,
         "珊瑚暗流" => 32,
         "极光冰湾" => 28,
-        "暗涌裂谷" => 22,
-        "夜光引渠" => 16,
-        "芦苇湾" => 11,
-        "雾海深渊" => 9,
-        "浅塘" => 4,
+        "深水海湾" => 22,
+        "地下暗河" => 16,
+        "芦苇湿地" => 11,
+        "近海礁石" => 9,
+        "废弃鱼塘" => 4,
         _ => CastFeeBase
     };
 
@@ -231,4 +231,21 @@ public static class EconomySinks
 
     // 兼容旧引用（无参修理费 = T1~T2 阶）
     public const int CastFee = CastFeeBase;
+
+    // Fish backpack upgrades
+    public const int FishBackpackBaseCapacity = 50;
+    public const int FishBackpackMaxCapacity = 300;
+    public const int FishBackpackUpgradeIncrement = 10;
+    public const int FishBackpackBaseUpgradeCostPerTier = 200;
+
+    public static int FishBackpackNextIncrement(int currentCapacity) =>
+        Math.Max(0, Math.Min(FishBackpackUpgradeIncrement, FishBackpackMaxCapacity - Math.Max(FishBackpackBaseCapacity, currentCapacity)));
+
+    public static int FishBackpackUpgradeCost(int currentCapacity)
+    {
+        int cur = Math.Max(FishBackpackBaseCapacity, currentCapacity);
+        if (cur >= FishBackpackMaxCapacity) return 0;
+        int tier = ((cur - FishBackpackBaseCapacity) / FishBackpackUpgradeIncrement) + 1;
+        return FishBackpackBaseUpgradeCostPerTier * tier;
+    }
 }

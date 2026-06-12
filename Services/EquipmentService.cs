@@ -566,5 +566,567 @@ public class EquipmentService
         if (tracked is not null && !ReferenceEquals(tracked, player))
             tracked.Money = player.Money;
     }
+
+    // ── 商店乐观 UI（校验 / 内存更新 / 后台 Commit） ──
+
+    public static bool TryPrepareBuyRod(
+        Player player, IReadOnlyList<FishingRod> rods, RodSpec spec,
+        int catLevel, IReadOnlyList<FishDexEntry> dex, Func<string, bool> hasLicense,
+        out FishingRod rod, out string error)
+    {
+        rod = null!;
+        error = "";
+        if (spec.CraftOnly || !spec.ShopAvailable) { error = "需炼金锻造"; return false; }
+        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player.FishingLevel, catLevel, dex, hasLicense))
+        {
+            error = $"未满足解锁：{GearProgressionCatalog.UnlockShortfall(
+                spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent,
+                spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent,
+                spec.RequiredMythicCaught, spec.RequiredAllMythic,
+                player.FishingLevel, catLevel, dex, hasLicense)}";
+            return false;
+        }
+        if (player.Money < spec.Price) { error = "金币不足或已拥有同类装备"; return false; }
+        if (rods.Any(r => r.Name == spec.Name)) { error = "已拥有该装备"; return false; }
+        rod = CreateRodFromSpec(spec, player.Id);
+        return true;
+    }
+
+    public static bool TryPrepareBuyReel(
+        Player player, IReadOnlyList<FishingReel> reels, ReelSpec spec,
+        int catLevel, IReadOnlyList<FishDexEntry> dex, Func<string, bool> hasLicense,
+        out FishingReel reel, out string error)
+    {
+        reel = null!;
+        error = "";
+        if (spec.CraftOnly || !spec.ShopAvailable) { error = "需炼金锻造"; return false; }
+        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player.FishingLevel, catLevel, dex, hasLicense))
+        {
+            error = $"未满足解锁：{GearProgressionCatalog.UnlockShortfall(
+                spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent,
+                spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent,
+                spec.RequiredMythicCaught, spec.RequiredAllMythic,
+                player.FishingLevel, catLevel, dex, hasLicense)}";
+            return false;
+        }
+        if (player.Money < spec.Price) { error = "金币不足或已拥有同类装备"; return false; }
+        if (reels.Any(r => r.Name == spec.Name)) { error = "已拥有该装备"; return false; }
+        reel = CreateReelFromSpec(spec, player.Id);
+        return true;
+    }
+
+    public static bool TryPrepareBuyLine(
+        Player player, IReadOnlyList<FishingLine> lines, LineSpec spec,
+        int catLevel, IReadOnlyList<FishDexEntry> dex, Func<string, bool> hasLicense,
+        out FishingLine line, out string error)
+    {
+        line = null!;
+        error = "";
+        if (spec.CraftOnly || !spec.ShopAvailable) { error = "需炼金锻造"; return false; }
+        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player.FishingLevel, catLevel, dex, hasLicense))
+        {
+            error = $"未满足解锁：{GearProgressionCatalog.UnlockShortfall(
+                spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent,
+                spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent,
+                spec.RequiredMythicCaught, spec.RequiredAllMythic,
+                player.FishingLevel, catLevel, dex, hasLicense)}";
+            return false;
+        }
+        if (player.Money < spec.Price) { error = "金币不足或已拥有同类装备"; return false; }
+        if (lines.Any(l => l.Name == spec.Name)) { error = "已拥有该装备"; return false; }
+        line = CreateLineFromSpec(spec, player.Id);
+        return true;
+    }
+
+    public static bool TryPrepareBuyLure(
+        Player player, LureSpec spec,
+        int catLevel, IReadOnlyList<FishDexEntry> dex, Func<string, bool> hasLicense,
+        out string error)
+    {
+        error = "";
+        if (spec.CraftOnly || !spec.ShopAvailable)
+        {
+            error = "需炼金锻造";
+            return false;
+        }
+
+        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player.FishingLevel, catLevel, dex, hasLicense))
+        {
+            error = $"未满足解锁：{GearProgressionCatalog.UnlockShortfall(
+                spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent,
+                spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent,
+                spec.RequiredMythicCaught, spec.RequiredAllMythic,
+                player.FishingLevel, catLevel, dex, hasLicense)}";
+            return false;
+        }
+
+        if (player.Money < spec.PackPrice)
+        {
+            error = "金币不足";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ApplyBuyRodOptimistic(Player player, List<FishingRod> rods, RodSpec spec, FishingRod rod)
+    {
+        player.Money -= spec.Price;
+        rods.Add(rod);
+        rods.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+    }
+
+    public static void ApplyBuyReelOptimistic(Player player, List<FishingReel> reels, ReelSpec spec, FishingReel reel)
+    {
+        player.Money -= spec.Price;
+        reels.Add(reel);
+        reels.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+    }
+
+    public static void ApplyBuyLineOptimistic(Player player, List<FishingLine> lines, LineSpec spec, FishingLine line)
+    {
+        player.Money -= spec.Price;
+        lines.Add(line);
+        lines.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+    }
+
+    public static FishingLure ApplyBuyLureOptimistic(Player player, List<FishingLure> lures, LureSpec spec)
+    {
+        player.Money -= spec.PackPrice;
+        var existing = lures.FirstOrDefault(l => l.Name == spec.Name);
+        if (existing is not null)
+        {
+            existing.Quantity += spec.PackSize;
+            if (existing.DurabilityRemaining <= 0 && existing.Quantity > 0)
+                existing.DurabilityRemaining = spec.MaxDurability;
+            return existing;
+        }
+
+        var lure = CreateLureFromSpec(spec, player.Id);
+        lures.Add(lure);
+        lures.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        return lure;
+    }
+
+    public static void RollbackBuyRod(Player player, List<FishingRod> rods, RodSpec spec, FishingRod rod)
+    {
+        player.Money += spec.Price;
+        rods.RemoveAll(r => r.Id == rod.Id);
+    }
+
+    public static void RollbackBuyReel(Player player, List<FishingReel> reels, ReelSpec spec, FishingReel reel)
+    {
+        player.Money += spec.Price;
+        reels.RemoveAll(r => r.Id == reel.Id);
+    }
+
+    public static void RollbackBuyLine(Player player, List<FishingLine> lines, LineSpec spec, FishingLine line)
+    {
+        player.Money += spec.Price;
+        lines.RemoveAll(l => l.Id == line.Id);
+    }
+
+    public static void RollbackBuyLure(Player player, List<FishingLure> lures, LureSpec spec)
+    {
+        player.Money += spec.PackPrice;
+        var existing = lures.FirstOrDefault(l => l.Name == spec.Name);
+        if (existing is null) return;
+        existing.Quantity -= spec.PackSize;
+        if (existing.Quantity <= 0)
+            lures.RemoveAll(l => l.Id == existing.Id);
+    }
+
+    public static void ApplyEquipRodOptimistic(List<FishingRod> rods, FishingRod rod, FishingLoadout loadout)
+    {
+        foreach (var r in rods) r.IsEquipped = r.Id == rod.Id;
+        loadout.RodName = rod.Name;
+        loadout.Sensitivity = rod.Sensitivity;
+        loadout.CastRange = rod.CastRange;
+        loadout.MaxStrength = rod.MaxStrength;
+        loadout.RodRequiredLevel = rod.RequiredLevel;
+        loadout.RodDurability = rod.Durability;
+        loadout.RodGearTier = GearProgressionCatalog.GetRodTier(rod.Name);
+    }
+
+    public static void ApplyEquipReelOptimistic(List<FishingReel> reels, FishingReel reel, FishingLoadout loadout)
+    {
+        foreach (var r in reels) r.IsEquipped = r.Id == reel.Id;
+        loadout.ReelName = reel.Name;
+        loadout.DragPower = reel.DragPower;
+        loadout.GearRatio = reel.GearRatio;
+        loadout.LineCapacity = reel.LineCapacity;
+        loadout.Smoothness = reel.Smoothness;
+        loadout.ReelRequiredLevel = reel.RequiredLevel;
+        loadout.ReelDurability = reel.Durability;
+    }
+
+    public static void ApplyEquipLineOptimistic(List<FishingLine> lines, FishingLine line, FishingLoadout loadout)
+    {
+        foreach (var l in lines) l.IsEquipped = l.Id == line.Id;
+        loadout.LineName = line.Name;
+        loadout.LineStrength = line.LineStrength;
+        loadout.LineSensitivity = line.LineSensitivity;
+        loadout.LineStealth = line.LineStealth;
+        loadout.AbrasionResistance = line.AbrasionResistance;
+        loadout.LineDepth = line.TargetDepth;
+        loadout.LineRequiredLevel = line.RequiredLevel;
+        loadout.LineDurability = line.Durability;
+    }
+
+    public static void ApplyEquipLureOptimistic(List<FishingLure> lures, FishingLure lure, FishingLoadout loadout)
+    {
+        foreach (var l in lures) l.IsEquipped = l.Id == lure.Id;
+        if (lure.DurabilityRemaining <= 0 && lure.Quantity > 0)
+        {
+            var spec = GearCatalog.FindLure(lure.Name);
+            lure.DurabilityRemaining = spec?.MaxDurability ?? 10;
+        }
+
+        var lureSpec = GearCatalog.FindLure(lure.Name);
+        loadout.LureName = lure.Name;
+        loadout.Attraction = lure.Attraction;
+        loadout.RarityBonus = lure.RarityBonus;
+        loadout.LureDepth = lure.TargetDepth;
+        loadout.LureDurabilityRemaining = lure.DurabilityRemaining;
+        loadout.LureRequiredLevel = lure.RequiredLevel;
+        loadout.LureQuantity = lure.Quantity;
+        loadout.LureGearTier = lureSpec is not null ? (int)lureSpec.Tier : 1;
+        loadout.LureMythicBonus = lureSpec?.MythicBonus ?? 0;
+    }
+
+    public static bool TryPrepareRepairRod(Player player, FishingRod rod, bool fullRepair, out int cost, out string error)
+    {
+        cost = 0;
+        error = "";
+        if (rod.Durability >= 100)
+        {
+            error = "耐久已满";
+            return false;
+        }
+
+        int tier = GearProgressionCatalog.GetGearTier(rod.Name);
+        cost = fullRepair
+            ? EconomySinks.GearFullRepairCost(rod.MaxStrength, tier)
+            : EconomySinks.GearRepairPartialCost(tier);
+        if (player.Money < cost)
+        {
+            error = $"金币不足，修理需 {cost}g";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static bool TryPrepareRepairReel(Player player, FishingReel reel, bool fullRepair, out int cost, out string error)
+    {
+        cost = 0;
+        error = "";
+        if (reel.Durability >= 100)
+        {
+            error = "耐久已满";
+            return false;
+        }
+
+        int tier = GearProgressionCatalog.GetGearTier(reel.Name);
+        cost = fullRepair
+            ? EconomySinks.GearFullRepairCost(reel.DragPower, tier)
+            : EconomySinks.GearRepairPartialCost(tier);
+        if (player.Money < cost)
+        {
+            error = $"金币不足，修理需 {cost}g";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static bool TryPrepareRepairLine(Player player, FishingLine line, bool fullRepair, out int cost, out string error)
+    {
+        cost = 0;
+        error = "";
+        if (line.Durability >= 100)
+        {
+            error = "耐久已满";
+            return false;
+        }
+
+        int tier = GearProgressionCatalog.GetGearTier(line.Name);
+        cost = fullRepair
+            ? EconomySinks.GearFullRepairCost(line.LineStrength, tier)
+            : EconomySinks.GearRepairPartialCost(tier);
+        if (player.Money < cost)
+        {
+            error = $"金币不足，修理需 {cost}g";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ApplyRepairRodOptimistic(Player player, FishingRod rod, bool fullRepair, int cost, FishingLoadout loadout)
+    {
+        player.Money -= cost;
+        rod.Durability = fullRepair ? 100 : Math.Min(100, rod.Durability + EconomySinks.GearRepairPartialAmount);
+        if (rod.IsEquipped)
+            loadout.RodDurability = rod.Durability;
+    }
+
+    public static void ApplyRepairReelOptimistic(Player player, FishingReel reel, bool fullRepair, int cost, FishingLoadout loadout)
+    {
+        player.Money -= cost;
+        reel.Durability = fullRepair ? 100 : Math.Min(100, reel.Durability + EconomySinks.GearRepairPartialAmount);
+        if (reel.IsEquipped)
+            loadout.ReelDurability = reel.Durability;
+    }
+
+    public static void ApplyRepairLineOptimistic(Player player, FishingLine line, bool fullRepair, int cost, FishingLoadout loadout)
+    {
+        player.Money -= cost;
+        line.Durability = fullRepair ? 100 : Math.Min(100, line.Durability + EconomySinks.GearRepairPartialAmount);
+        if (line.IsEquipped)
+            loadout.LineDurability = line.Durability;
+    }
+
+    public async Task<(bool Ok, string Message)> CommitBuyRodAsync(Player player, FishingRod rod)
+    {
+        if (await _context.FishingRods.AnyAsync(r => r.PlayerId == player.Id && r.Name == rod.Name))
+            return (false, "已拥有该鱼竿");
+
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        if (!await _context.FishingRods.AnyAsync(r => r.Id == rod.Id))
+            _context.FishingRods.Add(CloneRod(rod));
+
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitBuyReelAsync(Player player, FishingReel reel)
+    {
+        if (await _context.FishingReels.AnyAsync(r => r.PlayerId == player.Id && r.Name == reel.Name))
+            return (false, "已拥有该卷线器");
+
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        if (!await _context.FishingReels.AnyAsync(r => r.Id == reel.Id))
+            _context.FishingReels.Add(CloneReel(reel));
+
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitBuyLineAsync(Player player, FishingLine line)
+    {
+        if (await _context.FishingLines.AnyAsync(l => l.PlayerId == player.Id && l.Name == line.Name))
+            return (false, "已拥有该鱼线");
+
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        if (!await _context.FishingLines.AnyAsync(l => l.Id == line.Id))
+            _context.FishingLines.Add(CloneLine(line));
+
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitBuyLureAsync(Player player, LureSpec spec, FishingLure memoryLure)
+    {
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        var existing = await _context.FishingLures
+            .FirstOrDefaultAsync(l => l.PlayerId == player.Id && l.Name == spec.Name);
+        if (existing is not null)
+        {
+            existing.Quantity = memoryLure.Quantity;
+            existing.DurabilityRemaining = memoryLure.DurabilityRemaining;
+        }
+        else if (!await _context.FishingLures.AnyAsync(l => l.Id == memoryLure.Id))
+        {
+            _context.FishingLures.Add(CloneLure(memoryLure));
+        }
+
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitRepairRodAsync(Player player, FishingRod rod)
+    {
+        var dbRod = await _context.FishingRods.FirstOrDefaultAsync(r => r.Id == rod.Id && r.PlayerId == player.Id);
+        if (dbRod is null) return (false, "鱼竿不存在");
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null) return (false, "玩家不存在");
+        dbPlayer.Money = player.Money;
+        dbRod.Durability = rod.Durability;
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitRepairReelAsync(Player player, FishingReel reel)
+    {
+        var dbReel = await _context.FishingReels.FirstOrDefaultAsync(r => r.Id == reel.Id && r.PlayerId == player.Id);
+        if (dbReel is null) return (false, "卷线器不存在");
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null) return (false, "玩家不存在");
+        dbPlayer.Money = player.Money;
+        dbReel.Durability = reel.Durability;
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitRepairLineAsync(Player player, FishingLine line)
+    {
+        var dbLine = await _context.FishingLines.FirstOrDefaultAsync(l => l.Id == line.Id && l.PlayerId == player.Id);
+        if (dbLine is null) return (false, "鱼线不存在");
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null) return (false, "玩家不存在");
+        dbPlayer.Money = player.Money;
+        dbLine.Durability = line.Durability;
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    private static FishingRod CreateRodFromSpec(RodSpec spec, Guid playerId) => new()
+    {
+        PlayerId = playerId,
+        Name = spec.Name,
+        Sensitivity = spec.Sensitivity,
+        MaxStrength = spec.MaxStrength,
+        CastRange = spec.CastRange,
+        RequiredLevel = spec.RequiredLevel,
+        Durability = 100
+    };
+
+    private static FishingReel CreateReelFromSpec(ReelSpec spec, Guid playerId) => new()
+    {
+        PlayerId = playerId,
+        Name = spec.Name,
+        DragPower = spec.DragPower,
+        GearRatio = spec.GearRatio,
+        LineCapacity = spec.LineCapacity,
+        Smoothness = spec.Smoothness,
+        RequiredLevel = spec.RequiredLevel,
+        Durability = 100
+    };
+
+    private static FishingLine CreateLineFromSpec(LineSpec spec, Guid playerId) => new()
+    {
+        PlayerId = playerId,
+        Name = spec.Name,
+        LineStrength = spec.LineStrength,
+        LineSensitivity = spec.LineSensitivity,
+        LineStealth = spec.LineStealth,
+        AbrasionResistance = spec.AbrasionResistance,
+        TargetDepth = spec.TargetDepth,
+        RequiredLevel = spec.RequiredLevel,
+        Durability = 100
+    };
+
+    private static FishingLure CreateLureFromSpec(LureSpec spec, Guid playerId) => new()
+    {
+        PlayerId = playerId,
+        Name = spec.Name,
+        Attraction = spec.Attraction,
+        RarityBonus = spec.RarityBonus,
+        TargetDepth = spec.TargetDepth,
+        DurabilityRemaining = spec.MaxDurability,
+        RequiredLevel = spec.RequiredLevel,
+        Quantity = spec.PackSize
+    };
+
+    private static FishingRod CloneRod(FishingRod rod) => new()
+    {
+        Id = rod.Id,
+        PlayerId = rod.PlayerId,
+        Name = rod.Name,
+        Sensitivity = rod.Sensitivity,
+        MaxStrength = rod.MaxStrength,
+        CastRange = rod.CastRange,
+        RequiredLevel = rod.RequiredLevel,
+        Durability = rod.Durability,
+        IsEquipped = rod.IsEquipped,
+        IsCrafted = rod.IsCrafted
+    };
+
+    private static FishingReel CloneReel(FishingReel reel) => new()
+    {
+        Id = reel.Id,
+        PlayerId = reel.PlayerId,
+        Name = reel.Name,
+        DragPower = reel.DragPower,
+        GearRatio = reel.GearRatio,
+        LineCapacity = reel.LineCapacity,
+        Smoothness = reel.Smoothness,
+        RequiredLevel = reel.RequiredLevel,
+        Durability = reel.Durability,
+        IsEquipped = reel.IsEquipped,
+        IsCrafted = reel.IsCrafted
+    };
+
+    private static FishingLine CloneLine(FishingLine line) => new()
+    {
+        Id = line.Id,
+        PlayerId = line.PlayerId,
+        Name = line.Name,
+        LineStrength = line.LineStrength,
+        LineSensitivity = line.LineSensitivity,
+        LineStealth = line.LineStealth,
+        AbrasionResistance = line.AbrasionResistance,
+        TargetDepth = line.TargetDepth,
+        RequiredLevel = line.RequiredLevel,
+        Durability = line.Durability,
+        IsEquipped = line.IsEquipped,
+        IsCrafted = line.IsCrafted
+    };
+
+    private static FishingLure CloneLure(FishingLure lure) => new()
+    {
+        Id = lure.Id,
+        PlayerId = lure.PlayerId,
+        Name = lure.Name,
+        Attraction = lure.Attraction,
+        RarityBonus = lure.RarityBonus,
+        TargetDepth = lure.TargetDepth,
+        DurabilityRemaining = lure.DurabilityRemaining,
+        RequiredLevel = lure.RequiredLevel,
+        Quantity = lure.Quantity,
+        IsEquipped = lure.IsEquipped,
+        IsCrafted = lure.IsCrafted
+    };
+}
+
+public sealed class GearBuyRodEventArgs
+{
+    public required RodSpec Spec { get; init; }
+    public required FishingRod Rod { get; init; }
+}
+
+public sealed class GearBuyReelEventArgs
+{
+    public required ReelSpec Spec { get; init; }
+    public required FishingReel Reel { get; init; }
+}
+
+public sealed class GearBuyLineEventArgs
+{
+    public required LineSpec Spec { get; init; }
+    public required FishingLine Line { get; init; }
+}
+
+public sealed class GearBuyLureEventArgs
+{
+    public required LureSpec Spec { get; init; }
+    public required FishingLure Lure { get; init; }
 }
 

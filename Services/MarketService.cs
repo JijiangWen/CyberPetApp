@@ -10,6 +10,19 @@ public class MarketListingView
     public List<NpcOffer> PendingOffers { get; init; } = [];
 }
 
+public sealed class MarketListEventArgs
+{
+    public required Fish Fish { get; init; }
+    public required MarketListing Listing { get; init; }
+    public required int StallFee { get; init; }
+}
+
+public sealed class MarketDelistEventArgs
+{
+    public required MarketListing Listing { get; init; }
+    public required Fish ReturnedFish { get; init; }
+}
+
 public class MarketService
 {
     public const string StallTicketItemName = "摊位券";
@@ -46,6 +59,66 @@ public class MarketService
 
     public static int MarketFloorPrice(Fish fish) =>
         Math.Max(1, (int)(fish.SellPrice * MarketFloorRate));
+
+    /// <summary>上架前校验（UI 与持久化共用）。</summary>
+    public static bool TryPrepareList(
+        Player player,
+        IReadOnlyList<MarketListingView> listings,
+        Fish fish,
+        out MarketListing listing,
+        out int stallFee,
+        out string error)
+    {
+        listing = null!;
+        stallFee = 0;
+        error = "";
+
+        if (!player.FishBackpack.Any(f => f.Id == fish.Id))
+        {
+            error = "背包里没有这条鱼";
+            return false;
+        }
+
+        int limit = GetListingLimit(player);
+        if (listings.Count >= limit)
+        {
+            error = $"挂单已满（{listings.Count}/{limit}），打工获取摊位券可提升上限";
+            return false;
+        }
+
+        stallFee = EconomySinks.MarketListingFee(fish.SellPrice);
+        if (player.Money < stallFee)
+        {
+            error = $"金币不足，上架摊位费需 {stallFee}g（拒绝/下架不退）";
+            return false;
+        }
+
+        listing = CreateListingFromFish(fish, player.Id);
+        return true;
+    }
+
+    public static void ApplyListOptimistic(
+        Player player,
+        List<MarketListingView> listings,
+        Fish fish,
+        MarketListing listing,
+        int stallFee)
+    {
+        player.Money -= stallFee;
+        player.FishBackpack.RemoveAll(f => f.Id == fish.Id);
+        listings.Insert(0, new MarketListingView { Listing = listing, PendingOffers = [] });
+    }
+
+    public static void ApplyDelistOptimistic(
+        Player player,
+        List<MarketListingView> listings,
+        MarketListing listing,
+        out Fish returnedFish)
+    {
+        returnedFish = ListingToFish(listing, player.Id);
+        listings.RemoveAll(v => v.Listing.Id == listing.Id);
+        player.FishBackpack.Add(returnedFish);
+    }
 
     /// <summary>
     /// 还价成功率 = clamp(50% + Happiness/1000×20% - 还价幅度×30%, 10%, 90%)
@@ -104,21 +177,7 @@ public class MarketService
         dbPlayer.Money -= stallFee;
         player.Money = dbPlayer.Money;
 
-        var listing = new MarketListing
-        {
-            PlayerId = player.Id,
-            FishName = dbFish.Name,
-            Rarity = dbFish.Rarity,
-            ActualWeight = dbFish.ActualWeight,
-            SizePercentage = dbFish.SizePercentage,
-            HungerRestore = dbFish.HungerRestore,
-            EnergyRestore = dbFish.EnergyRestore,
-            HappinessRestore = dbFish.HappinessRestore,
-            BaseSellPrice = dbFish.SellPrice,
-            ListingFloorPrice = MarketFloorPrice(dbFish),
-            ListedAt = DateTime.UtcNow,
-            IsActive = true
-        };
+        var listing = CreateListingFromFish(dbFish, player.Id);
 
         _context.Fishes.Remove(dbFish);
         _context.MarketListings.Add(listing);
@@ -129,17 +188,80 @@ public class MarketService
         return (true, $"已上架 [{dbFish.Name}]，扣摊位费 {stallFee}g（不退），底价 {listing.ListingFloorPrice}g，等待 NPC 出价…");
     }
 
+    /// <summary>乐观 UI 已扣费/移鱼后，仅同步数据库。</summary>
+    public async Task<(bool Ok, string Message)> CommitListFishAsync(Player player, Fish fish, MarketListing listing)
+    {
+        if (listing.PlayerId != player.Id)
+            return (false, "无效挂单");
+
+        int limit = GetListingLimit(player);
+        int activeCount = await _context.MarketListings
+            .CountAsync(l => l.PlayerId == player.Id && l.IsActive);
+        if (activeCount >= limit)
+            return (false, $"挂单已满（{activeCount}/{limit}）");
+
+        var dbFish = await _context.Fishes
+            .FirstOrDefaultAsync(f => f.Id == fish.Id && f.PlayerId == player.Id);
+        if (dbFish is null)
+            return (false, "背包里没有这条鱼");
+
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        _context.Fishes.Remove(dbFish);
+
+        if (!await _context.MarketListings.AnyAsync(l => l.Id == listing.Id))
+            _context.MarketListings.Add(listing);
+
+        await _context.SaveChangesAsync();
+        return (true, "已同步");
+    }
+
     public async Task<(bool Ok, string Message)> DelistAsync(Player player, Guid listingId)
+    {
+        var (ok, msg, fish) = await DelistCoreAsync(player.Id, listingId);
+        if (ok && fish is not null)
+            player.FishBackpack.Add(fish);
+        return (ok, msg);
+    }
+
+    /// <summary>乐观 UI 已将鱼退回背包后，仅同步数据库。</summary>
+    public async Task<(bool Ok, string Message)> CommitDelistAsync(Player player, Guid listingId, Fish returnedFish)
     {
         var listing = await _context.MarketListings
             .FirstOrDefaultAsync(l => l.Id == listingId && l.PlayerId == player.Id && l.IsActive);
         if (listing is null)
             return (false, "挂单不存在");
 
-        var fish = ListingToFish(listing);
+        returnedFish.PlayerId = player.Id;
+        if (!await _context.Fishes.AnyAsync(f => f.Id == returnedFish.Id))
+            _context.Fishes.Add(returnedFish);
+
+        listing.IsActive = false;
+        await RemoveListingOffersAndBansAsync(listingId);
+        await _context.SaveChangesAsync();
+        return (true, "已同步");
+    }
+
+    private async Task<(bool Ok, string Message, Fish? Fish)> DelistCoreAsync(Guid playerId, Guid listingId)
+    {
+        var listing = await _context.MarketListings
+            .FirstOrDefaultAsync(l => l.Id == listingId && l.PlayerId == playerId && l.IsActive);
+        if (listing is null)
+            return (false, "挂单不存在", null);
+
+        var fish = ListingToFish(listing, playerId);
         _context.Fishes.Add(fish);
         listing.IsActive = false;
+        await RemoveListingOffersAndBansAsync(listingId);
+        await _context.SaveChangesAsync();
+        return (true, $"已下架 [{listing.FishName}]，鱼已退回背包", fish);
+    }
 
+    private async Task RemoveListingOffersAndBansAsync(Guid listingId)
+    {
         var pendingOffers = await _context.NpcOffers
             .Where(o => o.ListingId == listingId && !o.IsAccepted)
             .ToListAsync();
@@ -147,10 +269,6 @@ public class MarketService
 
         var bans = await _context.NpcListingBans.Where(b => b.ListingId == listingId).ToListAsync();
         _context.NpcListingBans.RemoveRange(bans);
-
-        await _context.SaveChangesAsync();
-        player.FishBackpack.Add(fish);
-        return (true, $"已下架 [{listing.FishName}]，鱼已退回背包");
     }
 
     public async Task<(bool Ok, string Message, int? NewMoney)> AcceptOfferAsync(Player player, Guid offerId)
@@ -387,7 +505,23 @@ public class MarketService
         _ => ""
     };
 
-    private static Fish ListingToFish(MarketListing listing) => new(
+    public static MarketListing CreateListingFromFish(Fish fish, Guid playerId) => new()
+    {
+        PlayerId = playerId,
+        FishName = fish.Name,
+        Rarity = fish.Rarity,
+        ActualWeight = fish.ActualWeight,
+        SizePercentage = fish.SizePercentage,
+        HungerRestore = fish.HungerRestore,
+        EnergyRestore = fish.EnergyRestore,
+        HappinessRestore = fish.HappinessRestore,
+        BaseSellPrice = fish.SellPrice,
+        ListingFloorPrice = MarketFloorPrice(fish),
+        ListedAt = DateTime.UtcNow,
+        IsActive = true
+    };
+
+    public static Fish ListingToFish(MarketListing listing, Guid playerId) => new(
         listing.FishName,
         listing.HungerRestore,
         listing.EnergyRestore,
@@ -396,6 +530,7 @@ public class MarketService
         listing.Rarity,
         listing.ActualWeight)
     {
+        PlayerId = playerId,
         SizePercentage = listing.SizePercentage
     };
 }

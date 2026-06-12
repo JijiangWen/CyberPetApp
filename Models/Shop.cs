@@ -22,12 +22,12 @@ public class Shop
 
     public Shop()
     {
-        ShopItems.Add(new ShopItem(new Food("纯净水", 0, 0, 0), 5, "water", "装入饮水器或手动饮用"));
-        ShopItems.Add(new ShopItem(new Food("普通猫粮", 15, 2, 2), 10, "food", "基础饱腹"));
-        ShopItems.Add(new ShopItem(new Food("高级猫粮", 25, 5, 3), 15, "food", "喂食器/手动喂"));
-        ShopItems.Add(new ShopItem(new Food("金枪鱼罐头", 35, 15, 5), 20, "food", "高饱腹高精力"));
-        ShopItems.Add(new ShopItem(new Food("猫薄荷包", 0, 0, 50), 30, "treat", "手动快乐+50 或装入喂食器"));
-        ShopItems.Add(new ShopItem(new Food("能量饮料", 0, 40, 0), 25, "drink", "手动精力+40"));
+        ShopItems.Add(new ShopItem(new Food("纯净水", 0, 0, 0), 2, "water", "装入饮水器或手动饮用"));
+        ShopItems.Add(new ShopItem(new Food("干瘪的猫粮", 10, 1, 0), 5, "food", "廉价的基础饱腹"));
+        ShopItems.Add(new ShopItem(new Food("混合肉干猫粮", 20, 5, 5), 15, "food", "性价比口粮"));
+        ShopItems.Add(new ShopItem(new Food("鲜肉营养罐头", 35, 10, 10), 30, "food", "高饱腹、恢复精力"));
+        ShopItems.Add(new ShopItem(new Food("浓缩猫薄荷", 0, 0, 60), 50, "treat", "大幅提升快乐（+60）"));
+        ShopItems.Add(new ShopItem(new Food("赛博能量液", 0, 50, -5), 45, "drink", "快速恢复精力（+50）"));
 
         // 炼金锻造素材（craft.gear）
         ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.NylonFilament, 0, 0, 0), 15, "craft", "炼制鱼线 · 尼龙原丝"));

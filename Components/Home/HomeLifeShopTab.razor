@@ -1,4 +1,5 @@
 @using CyberPetApp.Models
+@using CyberPetApp.Services
 @inherits HomeTabBase
 
 <div class="content-panel content-panel-stack">
@@ -9,8 +10,8 @@
     <LifeShopPanel Player="Session.Player"
                    ShopItems="Shop.ShopItems"
                    Backpack="Session.Player.Backpack"
-                   Message="Message"
-                   OnBuyItem="OnBuyItem" />
+                   Message="DisplayMessage"
+                   OnBuyItem="BuyItemClick" />
 </div>
 
 @code {
@@ -18,5 +19,35 @@
 
     [Parameter] public Shop Shop { get; set; } = null!;
     [Parameter] public string? Message { get; set; }
-    [Parameter] public EventCallback<ShopItem> OnBuyItem { get; set; }
+    [Parameter] public EventCallback<ShopItem> OnBuyItemCommitted { get; set; }
+
+    private string? _localMessage;
+    private int _syncTick = -1;
+
+    private string? DisplayMessage => _localMessage ?? Message;
+
+    protected override void OnParametersSet()
+    {
+        if (TickGeneration != _syncTick)
+        {
+            _localMessage = null;
+            _syncTick = TickGeneration;
+        }
+    }
+
+    private void BuyItemClick(ShopItem item)
+    {
+        var player = Session.Player!;
+        if (!PlayerService.TryPrepareBuyShopItem(player, item, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        PlayerService.ApplyBuyShopItemOptimistic(player, item);
+        _localMessage = $"已购买 {item.Food.Name} ×1";
+        RequestRender();
+        _ = OnBuyItemCommitted.InvokeAsync(item);
+    }
 }

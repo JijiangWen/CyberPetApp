@@ -1386,6 +1386,103 @@ body::after {
     gap: 4px;
 }
 
+.gear-shop-cat-bar {
+    margin-bottom: 8px;
+}
+
+.gear-shop-tab-badge {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 5px;
+    font-size: 9px;
+    line-height: 14px;
+    color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    background: #0d1b2a;
+}
+
+.gear-shop-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.gear-shop-search {
+    flex: 1 1 160px;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 5px 8px;
+    background: var(--bg2);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.gear-shop-search:focus {
+    outline: none;
+    border-color: var(--cyan-dim);
+}
+
+.gear-shop-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.filter-chip {
+    font-family: inherit;
+    font-size: 9px;
+    padding: 3px 8px;
+    background: var(--bg2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.filter-chip:hover {
+    color: var(--text-2);
+    border-color: var(--border-hi);
+}
+
+.filter-chip.active {
+    color: var(--gold);
+    border-color: var(--gold-dim);
+    background: #1a1508;
+}
+
+.gear-shop-tier-lbl {
+    cursor: pointer;
+    margin-top: 8px;
+    user-select: none;
+}
+
+.gear-shop-tier-lbl:first-of-type {
+    margin-top: 0;
+}
+
+.gear-shop-tier-meta {
+    color: var(--muted);
+    font-weight: normal;
+    margin-left: 6px;
+}
+
+.gear-shop-crafted-lbl {
+    margin-top: 14px;
+}
+
+.gear-shop-empty {
+    margin: 12px 0 4px;
+    color: var(--muted);
+}
+
+.gear-shop-footnote,
+.gear-shop-message {
+    margin-top: 8px;
+    font-size: 9px;
+}
+
 .gear-loadout-warn {
     color: var(--gold);
     border-left: 3px solid var(--gold-dim);

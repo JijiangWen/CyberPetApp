@@ -164,11 +164,11 @@ public partial class Home : IAsyncDisposable
 
     private string CatMoodText() => CatState() switch
     {
-        "fishing" => "???? ?`",
-        "sleep"   => "?????? zzz",
-        "hungry"  => "??q????c",
-        "happy"   => "????S ?",
-        _         => "?S??s?"
+        "fishing" => "专注钓鱼 🎣",
+        "sleep"   => "困意满满 zzz",
+        "hungry"  => "饥肠辘辘",
+        "happy"   => "超级开心 ♥",
+        _         => "状态尚可"
     };
 
     /// <summary>??????????X?V???????C???????????d?Z?B</summary>
@@ -199,7 +199,7 @@ public partial class Home : IAsyncDisposable
     private void UpdateSidebarDebuffLines(IEnumerable<string> statusLines)
     {
         var newLines = statusLines
-            .Where(l => l.Contains("??") || l.Contains("???") || l.Contains("???"))
+            .Where(l => l.Contains("饥饿") || l.Contains("疲劳") || l.Contains("拖欠") || l.Contains("debuff"))
             .ToList();
         if (_sidebarDebuffLines.Count == newLines.Count
             && _sidebarDebuffLines.SequenceEqual(newLines))
@@ -264,16 +264,16 @@ public partial class Home : IAsyncDisposable
 
     private static string SectionTabLabel(string section) => section switch
     {
-        "house" => "???",
-        "fishing" => "??",
-        "work" => "??H",
-        "market" => "??s",
-        "gear" => "???",
-        "cooking" => "?B?",
-        "alchemy" => "???",
-        "lifeshop" => "???????X",
-        "milestones" => "??????",
-        "backpack" => "?w??",
+        "house" => "家园",
+        "fishing" => "钓鱼",
+        "work" => "打工",
+        "market" => "鱼市",
+        "gear" => "装备",
+        "cooking" => "烹饪",
+        "alchemy" => "炼金",
+        "lifeshop" => "生活商店",
+        "milestones" => "里程碑",
+        "backpack" => "背包",
         _ => section
     };
 
@@ -281,7 +281,7 @@ public partial class Home : IAsyncDisposable
     {
         activeSection = s;
         if (s == "market" && player is not null)
-            await ReloadMarketAsync();
+            await WithDbLock(ReloadMarketAsync);
         if (s == "milestones" && player is not null)
             await ReloadMilestonesAsync();
         if (s == "alchemy" && player is not null)
@@ -328,10 +328,6 @@ public partial class Home : IAsyncDisposable
         await ReloadGearPanelAsync();
     }
 
-    private Task RepairRodPartial(FishingRod rod) => RepairRod(rod, false);
-    private Task RepairReelPartial(FishingReel reel) => RepairReel(reel, false);
-    private Task RepairLinePartial(FishingLine line) => RepairLine(line, false);
-
     private async Task ReloadGearAsync()
     {
         myRods = await _equipmentService.GetRodsAsync(player!.Id);
@@ -339,7 +335,6 @@ public partial class Home : IAsyncDisposable
         myLines = await _equipmentService.GetLinesAsync(player.Id);
         myLures = await _equipmentService.GetLuresAsync(player.Id);
 
-        // ??? loadout ???p?s??i????????L???????j?C????????i
         var fresh = await _equipmentService.BuildLoadoutAsync(player.Id, player.FishingLevel, milestoneBuffs.RarityBonus);
         loadout.RodName = fresh.RodName;
         loadout.Sensitivity = fresh.Sensitivity;
@@ -390,30 +385,6 @@ public partial class Home : IAsyncDisposable
         double dex = GearProgressionCatalog.OverallDexPercent(GetFishDex());
         int mythCount = fishRecords.Count(r => r.FishName.StartsWith("?_??E", StringComparison.Ordinal));
         return GearProgressionCatalog.ComputeGraduationPercent(rodTier, reelTier, lineTier, lureTier, dex, mythCount);
-    }
-
-    private async Task RepairRod(FishingRod rod, bool full)
-    {
-        (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _equipmentService.RepairRodAsync(player!, rod.Id, full));
-        gearMessage = result.msg;
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private async Task RepairReel(FishingReel reel, bool full)
-    {
-        (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _equipmentService.RepairReelAsync(player!, reel.Id, full));
-        gearMessage = result.msg;
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private async Task RepairLine(FishingLine line, bool full)
-    {
-        (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _equipmentService.RepairLineAsync(player!, line.Id, full));
-        gearMessage = result.msg;
-        await WithDbLock(ReloadGearAsync);
     }
 
     private bool HasSpotAccess(string spotName)
@@ -494,143 +465,39 @@ public partial class Home : IAsyncDisposable
         }
     }
 
-    private async Task BuyRod(RodSpec spec)
-    {
-        bool ok = false;
-        await WithDbLock(async () => ok = await _equipmentService.BuyRodAsync(player!, spec, cat.CatLevel, GetFishDex(), HasSpotAccess));
-        gearMessage = ok ? $"??? {spec.Name}" : GearBuyFailMessage(spec);
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private async Task BuyReel(ReelSpec spec)
-    {
-        bool ok = false;
-        await WithDbLock(async () => ok = await _equipmentService.BuyReelAsync(player!, spec, cat.CatLevel, GetFishDex(), HasSpotAccess));
-        gearMessage = ok ? $"??? {spec.Name}" : GearBuyFailMessage(spec);
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private async Task BuyLine(LineSpec spec)
-    {
-        bool ok = false;
-        await WithDbLock(async () => ok = await _equipmentService.BuyLineAsync(player!, spec, cat.CatLevel, GetFishDex(), HasSpotAccess));
-        gearMessage = ok ? $"??? {spec.Name}" : GearBuyFailMessage(spec);
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private async Task BuyLure(LureSpec spec)
-    {
-        bool ok = false;
-        await WithDbLock(async () => ok = await _equipmentService.BuyLureAsync(player!, spec, cat.CatLevel, GetFishDex(), HasSpotAccess));
-        gearMessage = ok ? $"??? {spec.Name} ?~{spec.PackSize}" : GearBuyFailMessage(spec);
-        await WithDbLock(ReloadGearAsync);
-    }
-
-    private string GearBuyFailMessage(RodSpec spec)
-    {
-        if (spec.CraftOnly) return "????????";
-        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player!.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess))
-            return $"??????F{GearProgressionCatalog.UnlockShortfall(spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent, spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent, player.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess)}";
-        return "????s????????L";
-    }
-
-    private string GearBuyFailMessage(ReelSpec spec)
-    {
-        if (spec.CraftOnly) return "????????";
-        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player!.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess))
-            return $"??????F{GearProgressionCatalog.UnlockShortfall(spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent, spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent, player.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess)}";
-        return "????s????????L";
-    }
-
-    private string GearBuyFailMessage(LineSpec spec)
-    {
-        if (spec.CraftOnly) return "????????";
-        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player!.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess))
-            return $"??????F{GearProgressionCatalog.UnlockShortfall(spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent, spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent, player.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess)}";
-        return "????s????????L";
-    }
-
-    private string GearBuyFailMessage(LureSpec spec)
-    {
-        if (spec.CraftOnly) return "????????";
-        if (!GearProgressionCatalog.MeetsGearUnlock(spec, player!.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess))
-            return $"??????F{GearProgressionCatalog.UnlockShortfall(spec.RequiredLevel, spec.RequiredCatLevel, spec.RequiredDexSpot, spec.RequiredDexPercent, spec.RequiredLicenseSpot, spec.RequiredOverallDexPercent, player.FishingLevel, cat.CatLevel, GetFishDex(), HasSpotAccess)}";
-        return "????s??";
-    }
-
     private async Task DisassembleFish(Fish fish)
     {
-        (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _gearMaterialService.DisassembleFishAsync(player!, fish));
-        feedMessage = result.msg;
-        if (result.ok) await _playerService.SaveProgressAsync(player!);
+        if (player is null || !player.FishBackpack.Any(f => f.Id == fish.Id))
+            return;
+
+        var (ok, msg, drops) = _gearMaterialService.ApplyDisassembleInMemory(player, fish);
+        feedMessage = msg;
+        if (!ok)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        tickGeneration++;
+        BindGameSession();
+        await InvokeAsync(StateHasChanged);
+
+        _ = PersistDisassembleFishAsync(fish, drops);
     }
 
-    private async Task EquipRod(FishingRod rod)
-    {
-        await WithDbLock(() => _equipmentService.EquipRodAsync(player!.Id, rod.Id));
-        await WithDbLock(ReloadGearAsync);
-        gearMessage = $"???? {rod.Name}";
-    }
-
-    private async Task EquipReel(FishingReel reel)
-    {
-        await WithDbLock(() => _equipmentService.EquipReelAsync(player!.Id, reel.Id));
-        await WithDbLock(ReloadGearAsync);
-        gearMessage = $"???? {reel.Name}";
-    }
-
-    private async Task EquipLine(FishingLine line)
-    {
-        await WithDbLock(() => _equipmentService.EquipLineAsync(player!.Id, line.Id));
-        await WithDbLock(ReloadGearAsync);
-        gearMessage = $"???? {line.Name}";
-    }
-
-    private async Task EquipLure(FishingLure lure)
-    {
-        await WithDbLock(() => _equipmentService.EquipLureAsync(player!.Id, lure.Id));
-        await WithDbLock(ReloadGearAsync);
-        gearMessage = $"???? {lure.Name}";
-    }
-
-    // ?? ?B? ??
-    private async Task CookFish(Fish fish, string? recipeId = null)
+    private async Task PersistDisassembleFishAsync(Fish fish, IReadOnlyList<(string Name, int Qty)> drops)
     {
         try
         {
-            CookResult? result = null;
-            await WithDbLock(async () =>
-            {
-                result = await _cookingService.CookFishAsync(player!, cat, fish, GetHouseBuffs(), recipeId);
-                await _cyberCatService.SaveAsync(cat);
-                await _playerService.SaveProgressAsync(player!);
-            });
-            cookMessage = result!.Message + (result.LevelUps > 0 ? $" ? ?B????? Lv.{player!.CookingLevel}!" : "");
-            _ = WithDbLock(async () => await _achievementService.SyncProgressAsync(player!, fishRecords, HasDeepSeaPermanent()));
+            await WithDbLock(() => _gearMaterialService.PersistDisassembleAsync(player!, fish, drops));
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "CookFish ????F{FishName}", fish.Name);
-            cookMessage = "?B?????C??c?@?d?";
+            Logger.LogWarning(ex, "PersistDisassembleFish failed for {FishId}", fish.Id);
         }
     }
 
-    private async Task CookAll(bool commonOnlyOnly)
-    {
-        CookResult? result = null;
-        await WithDbLock(async () =>
-        {
-            result = await _cookingService.CookAllAsync(player!, cat, GetHouseBuffs(), commonOnlyOnly);
-            await _cyberCatService.SaveAsync(cat);
-            await _playerService.SaveProgressAsync(player!);
-        });
-        cookMessage = result!.Message + (result.LevelUps > 0 ? $" ? ?B????? Lv.{player!.CookingLevel}!" : "");
-        await _achievementService.SyncProgressAsync(player!, fishRecords, HasDeepSeaPermanent());
-    }
-
-    private Task CookFishFromTab((Fish fish, string recipeId) args) =>
-        CookFish(args.fish, args.recipeId);
+    // 烹饪 / 喂食 → Home.Cooking.cs（乐观 UI）
 
     // Reload alchemy panel
     private async Task ReloadAlchemyAsync()
@@ -751,68 +618,10 @@ public partial class Home : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task FeedCookedFood(string foodName)
-    {
-        string? msg = null;
-        Food? food = null;
-        string? catLevelMsg = null;
-        await WithDbLock(async () =>
-        {
-            (food, msg) = await _cookingService.FeedCookedFoodAsync(player!, foodName);
-        });
-        if (food is not null)
-        {
-            lock (catStateLock)
-            {
-                cat.FeedFood(food);
-                int catXp = CatFishingStatsHelper.XpFromFood(foodName);
-                (_, catLevelMsg) = _catProgressionService.AddXp(cat, catXp);
-            }
-            player!.LifetimeFeedCount++;
-            await WithDbLock(async () =>
-            {
-                activeFoodBuffs = await _catBuffService.LoadActiveAsync(player.Id);
-                await _catProgressionService.SaveAsync(cat);
-                await _playerService.SaveProgressAsync(player);
-                await _achievementService.SyncProgressAsync(player, fishRecords, HasDeepSeaPermanent());
-            });
-        }
-        feedMessage = food is not null
-            ? (string.IsNullOrEmpty(catLevelMsg) ? msg : $"{msg} ?E {catLevelMsg}")
-            : msg ?? $"?w???v?L {foodName}";
-        TryRefreshSidebarVitals();
-        await InvokeAsync(StateHasChanged);
-    }
+    // FeedCookedFood / FeedShopFood → Home.Cooking.cs
 
     private bool HasBackpackFood(string itemName) =>
         player!.Backpack.TryGetValue(itemName, out int qty) && qty > 0;
-
-    private async Task FeedShopFood(Food food)
-    {
-        bool consumed = false;
-        await WithDbLock(async () => consumed = await _playerService.ConsumeBackpackItemAsync(player!, food.Name));
-        if (consumed)
-        {
-            string? catLevelMsg;
-            lock (catStateLock)
-            {
-                cat.FeedFood(food);
-                int catXp = CatFishingStatsHelper.XpFromFood(food.Name);
-                (_, catLevelMsg) = _catProgressionService.AddXp(cat, catXp);
-            }
-            player!.LifetimeFeedCount++;
-            feedMessage = catLevelMsg;
-            _ = WithDbLock(async () =>
-            {
-                await _playerService.SaveProgressAsync(player);
-                await _catProgressionService.SaveAsync(cat);
-                await _achievementService.SyncProgressAsync(player, fishRecords, HasDeepSeaPermanent());
-            });
-        }
-        else feedMessage = $"?w???v?L {food.Name}";
-        TryRefreshSidebarVitals();
-        await InvokeAsync(StateHasChanged);
-    }
 
     private async Task ReloadLeaderboardAsync()
     {
@@ -916,12 +725,36 @@ public partial class Home : IAsyncDisposable
         }
     }
 
-    private async Task BuyShopItem(ShopItem item)
+    private Task FinalizeBuyShopItem(ShopItem item)
     {
-        bool ok = false;
-        await WithDbLock(async () => ok = await _playerService.BuyShopItemAsync(player!, item));
-        if (!ok) lifeShopMessage = "????s??";
-        else lifeShopMessage = $"????? {item.Food.Name} ?~1";
+        lifeShopMessage = $"已购买 {item.Food.Name} ×1";
+        tickGeneration++;
+        BindGameSession();
+        _ = PersistBuyShopItemAsync(item);
+        return Task.CompletedTask;
+    }
+
+    private async Task PersistBuyShopItemAsync(ShopItem item)
+    {
+        try
+        {
+            await WithDbLock(async () =>
+            {
+                var (ok, msg) = await _playerService.CommitBuyShopItemAsync(player!, item);
+                if (!ok)
+                {
+                    PlayerService.RollbackBuyShopItem(player!, item);
+                    lifeShopMessage = msg;
+                }
+            });
+            tickGeneration++;
+            BindGameSession();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PersistBuyShopItem failed for {ItemName}", item.Food.Name);
+        }
     }
 
     private static string FishSpriteClass(string name, FishRarity rarity) =>
@@ -981,6 +814,46 @@ public partial class Home : IAsyncDisposable
         workingPlace.EffectiveTicksPerStallTicketForDisplay(GetHouseBuffs());
 
     private int BackpackTotalCount() => player!.Backpack.Values.Sum() + player.FishBackpack.Count;
+
+    private Task HandleUpgradeBackpack()
+    {
+        if (player is null) return Task.CompletedTask;
+        if (!PlayerService.TryPrepareFishBackpackUpgrade(player, out var inc, out var cost, out var error))
+        {
+            feedMessage = error;
+            return InvokeAsync(StateHasChanged);
+        }
+
+        PlayerService.ApplyFishBackpackUpgradeOptimistic(player, inc, cost);
+        feedMessage = $"背包升级 +{inc}，扣除 {cost}g";
+        tickGeneration++;
+        BindGameSession();
+        _ = PersistUpgradeBackpackAsync(inc, cost);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PersistUpgradeBackpackAsync(int inc, int cost)
+    {
+        try
+        {
+            await WithDbLock(async () =>
+            {
+                var ok = await _playerService.CommitFishBackpackUpgradeAsync(player!);
+                if (!ok)
+                {
+                    PlayerService.RollbackFishBackpackUpgrade(player!, inc, cost);
+                    feedMessage = "升级失败，已回滚";
+                }
+            });
+            tickGeneration++;
+            BindGameSession();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PersistUpgradeBackpack failed");
+        }
+    }
     private int UnlockedRoomCount() => playerHouse.Rooms.Values.Count(r => r.IsUnlocked);
     private int TotalFurnitureCount() => playerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
     private int UnlockedFurnitureCount() => playerHouse.Rooms.Values.SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);

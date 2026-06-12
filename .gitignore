@@ -478,5 +478,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# Vim temporary swap files
-*.swp
+# Playwright e2e
+playwright-report/
+playwright/.cache/
+playwright-test-output/

@@ -716,6 +716,9 @@ namespace CyberPetApp.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<int>("FishBackpackCapacity")
+                        .HasColumnType("integer");
+
                     b.Property<int>("FishingLevel")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

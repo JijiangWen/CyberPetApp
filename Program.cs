@@ -14,7 +14,31 @@ using Microsoft.EntityFrameworkCore;
 
 
 
+#if DEBUG
+var rootDir = AppDomain.CurrentDomain.BaseDirectory;
+int idx = rootDir.IndexOf(Path.Combine("bin", "Debug"));
+if (idx > 0)
+{
+    rootDir = rootDir.Substring(0, idx);
+}
+else
+{
+    rootDir = Directory.GetCurrentDirectory();
+}
+
+// 🌟 DEBUG 模式下：最高优先级注入绝对路径和开发环境
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ApplicationName = "CyberPetApp",
+    EnvironmentName = Environments.Development,
+    ContentRootPath = rootDir,
+    WebRootPath = Path.Combine(rootDir, "wwwroot")
+});
+#else
+// 🌟 RELEASE 模式下：保持正常的默认初始化，注意这里依然有 var，两个分支绝对互斥，不会重复定义
 var builder = WebApplication.CreateBuilder(args);
+#endif
 
 
 

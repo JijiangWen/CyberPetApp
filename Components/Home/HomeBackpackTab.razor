@@ -9,10 +9,22 @@
         <span class="panel-meta">
             items: @Session.Player!.Backpack.Count
             &nbsp;·&nbsp;
-            fish: @Session.Player.FishBackpack.Count
+            fish: @Session.Player.FishBackpack.Count/@Session.Player.FishBackpackCapacity
             &nbsp;·&nbsp;
             total: @TotalCount
         </span>
+        <div class="panel-actions">
+            @if (Session.Player.FishBackpackCapacity < Models.EconomySinks.FishBackpackMaxCapacity)
+            {
+                var nextInc = Models.EconomySinks.FishBackpackNextIncrement(Session.Player.FishBackpackCapacity);
+                var cost = Models.EconomySinks.FishBackpackUpgradeCost(Session.Player.FishBackpackCapacity);
+                <button class="g-btn" @onclick="UpgradeBackpack">Upgrade +@nextInc (@cost g)</button>
+            }
+            else
+            {
+                <button class="g-btn" disabled>Max capacity reached</button>
+            }
+        </div>
     </div>
     @if (Session.Player.Backpack.Count == 0 && Session.Player.FishBackpack.Count == 0)
     {
@@ -102,4 +114,11 @@
     [Parameter] public EventCallback<Fish> OnDisassembleFish { get; set; }
     [Parameter] public EventCallback<Fish> OnListFishOnMarket { get; set; }
     [Parameter] public EventCallback OnGoToMarket { get; set; }
+    [Parameter] public EventCallback OnUpgradeBackpack { get; set; }
+
+    private async Task UpgradeBackpack()
+    {
+        if (OnUpgradeBackpack.HasDelegate)
+            await OnUpgradeBackpack.InvokeAsync(null);
+    }
 }

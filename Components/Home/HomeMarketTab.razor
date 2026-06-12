@@ -56,9 +56,9 @@
         </div>
     </div>
 
-    @if (Message is not null)
+    @if (DisplayMessage is not null)
     {
-        <p class="hint market-msg">// @Message</p>
+        <p class="hint market-msg">// @DisplayMessage</p>
     }
 
     <div class="section-tw tw">
@@ -103,7 +103,7 @@
                                         }
                                     </td>
                                     <td class="td-actions">
-                                        <button class="g-btn g-btn-sm" @onclick="() => OnDelist.InvokeAsync(listing)">下架</button>
+                                        <button type="button" class="g-btn g-btn-sm" @onclick="() => DelistClick(listing)">下架</button>
                                     </td>
                                 </tr>
                             }
@@ -142,13 +142,13 @@
                                     </span>
                                 </div>
                                 <div class="offer-actions">
-                                    <button class="g-btn primary g-btn-sm"
+                                    <button type="button" class="g-btn primary g-btn-sm"
                                             @onclick="() => OnAcceptOffer.InvokeAsync(offer)">接受</button>
-                                    <button class="g-btn g-btn-sm"
+                                    <button type="button" class="g-btn g-btn-sm"
                                             @onclick="() => OnCounterOffer.InvokeAsync(offer)">
                                         还价 +10% → @((int)Math.Ceiling(offer.OfferPrice * 1.1)) g
                                     </button>
-                                    <button class="g-btn danger g-btn-sm"
+                                    <button type="button" class="g-btn danger g-btn-sm"
                                             @onclick="() => OnRejectOffer.InvokeAsync(offer)">拒绝</button>
                                 </div>
                             </div>
@@ -185,9 +185,9 @@
                             @{
                                 int listFee = EconomySinks.MarketListingFee(fish.SellPrice);
                             }
-                            <button class="g-btn primary" style="margin-top:4px;"
+                            <button type="button" class="g-btn primary" style="margin-top:4px;"
                                     disabled="@(MarketListings.Count >= ListingLimit || Session.Player.Money < listFee)"
-                                    @onclick="() => OnListFishOnMarket.InvokeAsync(fish)">
+                                    @onclick="() => ListFishClick(fish)">
                                 上架（摊位费 @listFee g · 底价 @MarketService.MarketFloorPrice(fish) g）
                             </button>
                         </div>
@@ -208,9 +208,60 @@
     [Parameter] public string? Message { get; set; }
 
     [Parameter] public EventCallback OnRefreshBounty { get; set; }
-    [Parameter] public EventCallback<MarketListing> OnDelist { get; set; }
+    [Parameter] public EventCallback<MarketDelistEventArgs> OnDelist { get; set; }
     [Parameter] public EventCallback<NpcOffer> OnAcceptOffer { get; set; }
     [Parameter] public EventCallback<NpcOffer> OnCounterOffer { get; set; }
     [Parameter] public EventCallback<NpcOffer> OnRejectOffer { get; set; }
-    [Parameter] public EventCallback<Fish> OnListFishOnMarket { get; set; }
+    [Parameter] public EventCallback<MarketListEventArgs> OnListFishCommitted { get; set; }
+
+    private string? _localMessage;
+    private int _syncTick = -1;
+
+    private string? DisplayMessage => _localMessage ?? Message;
+
+    protected override void OnParametersSet()
+    {
+        if (TickGeneration != _syncTick)
+        {
+            _localMessage = null;
+            _syncTick = TickGeneration;
+        }
+    }
+
+    private void ListFishClick(Fish fish)
+    {
+        var player = Session.Player!;
+        if (!MarketService.TryPrepareList(player, MarketListings, fish, out var listing, out var stallFee, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        MarketService.ApplyListOptimistic(player, MarketListings, fish, listing, stallFee);
+        _localMessage = $"已上架 [{fish.Name}]，扣摊位费 {stallFee}g（不退），底价 {listing.ListingFloorPrice}g，等待 NPC 出价…";
+        RequestRender();
+        _ = OnListFishCommitted.InvokeAsync(new MarketListEventArgs
+        {
+            Fish = fish,
+            Listing = listing,
+            StallFee = stallFee
+        });
+    }
+
+    private void DelistClick(MarketListing listing)
+    {
+        var player = Session.Player!;
+        if (!MarketListings.Any(v => v.Listing.Id == listing.Id))
+            return;
+
+        MarketService.ApplyDelistOptimistic(player, MarketListings, listing, out var fish);
+        _localMessage = $"已下架 [{listing.FishName}]，鱼已退回背包";
+        RequestRender();
+        _ = OnDelist.InvokeAsync(new MarketDelistEventArgs
+        {
+            Listing = listing,
+            ReturnedFish = fish
+        });
+    }
 }

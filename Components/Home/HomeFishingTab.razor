@@ -35,19 +35,19 @@
                 <span class="s-val" style="font-size:10px;">@Session.Player.FishingXp/@Player.XpToNext(Session.Player.FishingLevel)</span>
             </div>
             <div class="gear-brief">
-                <span class="gb-item">🎣 @Session.Loadout.RodName ·抛投@Session.Loadout.CastRange <code class="abar abar-energy">@ABar(Session.Loadout.RodDurability, 100)</code></span>
-                <span class="gb-item">⚙ @Session.Loadout.ReelName ·线杯@Session.Loadout.LineCapacity kg <code class="abar abar-hunger">@ABar(Session.Loadout.ReelDurability, 100)</code></span>
-                <span class="gb-item">🧵 @Session.Loadout.LineName ·强度@Session.Loadout.LineStrength kg ·承重@Session.Loadout.EffectiveWeightLimit.ToString("0.#") kg <code class="abar abar-energy">@ABar(Session.Loadout.LineDurability, 100)</code></span>
-                <span class="gb-item @(Session.Loadout.LureQuantity == 0 ? "gb-empty" : "")">🪱 @Session.Loadout.LureName @GearCatalog.DepthLabel(Session.Loadout.LureDepth)层 ·耐久@Session.Loadout.LureDurabilityRemaining ×@Session.Loadout.LureQuantity</span>
+                <span class="gb-item">🎣 @Session.Loadout.RodName ·抛投@(Session.Loadout.CastRange) <code class="abar abar-energy">@ABar(Session.Loadout.RodDurability, 100)</code></span>
+                <span class="gb-item">⚙ @Session.Loadout.ReelName ·线杯@(Session.Loadout.LineCapacity) kg <code class="abar abar-hunger">@ABar(Session.Loadout.ReelDurability, 100)</code></span>
+                <span class="gb-item">🧵 @Session.Loadout.LineName ·强度@(Session.Loadout.LineStrength) kg ·承重@(Session.Loadout.EffectiveWeightLimit.ToString("0.#")) kg <code class="abar abar-energy">@ABar(Session.Loadout.LineDurability, 100)</code></span>
+                <span class="gb-item @(Session.Loadout.LureQuantity == 0 ? "gb-empty" : "")">🪱 @Session.Loadout.LureName @GearCatalog.DepthLabel(Session.Loadout.LureDepth)层 ·耐久@(Session.Loadout.LureDurabilityRemaining) ×@(Session.Loadout.LureQuantity)</span>
             </div>
             @if (!Session.Loadout.MeetsGearLevel)
             {
-                <p class="hint" style="margin-top:4px;">// 装备等级不足：需要钓鱼 Lv.@Session.Loadout.MinGearRequiredLevel（当前 Lv.@Session.Player.FishingLevel）</p>
+                <p class="hint" style="margin-top:4px;">// 装备等级不足：需要钓鱼 Lv.@(Session.Loadout.MinGearRequiredLevel)（当前 Lv.@(Session.Player.FishingLevel)）</p>
             }
             @if (Session.Loadout.SpotGearEffectiveness < 1.0)
             {
                 <p class="hint gear-loadout-warn" style="margin-top:4px;">
-                    // 竿阶 T@Session.Loadout.RodGearTier 低于钓点门槛 · 抓口/起鱼 ×@Session.Loadout.SpotGearEffectiveness.ToString("0.##") — 升级装备或炼金锻造
+                    // 竿阶 T@(Session.Loadout.RodGearTier) 低于钓点门槛 · 抓口/起鱼 ×@(Session.Loadout.SpotGearEffectiveness.ToString("0.##")) — 升级装备或炼金锻造
                 </p>
             }
         </div>
@@ -204,7 +204,11 @@
                     }
                     else if (!Session.Loadout.MeetsGearLevel)
                     {
-                        <button class="g-btn" disabled>装备需钓鱼 Lv.@Session.Loadout.MinGearRequiredLevel</button>
+                        <button class="g-btn" disabled>装备需钓鱼 Lv.@(Session.Loadout.MinGearRequiredLevel)</button>
+                    }
+                    else if (Session.Player.IsFishBackpackFull)
+                    {
+                        <button class="g-btn" disabled>鱼背包已满 (@Session.Player.FishBackpack.Count/@Session.Player.FishBackpackCapacity)</button>
                     }
                     else
                     {

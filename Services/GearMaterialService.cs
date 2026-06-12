@@ -19,49 +19,83 @@ public class GearMaterialService
         _playerService = playerService;
     }
 
-    /// <summary>成功钓获后随机掉落素材（写入背包）。</summary>
-    public async Task<string?> TryGrantCatchMaterialAsync(Player player, Fish fish, string spotName)
+    /// <summary>成功钓获后随机掉落素材（写入背包）。
+    /// NOTE: this method no longer calls SaveChanges; caller should persist once.
+    /// </summary>
+    public Task<string?> TryGrantCatchMaterialAsync(Player player, Fish fish, string spotName)
     {
         var drops = RollCatchDrops(fish, spotName);
-        if (drops.Count == 0) return null;
+        if (drops.Count == 0) return Task.FromResult<string?>(null);
 
         var parts = new List<string>();
         foreach (var (name, qty) in drops)
         {
-            await _playerService.GrantBackpackItemAsync(player, name, qty);
+            UpsertBackpackItem(player, name, qty);
             parts.Add($"{name}×{qty}");
         }
-        await _context.SaveChangesAsync();
-        return string.Join(" · ", parts);
+
+        // caller is responsible for calling SaveChangesAsync once
+        return Task.FromResult<string?>(string.Join(" · ", parts));
     }
 
-    /// <summary>分解鱼获换取炼金素材（鱼从背包移除）。</summary>
-    public async Task<(bool Ok, string Message)> DisassembleFishAsync(Player player, Fish fish)
+    /// <summary>分解鱼获：仅更新内存，供乐观 UI 立即反馈。</summary>
+    public (bool Ok, string Message, List<(string Name, int Qty)> Drops) ApplyDisassembleInMemory(Player player, Fish fish)
     {
         string spot = ResolveSpot(fish.Name);
         var drops = RollDisassembleDrops(fish, spot);
         if (drops.Count == 0)
-            return (false, "该鱼无法分解");
+            return (false, "该鱼无法分解", []);
 
-        var dbFish = await _context.Fishes.FirstOrDefaultAsync(f => f.Id == fish.Id && f.PlayerId == player.Id);
-        if (dbFish is null) return (false, "鱼不存在");
-        _context.Fishes.Remove(dbFish);
         player.FishBackpack.RemoveAll(f => f.Id == fish.Id);
-
         var parts = new List<string>();
         foreach (var (name, qty) in drops)
         {
-            await _playerService.GrantBackpackItemAsync(player, name, qty);
+            player.Backpack[name] = player.Backpack.GetValueOrDefault(name) + qty;
             parts.Add($"{name}×{qty}");
         }
+
+        return (true, $"分解【{fish.Name}】→ {string.Join(" · ", parts)}", drops);
+    }
+
+    /// <summary>将分解结果写入 EF 跟踪并提交（内存已由页面更新）。</summary>
+    public async Task PersistDisassembleAsync(Player player, Fish fish, IReadOnlyList<(string Name, int Qty)> drops)
+    {
+        var dbFish = _context.Fishes.Local.FirstOrDefault(f => f.Id == fish.Id && f.PlayerId == player.Id);
+        if (dbFish is not null)
+            _context.Fishes.Remove(dbFish);
+        else
+            _context.Entry(new Fish { Id = fish.Id, PlayerId = player.Id }).State = EntityState.Deleted;
+
+        foreach (var (name, qty) in drops)
+            ApplyBackpackDeltaToContext(player, name, qty);
+
         await _context.SaveChangesAsync();
-        return (true, $"分解【{fish.Name}】→ {string.Join(" · ", parts)}");
+    }
+
+    /// <summary>仅同步 EF 跟踪（内存已由调用方更新）。</summary>
+    private void ApplyBackpackDeltaToContext(Player player, string name, int delta)
+    {
+        var item = _context.BackpackItems.Local
+            .FirstOrDefault(b => b.PlayerId == player.Id && b.ItemName == name);
+        if (item is null)
+        {
+            _context.BackpackItems.Add(new BackpackItem
+            {
+                PlayerId = player.Id,
+                ItemName = name,
+                Quantity = player.Backpack.GetValueOrDefault(name)
+            });
+        }
+        else
+        {
+            item.Quantity += delta;
+        }
     }
 
     /// <summary>直售/市场上架时额外返还少量素材。</summary>
-    public async Task GrantRecycleBonusAsync(Player player, Fish fish)
+    public Task GrantRecycleBonusAsync(Player player, Fish fish)
     {
-        if (_random.NextDouble() > 0.35) return;
+        if (_random.NextDouble() > 0.35) return Task.CompletedTask;
         string spot = ResolveSpot(fish.Name);
         string? bonus = fish.Rarity switch
         {
@@ -69,17 +103,18 @@ public class GearMaterialService
                 => AlchemyMaterials.MythScalePowder,
             FishRarity.Legendary => AlchemyMaterials.ScalePowder,
             FishRarity.Epic => SpotEpicRecycleMaterial(spot),
-            FishRarity.Rare when spot is "雾海深渊" or "芦苇湾" => AlchemyMaterials.CarbonFiber,
-            FishRarity.Rare when spot is "暗涌裂谷" => AlchemyMaterials.RiftSlag,
-            FishRarity.Common when spot is "静溪" or "浅塘" => _random.NextDouble() < 0.5
+            FishRarity.Rare when spot is "近海礁石" or "芦苇湿地" => AlchemyMaterials.CarbonFiber,
+            FishRarity.Rare when spot is "深水海湾" => AlchemyMaterials.RiftSlag,
+            FishRarity.Common when spot is "镇外溪流" or "废弃鱼塘" => _random.NextDouble() < 0.5
                 ? AlchemyMaterials.WaterWeed : AlchemyMaterials.BambooStrip,
-            FishRarity.Common when spot == "芦苇湾" => AlchemyMaterials.ReedFiber,
+            FishRarity.Common when spot == "芦苇湿地" => AlchemyMaterials.ReedFiber,
             _ => AlchemyMaterials.FishBone
         };
-        if (bonus is null) return;
+        if (bonus is null) return Task.CompletedTask;
         int qty = fish.Rarity >= FishRarity.Epic ? 1 : _random.Next(1, 3);
-        await _playerService.GrantBackpackItemAsync(player, bonus, qty);
-        await _context.SaveChangesAsync();
+
+        UpsertBackpackItem(player, bonus, qty);
+        return Task.CompletedTask;
     }
 
     private static string SpotEpicRecycleMaterial(string spot) => spot switch
@@ -87,12 +122,12 @@ public class GearMaterialService
         "远礁外海" or "星潮海沟" => AlchemyMaterials.OpenSeaStarCore,
         "深渊回廊" => AlchemyMaterials.AbyssGel,
         "极光冰湾" => AlchemyMaterials.AuroraIceCrystal,
-        "夜光引渠" => AlchemyMaterials.CanalGlowPowder,
+        "地下暗河" => AlchemyMaterials.CanalGlowPowder,
         "珊瑚暗流" => AlchemyMaterials.CoralShard,
         "沉船墓场" => AlchemyMaterials.WreckRust,
-        "暗涌裂谷" => AlchemyMaterials.RiftSlag,
+        "深水海湾" => AlchemyMaterials.RiftSlag,
         "虚空钓域" => AlchemyMaterials.VoidMote,
-        "雾海深渊" => AlchemyMaterials.CarbonFiber,
+        "近海礁石" => AlchemyMaterials.CarbonFiber,
         _ => AlchemyMaterials.DeepSeaCrystal
     };
 
@@ -101,15 +136,15 @@ public class GearMaterialService
         var list = new List<(string, int)>();
         if (_random.NextDouble() > 0.22) return list;
 
-        if (fish.Rarity == FishRarity.Common && spotName is "静溪" or "浅塘" && _random.NextDouble() < 0.4)
+        if (fish.Rarity == FishRarity.Common && spotName is "镇外溪流" or "废弃鱼塘" && _random.NextDouble() < 0.4)
             list.Add((AlchemyMaterials.WaterWeed, 1));
-        if (fish.Rarity == FishRarity.Common && spotName == "芦苇湾" && _random.NextDouble() < 0.35)
+        if (fish.Rarity == FishRarity.Common && spotName == "芦苇湿地" && _random.NextDouble() < 0.35)
             list.Add((AlchemyMaterials.ReedFiber, 1));
         if (fish.Rarity <= FishRarity.Rare)
             list.Add((AlchemyMaterials.FishScale, _random.Next(1, 3)));
-        if (fish.Rarity >= FishRarity.Rare && spotName is "雾海深渊" or "芦苇湾")
+        if (fish.Rarity >= FishRarity.Rare && spotName is "近海礁石" or "芦苇湿地")
             list.Add((AlchemyMaterials.CarbonFiber, 1));
-        if (fish.Rarity >= FishRarity.Rare && spotName == "夜光引渠")
+        if (fish.Rarity >= FishRarity.Rare && spotName == "地下暗河")
             list.Add((AlchemyMaterials.CanalGlowPowder, 1));
         if (fish.Rarity >= FishRarity.Epic)
             list.Add((SpotEpicRecycleMaterial(spotName), 1));
@@ -140,18 +175,18 @@ public class GearMaterialService
         if (fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.ScalePowder, 1));
 
-        if (spot is "静溪" or "浅塘" && fish.Rarity == FishRarity.Common)
+        if (spot is "镇外溪流" or "废弃鱼塘" && fish.Rarity == FishRarity.Common)
         {
             list.Add((AlchemyMaterials.BambooStrip, Random.Shared.Next(1, 4)));
             list.Add((AlchemyMaterials.WaterWeed, 1));
         }
-        if (spot == "芦苇湾" && fish.Rarity == FishRarity.Common)
+        if (spot == "芦苇湿地" && fish.Rarity == FishRarity.Common)
             list.Add((AlchemyMaterials.ReedFiber, Random.Shared.Next(1, 3)));
-        if (spot is "雾海深渊" or "芦苇湾" && fish.Rarity >= FishRarity.Rare)
+        if (spot is "近海礁石" or "芦苇湿地" && fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.CarbonFiber, fish.Rarity >= FishRarity.Epic ? 2 : 1));
-        if (spot == "夜光引渠" && fish.Rarity >= FishRarity.Rare)
+        if (spot == "地下暗河" && fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.CanalGlowPowder, fish.Rarity >= FishRarity.Epic ? 2 : 1));
-        if (spot == "暗涌裂谷" && fish.Rarity >= FishRarity.Rare)
+        if (spot == "深水海湾" && fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.RiftSlag, fish.Rarity >= FishRarity.Epic ? 2 : 1));
         if (spot == "珊瑚暗流" && fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.CoralShard, fish.Rarity >= FishRarity.Epic ? 2 : 1));
@@ -177,7 +212,30 @@ public class GearMaterialService
     {
         string baseName = fishName.StartsWith("超规格·", StringComparison.Ordinal)
             ? fishName["超规格·".Length..] : fishName;
-        return SpotByFish.GetValueOrDefault(baseName, "静溪");
+        return SpotByFish.GetValueOrDefault(baseName, "镇外溪流");
+    }
+
+    /// <summary>仅操作 EF Local 缓存 + 内存字典，避免同步查库阻塞 UI 线程。</summary>
+    private void UpsertBackpackItem(Player player, string name, int delta)
+    {
+        var item = _context.BackpackItems.Local
+            .FirstOrDefault(b => b.PlayerId == player.Id && b.ItemName == name);
+        if (item is null)
+        {
+            int baseQty = player.Backpack.GetValueOrDefault(name);
+            _context.BackpackItems.Add(new BackpackItem
+            {
+                PlayerId = player.Id,
+                ItemName = name,
+                Quantity = baseQty + delta
+            });
+        }
+        else
+        {
+            item.Quantity += delta;
+        }
+
+        player.Backpack[name] = player.Backpack.GetValueOrDefault(name) + delta;
     }
 
     private static Dictionary<string, string> BuildFishSpotMap()

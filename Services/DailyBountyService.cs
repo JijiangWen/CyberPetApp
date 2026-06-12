@@ -151,15 +151,15 @@ public class DailyBountyService
             new("野生鲫鱼", 15, 5, 5, FishRarity.Common, 0.5, 3.0),
             new("大口鲈鱼", 20, 10, 8, FishRarity.Common, 1.0, 5.0),
             new("彩虹鳟鱼", 25, 12, 12, FishRarity.Rare, 1.5, 6.0),
-            new("溪涧银龙", 35, 15, 20, FishRarity.Epic, 2.0, 8.0),
-            new("黄金锦鲤", 50, 20, 30, FishRarity.Legendary, 2.0, 10.0),
+            new("大个体溪哥", 35, 15, 20, FishRarity.Epic, 2.0, 8.0),
+            new("纯色金化鲤", 50, 20, 30, FishRarity.Legendary, 2.0, 10.0),
         };
         if (fishingLevel >= 3)
         {
             pool.Add(new FishTemplate("雾海鲈鱼", 20, 10, 8, FishRarity.Common, 1.0, 5.0));
             pool.Add(new FishTemplate("夜光乌贼", 25, 15, 10, FishRarity.Rare, 1.0, 7.0));
             pool.Add(new FishTemplate("幽蓝安康", 40, 18, 15, FishRarity.Epic, 3.0, 12.0));
-            pool.Add(new FishTemplate("雾海锦鳞", 50, 20, 30, FishRarity.Legendary, 2.0, 10.0));
+            pool.Add(new FishTemplate("斑斓石斑", 50, 20, 30, FishRarity.Legendary, 2.0, 10.0));
         }
         return pool;
     }

@@ -385,6 +385,279 @@ public class CookingService
 
     }
 
+    // ── 乐观 UI ──
+
+    public sealed record CookFishSnapshot(
+        int Money, int CookingXp, int CookingLevel, int CookCount, int FoodQty,
+        int CatHunger, int CatEnergy, int CatHappiness, int CatThirst, int CatHealth);
+
+    public sealed record CookAllSnapshot(
+        int Money, int CookingXp, int CookingLevel, int CookCount,
+        Dictionary<string, int> FoodQtyByName,
+        int CatHunger, int CatEnergy, int CatHappiness, int CatThirst, int CatHealth,
+        List<Fish> CookedFish);
+
+    public static bool TryPrepareCookFish(
+        Player player, Fish fish, string? recipeId,
+        out CookingRecipe? recipe, out int fee, out string error)
+    {
+        recipe = ResolveRecipe(fish.Rarity, recipeId, player.CookingLevel);
+        error = "";
+        fee = 0;
+        if (recipe is null)
+        {
+            error = "未找到可用食谱（检查烹饪等级）";
+            return false;
+        }
+
+        fee = EconomySinks.CookingProcessingFee(fish.Rarity);
+        if (player.Money < fee)
+        {
+            error = $"金币不足，烹饪加工费需 {fee}g";
+            return false;
+        }
+
+        if (player.FishBackpack.All(f => f.Id != fish.Id))
+        {
+            error = "这条鱼不存在（可能已卖出/已烹饪）";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static (int LevelUps, int XpGain, CookFishSnapshot Snapshot) ApplyCookFishOptimistic(
+        Player player, CyberCat cat, Fish fish, CookingRecipe recipe, int fee, HouseBuffs houseBuffs)
+    {
+        var snap = new CookFishSnapshot(
+            player.Money, player.CookingXp, player.CookingLevel, player.CookCount,
+            player.Backpack.GetValueOrDefault(recipe.FoodName),
+            cat.Hunger, cat.Energy, cat.Happiness, cat.Thirst, cat.Health);
+
+        player.Money -= fee;
+        player.FishBackpack.RemoveAll(f => f.Id == fish.Id);
+        player.Backpack[recipe.FoodName] = player.Backpack.GetValueOrDefault(recipe.FoodName) + 1;
+        int xpGain = ScaleCookingXp(recipe.Xp, houseBuffs);
+        int ups = player.AddCookingXp(xpGain);
+        player.CookCount += 1;
+        cat.ApplyActivityCost(CatActivityType.Cooking, houseBuffs);
+        return (ups, xpGain, snap);
+    }
+
+    public static void RollbackCookFishOptimistic(
+        Player player, CyberCat cat, Fish fish, CookingRecipe recipe, CookFishSnapshot snap)
+    {
+        player.Money = snap.Money;
+        player.CookingXp = snap.CookingXp;
+        player.CookingLevel = snap.CookingLevel;
+        player.CookCount = snap.CookCount;
+        if (snap.FoodQty <= 0) player.Backpack.Remove(recipe.FoodName);
+        else player.Backpack[recipe.FoodName] = snap.FoodQty;
+        if (player.FishBackpack.All(f => f.Id != fish.Id))
+            player.FishBackpack.Add(fish);
+        cat.Hunger = snap.CatHunger;
+        cat.Energy = snap.CatEnergy;
+        cat.Happiness = snap.CatHappiness;
+        cat.Thirst = snap.CatThirst;
+        cat.Health = snap.CatHealth;
+    }
+
+    public static bool TryPrepareCookAll(
+        Player player, bool commonOnlyOnly,
+        out List<Fish> cookable, out int totalFee, out string error)
+    {
+        error = "";
+        totalFee = 0;
+        cookable = player.FishBackpack.Where(f =>
+        {
+            if (commonOnlyOnly && f.Rarity != FishRarity.Common) return false;
+            var recipe = CookBook.DefaultFor(f.Rarity);
+            return player.CookingLevel >= recipe.RequiredCookingLevel;
+        }).ToList();
+
+        if (cookable.Count == 0)
+        {
+            error = commonOnlyOnly
+                ? "没有可批量烹饪的普通鱼（需解锁生鱼片 Lv.1）"
+                : "没有可烹饪的鱼（检查食谱解锁等级与金币）";
+            return false;
+        }
+
+        totalFee = cookable.Sum(f => EconomySinks.CookingProcessingFee(f.Rarity));
+        if (player.Money < totalFee)
+        {
+            error = $"金币不足，批量加工费共需 {totalFee}g";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static (int LevelUps, int TotalXp, int CookedCount, CookAllSnapshot Snapshot) ApplyCookAllOptimistic(
+        Player player, CyberCat cat, List<Fish> cookable, int totalFee, HouseBuffs houseBuffs, bool commonOnlyOnly)
+    {
+        var foodQty = player.Backpack.ToDictionary(kv => kv.Key, kv => kv.Value);
+        var snap = new CookAllSnapshot(
+            player.Money, player.CookingXp, player.CookingLevel, player.CookCount,
+            foodQty,
+            cat.Hunger, cat.Energy, cat.Happiness, cat.Thirst, cat.Health,
+            []);
+
+        player.Money -= totalFee;
+        int totalXp = 0, ups = 0, cooked = 0;
+        foreach (var fish in cookable)
+        {
+            var recipe = CookBook.DefaultFor(fish.Rarity);
+            player.FishBackpack.RemoveAll(f => f.Id == fish.Id);
+            player.Backpack[recipe.FoodName] = player.Backpack.GetValueOrDefault(recipe.FoodName) + 1;
+            int xpGain = ScaleCookingXp(recipe.Xp, houseBuffs);
+            totalXp += xpGain;
+            ups += player.AddCookingXp(xpGain);
+            cat.ApplyActivityCost(CatActivityType.Cooking, houseBuffs);
+            snap.CookedFish.Add(fish);
+            cooked++;
+        }
+
+        player.CookCount += cooked;
+        return (ups, totalXp, cooked, snap);
+    }
+
+    public static void RollbackCookAllOptimistic(Player player, CyberCat cat, CookAllSnapshot snap)
+    {
+        player.Money = snap.Money;
+        player.CookingXp = snap.CookingXp;
+        player.CookingLevel = snap.CookingLevel;
+        player.CookCount = snap.CookCount;
+        player.Backpack.Clear();
+        foreach (var kv in snap.FoodQtyByName)
+            player.Backpack[kv.Key] = kv.Value;
+        foreach (var fish in snap.CookedFish)
+        {
+            if (player.FishBackpack.All(f => f.Id != fish.Id))
+                player.FishBackpack.Add(fish);
+        }
+
+        cat.Hunger = snap.CatHunger;
+        cat.Energy = snap.CatEnergy;
+        cat.Happiness = snap.CatHappiness;
+        cat.Thirst = snap.CatThirst;
+        cat.Health = snap.CatHealth;
+    }
+
+    public async Task<(bool Ok, string Message)> CommitCookFishAsync(
+        Player player, Fish fish, CookingRecipe recipe)
+    {
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null) return (false, "玩家不存在");
+
+        var dbFish = await _context.Fishes.FirstOrDefaultAsync(f => f.Id == fish.Id && f.PlayerId == player.Id);
+        if (dbFish is null) return (false, "这条鱼不存在（可能已卖出/已烹饪）");
+
+        dbPlayer.Money = player.Money;
+        _context.Fishes.Remove(dbFish);
+        int targetQty = player.Backpack.GetValueOrDefault(recipe.FoodName);
+        var backpackItem = await _context.BackpackItems
+            .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == recipe.FoodName);
+        if (backpackItem is null)
+            _context.BackpackItems.Add(new BackpackItem { PlayerId = player.Id, ItemName = recipe.FoodName, Quantity = targetQty });
+        else
+            backpackItem.Quantity = targetQty;
+        await PersistSkillsAsync(player);
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public async Task<(bool Ok, string Message)> CommitCookAllAsync(
+        Player player, CookAllSnapshot snap)
+    {
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null) return (false, "玩家不存在");
+
+        dbPlayer.Money = player.Money;
+        foreach (var fish in snap.CookedFish)
+        {
+            var dbFish = await _context.Fishes.FirstOrDefaultAsync(f => f.Id == fish.Id && f.PlayerId == player.Id);
+            if (dbFish is not null) _context.Fishes.Remove(dbFish);
+        }
+
+        foreach (var kv in player.Backpack)
+        {
+            var item = await _context.BackpackItems
+                .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == kv.Key);
+            if (item is null)
+                _context.BackpackItems.Add(new BackpackItem { PlayerId = player.Id, ItemName = kv.Key, Quantity = kv.Value });
+            else
+                item.Quantity = kv.Value;
+        }
+
+        var trackedItems = await _context.BackpackItems.Where(b => b.PlayerId == player.Id).ToListAsync();
+        foreach (var item in trackedItems)
+        {
+            if (!player.Backpack.ContainsKey(item.ItemName))
+                _context.BackpackItems.Remove(item);
+        }
+
+        await PersistSkillsAsync(player);
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public static bool TryPrepareFeedCooked(
+        Player player, string foodName, out CookingRecipe? recipe, out Food? food, out string error)
+    {
+        recipe = CookBook.RecipeByName(foodName);
+        food = CookBook.FoodByName(foodName);
+        error = "";
+        if (recipe is null || food is null)
+        {
+            error = "未知料理";
+            return false;
+        }
+
+        if (!player.Backpack.TryGetValue(foodName, out int qty) || qty <= 0)
+        {
+            error = $"背包里没有 {foodName}";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static int ApplyFeedCookedOptimistic(Player player, string foodName)
+    {
+        int prev = player.Backpack.GetValueOrDefault(foodName);
+        int left = prev - 1;
+        if (left <= 0) player.Backpack.Remove(foodName);
+        else player.Backpack[foodName] = left;
+        return prev;
+    }
+
+    public static void RollbackFeedCookedOptimistic(Player player, string foodName, int prevQty)
+    {
+        if (prevQty <= 0) player.Backpack.Remove(foodName);
+        else player.Backpack[foodName] = prevQty;
+    }
+
+    public async Task<(bool Ok, string Message)> CommitFeedCookedAsync(Player player, string foodName, CookingRecipe recipe)
+    {
+        var item = await _context.BackpackItems
+            .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == foodName);
+        int targetQty = player.Backpack.GetValueOrDefault(foodName);
+        if (targetQty <= 0)
+        {
+            if (item is not null) _context.BackpackItems.Remove(item);
+        }
+        else
+        {
+            if (item is null) return (false, "背包同步失败");
+            item.Quantity = targetQty;
+        }
+
+        await _catBuffService.ApplyRecipeBuffsAsync(player.Id, recipe);
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
 }
 
 

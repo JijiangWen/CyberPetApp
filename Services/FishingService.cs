@@ -12,11 +12,13 @@ public class FishingService
 {
     private readonly AppDbContext _context;
     private readonly GearMaterialService _materials;
+    private readonly PlayerService _playerService;
 
-    public FishingService(AppDbContext context, GearMaterialService materials)
+    public FishingService(AppDbContext context, GearMaterialService materials, PlayerService playerService)
     {
         _context = context;
         _materials = materials;
+        _playerService = playerService;
     }
 
     /// <summary>
@@ -31,7 +33,8 @@ public class FishingService
         {
             Id = player.Id,
             Money = player.Money,
-            IsWorking = player.IsWorking
+            IsWorking = player.IsWorking,
+            FishBackpackCapacity = 50
         });
         await _context.SaveChangesAsync();
     }
@@ -65,25 +68,19 @@ public class FishingService
             .ToListAsync();
 
     /// <summary>
-    /// 卖出一条鱼：从数据库删除并给玩家加钱，返回更新后的余额（避免页面双加）。
+    /// 持久化直售结果（内存状态已由页面乐观更新，此处不再重复加钱）。
     /// </summary>
-    public async Task<int?> SellFishAsync(Guid playerGuid, Guid fishId)
+    public async Task PersistSellFishAsync(Player player, Fish fish)
     {
-        var fish = await _context.Fishes
-            .FirstOrDefaultAsync(f => f.Id == fishId && f.PlayerId == playerGuid);
-
-        if (fish is null) return null;
-
-        var player = await _context.Players.FindAsync(playerGuid);
-        if (player is null) return null;
-
-        // 直售保底：SellPrice × 0.85（快速变现，低于市场上架）
-        int payout = MarketService.DirectSellPrice(fish);
-        player.Money += payout;
-        _context.Fishes.Remove(fish);
-        player.FishBackpack.RemoveAll(f => f.Id == fishId);
         await _materials.GrantRecycleBonusAsync(player, fish);
+
+        var dbFish = _context.Fishes.Local.FirstOrDefault(f => f.Id == fish.Id && f.PlayerId == player.Id);
+        if (dbFish is not null)
+            _context.Fishes.Remove(dbFish);
+        else
+            _context.Entry(new Fish { Id = fish.Id, PlayerId = player.Id }).State = EntityState.Deleted;
+
+        _playerService.SyncProgressToTracked(player);
         await _context.SaveChangesAsync();
-        return player.Money;
     }
 }

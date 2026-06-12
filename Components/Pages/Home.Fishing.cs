@@ -7,7 +7,13 @@ public partial class Home
 {
     private async Task StartFishingAsync(FishingSpot spot)
     {
-        if (!FishingSessionRegistry.TryStart(player!.Id, CircuitId))
+        if (player!.IsFishBackpackFull)
+        {
+            fishingBlockMessage = $"鱼背包已满 ({player.FishBackpack.Count}/{player.FishBackpackCapacity})，请先卖/分解鱼或升级背包容量";
+            return;
+        }
+
+        if (!FishingSessionRegistry.TryStart(player.Id, CircuitId))
         {
             fishingBlockMessage = "?????????????????????";
             return;
@@ -45,7 +51,8 @@ public partial class Home
         }
 
         fishingBlockMessage = null;
-        feedMessage = $"????? {castFee}g";
+        feedMessage = $"已付抛竿费 {castFee}g";
+        TryRefreshSidebarVitals();
         await ReloadGearAsync();
         loadout.SpotGearEffectiveness = GearProgressionCatalog.SpotGearEffectiveness(loadout.RodGearTier, spot.Name);
         fishingManager.StartFishing(spot, loadout,
@@ -69,7 +76,14 @@ public partial class Home
     {
         try
         {
-            player!.FishBackpack.Add(fish);
+            if (player!.IsFishBackpackFull)
+            {
+                feedMessage = $"鱼背包已满 ({player.FishBackpack.Count}/{player.FishBackpackCapacity})，钓鱼已停止";
+                StopFishing();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+            player.FishBackpack.Add(fish);
 
             int xp = fish.Rarity switch
             {
@@ -101,10 +115,12 @@ public partial class Home
                 RefreshFishDexCache();
                 var (claimed, bountyMsg) = await _dailyBountyService.TryClaimAsync(player, fish);
                 if (claimed) marketMessage = bountyMsg;
-                string? spotName = fishingManager.CurrentSpot?.Name ?? "??";
+                string? spotName = fishingManager.CurrentSpot?.Name ?? "未知钓点";
                 var matDrop = await _gearMaterialService.TryGrantCatchMaterialAsync(player, fish, spotName);
                 if (matDrop is not null)
-                    feedMessage = string.IsNullOrEmpty(feedMessage) ? $"???{matDrop}" : $"{feedMessage} � ?? {matDrop}";
+                    feedMessage = string.IsNullOrEmpty(feedMessage)
+                        ? $"获得素材 {matDrop}"
+                        : $"{feedMessage} · 素材 {matDrop}";
                 await _achievementService.SyncProgressAsync(player, fishRecords, HasDeepSeaPermanent());
                 await _playerService.SaveProgressAsync(player);
                 await _catProgressionService.SaveAsync(cat);
@@ -115,6 +131,7 @@ public partial class Home
             if (catLevelMsg is not null)
                 feedMessage = catLevelMsg;
 
+            TryRefreshSidebarVitals();
             bool isMyth = TargetFishCatalog.IsTargetExclusive(fish.Name);
             catchBroadcastMyth = isMyth;
             if (isMyth)
@@ -143,7 +160,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "HandleFishCaughtAsync ???{FishName}", fish.Name);
-            feedMessage = "????????????";
+            feedMessage = "收鱼失败，请稍后重试";
         }
     }
 
@@ -209,11 +226,12 @@ public partial class Home
                 await _equipmentService.SyncEquippedLureAsync(player!.Id, loadout.LureDurabilityRemaining, loadout.LureQuantity);
                 await _equipmentService.SyncEquippedLineDurabilityAsync(player.Id, loadout.LineDurability);
                 if (await _playerService.TrySpendGoldAsync(player, EconomySinks.LineRepairFee))
-                    feedMessage = $"?????? {EconomySinks.LineRepairFee}g � ???? {loadout.LineDurability} � ?? {loadout.LureDurabilityRemaining}";
+                    feedMessage = $"切线维修 {EconomySinks.LineRepairFee}g · 线耐久 {loadout.LineDurability} · 饵 {loadout.LureDurabilityRemaining}";
                 else
-                    feedMessage = $"????????? {EconomySinks.LineRepairFee}g";
+                    feedMessage = $"金币不足，切线维修需 {EconomySinks.LineRepairFee}g";
             });
             myLures = await _equipmentService.GetLuresAsync(player!.Id);
+            TryRefreshSidebarVitals();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)

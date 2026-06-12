@@ -20,8 +20,7 @@ public class FishingLogEntry
 }
 
 /// <summary>
-/// 挂机钓鱼核心：三阶段状态机（Waiting → Biting → Reeling），异步循环驱动。
-/// 成长性来自 FishingLoadout（装备数值 + 钓鱼等级）碾压鱼的精明度与爆发力。
+/// 挂机钓鱼：观察间隔 → 咬钩概率判定 → 抓口 → 遛鱼；空口继续观察且不扣猫活动消耗。
 /// </summary>
 public class FishingManager : IDisposable
 {
@@ -99,6 +98,11 @@ public class FishingManager : IDisposable
                 var catStats = _getCatStats?.Invoke()
                     ?? new CatFishingStats(1, 10, 10, 10, 10, 10, 10, 0, 0, 1, 1, 1, 0, 1, []);
 
+                // ── 阶段一：反复观察水面，直到咬钩或收竿 ──
+                if (!await WaitForBiteAsync(spot, catStats, catBuff, ct))
+                    break;
+
+                // 咬钩成功后才抽鱼种
                 var (fish, template) = spot.RollCatch(new FishingRollContext(
                     Loadout.EffectiveRarityBonus + catBuff.RarityBonus + catStats.RarityBonus
                         + Loadout.GemBonuses.LuckBonus,
@@ -106,18 +110,6 @@ public class FishingManager : IDisposable
                     spot.Name,
                     Loadout.LureGearTier,
                     Loadout.LureMythicBonus));
-
-                // ── 阶段一：等口 ──
-                // 等口 = base × (1-吸引-玩家Lv×0.3%-抛投×2%) × 猫AGI减免 × 状态乘算，下限 2s
-                double baseWait = 5 + _random.NextDouble() * 20;
-                double waitFactor = 1.0 - Loadout.EffectiveAttraction
-                    - Loadout.FishingLevel * 0.003
-                    - Loadout.CastRange * 0.02;
-                waitFactor *= catStats.WaitMultiplier;
-                double waitSeconds = Math.Max(2.0, baseWait * Math.Max(0.1, waitFactor));
-                waitSeconds *= spot.FishingTime / 3.0;
-                waitSeconds *= catBuff.WaitTimeMultiplier * catBuff.WaitTimePenalty;
-                await RunPhaseAsync(FishingState.Waiting, waitSeconds, "正在抛竿... 观察水面中... 🌊", ct);
 
                 // ── 阶段二：咬钩抓口 ──
                 // 咬钩窗口 × 猫AGI延长
@@ -193,6 +185,31 @@ public class FishingManager : IDisposable
             StatusText = "";
             Changed?.Invoke();
         }
+    }
+
+    /// <summary>循环观察直到咬钩；空口不扣猫活动消耗。</summary>
+    private async Task<bool> WaitForBiteAsync(
+        FishingSpot spot, CatFishingStats catStats, CatFishingBuff catBuff, CancellationToken ct)
+    {
+        int emptyChecks = 0;
+        while (!ct.IsCancellationRequested)
+        {
+            double waitSeconds = FishingWaitCalculator.ComputeWaitSeconds(
+                Loadout, catStats, catBuff, spot);
+            await RunPhaseAsync(FishingState.Waiting, waitSeconds,
+                "正在抛竿... 观察水面中... 🌊", ct);
+
+            double biteChance = FishingWaitCalculator.ComputeBiteChance(
+                Loadout, catStats, catBuff, spot);
+            if (_random.NextDouble() < biteChance)
+                return true;
+
+            emptyChecks++;
+            if (emptyChecks == 1 || emptyChecks % 4 == 0)
+                Log($"水面暂无动静，继续守望... (咬钩率 {biteChance:P0})", "info");
+        }
+
+        return false;
     }
 
     private async Task RunPhaseAsync(FishingState state, double seconds, string text, CancellationToken ct)

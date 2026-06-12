@@ -4,7 +4,7 @@
 <div class="gear-loadout-wrap">
     @if (!Loadout.MeetsGearLevel)
     {
-        <p class="hint gear-loadout-warn">// 装备等级不足：需要钓鱼 Lv.@Loadout.MinGearRequiredLevel（当前 Lv.@Loadout.FishingLevel）</p>
+        <p class="hint gear-loadout-warn">// 装备等级不足：需要钓鱼 Lv.@(Loadout.MinGearRequiredLevel)（当前 Lv.@(Loadout.FishingLevel)）</p>
     }
 
     <div class="section-lbl">loadout // 当前装配 · 四槽位（竿|轮|线|饵）</div>

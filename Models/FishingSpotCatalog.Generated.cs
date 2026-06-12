@@ -5,16 +5,16 @@ public static partial class FishingSpotCatalog
 {
     private static void BuildAllSpots(Dictionary<string, FishingSpot> spots)
     {
-        // ── 静溪 Lv1 · ×1.0 · Shallow ──
-        var _静溪 = new FishingSpot("静溪")
+        // ── 镇外溪流 Lv1 · ×1.0 · Shallow ──
+        var _镇外溪流 = new FishingSpot("镇外溪流")
         {
             FishingTime = 2,
             RequiredLevel = 1,
             PriceMultiplier = 1.0,
             PrimaryDepth = WaterDepth.Shallow,
-            Description = "终端新手流域 · 浅层缓流 · 竹片与水草主产",
+            Description = "终端新手流域 · 浅层缓流 · 废弃木料与普通水草主产",
         };
-        _静溪.FishTable.AddRange([
+        _镇外溪流.FishTable.AddRange([
             new FishTemplate("野生鲫鱼", 14, 9, 5, FishRarity.Common, 0.5, 3.0, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("大口鲈鱼", 14, 9, 5, FishRarity.Common, 1.0, 5.0, spawnWeight: 45, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("草虾", 14, 9, 5, FishRarity.Common, 0.3, 1.5, spawnWeight: 55, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
@@ -24,42 +24,42 @@ public static partial class FishingSpotCatalog
             new FishTemplate("弹跳泥鳅", 22, 13, 8, FishRarity.Rare, 0.8, 4.0, spawnWeight: 80, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("彩虹鳟鱼", 22, 13, 8, FishRarity.Rare, 1.5, 6.0, spawnWeight: 100, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("溪石鳜", 22, 13, 8, FishRarity.Rare, 1.2, 5.5, spawnWeight: 85, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("翠鳞银鳟", 35, 19, 12, FishRarity.Epic, 1.8, 7.5, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("溪涧银龙", 35, 19, 12, FishRarity.Epic, 2.0, 8.0, spawnWeight: 100, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("镜湖灵鲤", 35, 19, 12, FishRarity.Epic, 2.2, 9.0, spawnWeight: 90, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("黄金锦鲤", 50, 27, 17, FishRarity.Legendary, 2.0, 10.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("神话·镜湖神鲤", 72, 38, 25, FishRarity.Legendary, 4.0, 18.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Shallow, TargetLureRecipeId = "lure_mirror_koi" },
-            new FishTemplate("神话·翠影鳗王", 72, 38, 25, FishRarity.Legendary, 3.5, 16.0, spawnWeight: 110, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_creek_eel" },
+            new FishTemplate("老油条鳟鱼", 35, 19, 12, FishRarity.Epic, 1.8, 7.5, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
+            new FishTemplate("大个体溪哥", 35, 19, 12, FishRarity.Epic, 2.0, 8.0, spawnWeight: 100, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
+            new FishTemplate("大水花锦鲤", 35, 19, 12, FishRarity.Epic, 2.2, 9.0, spawnWeight: 90, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("纯色金化鲤", 50, 27, 17, FishRarity.Legendary, 2.0, 10.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("异变·巨型水虎鱼", 72, 38, 25, FishRarity.Legendary, 4.0, 18.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Shallow, TargetLureRecipeId = "lure_mutant_piranha" },
+            new FishTemplate("异变·装甲溪鳗", 72, 38, 25, FishRarity.Legendary, 3.5, 16.0, spawnWeight: 110, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_mutant_eel" },
         ]);
-        spots["静溪"] = _静溪;
+        spots["镇外溪流"] = _镇外溪流;
 
-        // ── 浅塘 Lv1 · ×1.05 · Shallow ──
-        var _浅塘 = new FishingSpot("浅塘")
+        // ── 废弃鱼塘 Lv1 · ×1.05 · Shallow ──
+        var _废弃鱼塘 = new FishingSpot("废弃鱼塘")
         {
             FishingTime = 2,
             RequiredLevel = 1,
             PriceMultiplier = 1.05,
             PrimaryDepth = WaterDepth.Shallow,
-            Description = "城郊人工浅塘 · 莲叶遮蔽 · 入门练竿",
+            Description = "城郊人工废弃鱼塘 · 莲叶遮蔽 · 入门练竿",
         };
-        _浅塘.FishTable.AddRange([
-            new FishTemplate("浅塘鲫", 14, 9, 5, FishRarity.Common, 0.4, 2.5, spawnWeight: 52, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
+        _废弃鱼塘.FishTable.AddRange([
+            new FishTemplate("废弃鱼塘鲫", 14, 9, 5, FishRarity.Common, 0.4, 2.5, spawnWeight: 52, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("塘畔虾", 14, 9, 5, FishRarity.Common, 0.25, 1.2, spawnWeight: 58, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("水莲鱼", 14, 9, 5, FishRarity.Common, 0.35, 1.8, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("泥鲫", 14, 9, 5, FishRarity.Common, 0.45, 2.2, spawnWeight: 48, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("浮萍鲤", 14, 9, 5, FishRarity.Common, 0.5, 2.8, spawnWeight: 46, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("荷影小鳅", 14, 9, 5, FishRarity.Common, 0.3, 1.5, spawnWeight: 44, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("浅塘鲤", 22, 13, 8, FishRarity.Rare, 0.9, 4.5, spawnWeight: 82, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("废弃鱼塘鲤", 22, 13, 8, FishRarity.Rare, 0.9, 4.5, spawnWeight: 82, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("荷塘蟹", 22, 13, 8, FishRarity.Rare, 0.7, 3.5, spawnWeight: 78, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("琉璃鳞鱼", 35, 19, 12, FishRarity.Epic, 1.6, 7.0, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("浅塘银鳟", 35, 19, 12, FishRarity.Epic, 1.9, 8.0, spawnWeight: 88, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("塘主金鲤", 50, 27, 17, FishRarity.Legendary, 2.2, 11.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("神话·浅塘幻鳞", 72, 38, 25, FishRarity.Legendary, 3.8, 15.0, spawnWeight: 115, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Shallow, TargetLureRecipeId = "lure_shallow_pond" },
+            new FishTemplate("色彩变异塘鱼", 35, 19, 12, FishRarity.Epic, 1.6, 7.0, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
+            new FishTemplate("大肚皮白鲢", 35, 19, 12, FishRarity.Epic, 1.9, 8.0, spawnWeight: 88, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("塘主·独眼老鲤", 50, 27, 17, FishRarity.Legendary, 2.2, 11.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("异变·沼泽吞噬者", 72, 38, 25, FishRarity.Legendary, 3.8, 15.0, spawnWeight: 115, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Shallow, TargetLureRecipeId = "lure_swamp_devourer" },
         ]);
-        spots["浅塘"] = _浅塘;
+        spots["废弃鱼塘"] = _废弃鱼塘;
 
-        // ── 雾海深渊 Lv8 · ×1.25 · Deep ──
-        var _雾海深渊 = new FishingSpot("雾海深渊")
+        // ── 近海礁石 Lv8 · ×1.25 · Deep ──
+        var _近海礁石 = new FishingSpot("近海礁石")
         {
             FishingTime = 2,
             RequiredLevel = 8,
@@ -74,12 +74,12 @@ public static partial class FishingSpotCatalog
                 { FishRarity.Legendary, 6 }
             }
         };
-        _雾海深渊.FishTable.AddRange([
-            new FishTemplate("雾海鲈鱼", 14, 9, 5, FishRarity.Common, 1.0, 5.0, spawnWeight: 40, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("雾海鲫鱼", 14, 9, 5, FishRarity.Common, 0.5, 3.0, spawnWeight: 60, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
+        _近海礁石.FishTable.AddRange([
+            new FishTemplate("近海海鲈", 14, 9, 5, FishRarity.Common, 1.0, 5.0, spawnWeight: 40, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("咸水鲷鱼", 14, 9, 5, FishRarity.Common, 0.5, 3.0, spawnWeight: 60, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("沙蚕幼体", 14, 9, 5, FishRarity.Common, 0.4, 2.0, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("磷光小鱿", 14, 9, 5, FishRarity.Common, 0.5, 2.5, spawnWeight: 55, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("雾海浮游群", 14, 9, 5, FishRarity.Common, 0.3, 1.5, spawnWeight: 48, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("近海虾群", 14, 9, 5, FishRarity.Common, 0.3, 1.5, spawnWeight: 48, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("幽光幼鳗", 14, 9, 5, FishRarity.Common, 0.45, 2.2, spawnWeight: 46, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("夜光乌贼", 22, 13, 8, FishRarity.Rare, 1.0, 7.0, spawnWeight: 100, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("深渊电鳗", 22, 13, 8, FishRarity.Rare, 1.5, 9.0, spawnWeight: 90, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Deep },
@@ -87,14 +87,14 @@ public static partial class FishingSpotCatalog
             new FishTemplate("珊瑚焰鱼", 22, 13, 8, FishRarity.Rare, 1.1, 6.5, spawnWeight: 80, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("幽蓝安康", 35, 19, 12, FishRarity.Epic, 3.0, 12.0, spawnWeight: 100, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("深渊鳐", 35, 19, 12, FishRarity.Epic, 2.5, 15.0, spawnWeight: 85, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("雾海巨鱿", 35, 19, 12, FishRarity.Epic, 2.8, 13.0, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("雾海锦鳞", 50, 27, 17, FishRarity.Legendary, 2.0, 10.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("神话·雾海古神鱿", 72, 38, 25, FishRarity.Legendary, 5.0, 22.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Deep, TargetLureRecipeId = "lure_abyss_core" },
+            new FishTemplate("大型软丝鱿", 35, 19, 12, FishRarity.Epic, 2.8, 13.0, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("斑斓石斑", 50, 27, 17, FishRarity.Legendary, 2.0, 10.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("异变·深海大王乌贼", 72, 38, 25, FishRarity.Legendary, 5.0, 22.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Deep, TargetLureRecipeId = "lure_giant_squid" },
         ]);
-        spots["雾海深渊"] = _雾海深渊;
+        spots["近海礁石"] = _近海礁石;
 
-        // ── 芦苇湾 Lv12 · ×1.3 · Shallow ──
-        var _芦苇湾 = new FishingSpot("芦苇湾")
+        // ── 芦苇湿地 Lv12 · ×1.3 · Shallow ──
+        var _芦苇湿地 = new FishingSpot("芦苇湿地")
         {
             FishingTime = 2,
             RequiredLevel = 12,
@@ -109,7 +109,7 @@ public static partial class FishingSpotCatalog
                 { FishRarity.Legendary, 6 }
             }
         };
-        _芦苇湾.FishTable.AddRange([
+        _芦苇湿地.FishTable.AddRange([
             new FishTemplate("芦苇鲫", 14, 9, 5, FishRarity.Common, 0.5, 2.8, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("湾口虾", 14, 9, 5, FishRarity.Common, 0.3, 1.6, spawnWeight: 54, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("苇影小鳅", 14, 9, 5, FishRarity.Common, 0.4, 2.0, spawnWeight: 48, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
@@ -119,15 +119,15 @@ public static partial class FishingSpotCatalog
             new FishTemplate("芦苇鲈", 22, 13, 8, FishRarity.Rare, 1.1, 5.5, spawnWeight: 88, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("湾影鳜", 22, 13, 8, FishRarity.Rare, 1.3, 6.5, spawnWeight: 85, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("风啸银鲑", 22, 13, 8, FishRarity.Rare, 1.4, 7.0, spawnWeight: 82, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("苇荡幽灵鲶", 35, 19, 12, FishRarity.Epic, 2.2, 10.0, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("泥沼巨斑鲶", 35, 19, 12, FishRarity.Epic, 2.2, 10.0, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("芦湾金鳍", 35, 19, 12, FishRarity.Epic, 2.0, 9.5, spawnWeight: 90, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("苇歌传说鲤", 50, 27, 17, FishRarity.Legendary, 2.5, 12.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
-            new FishTemplate("神话·芦苇幽歌", 72, 38, 25, FishRarity.Legendary, 4.2, 17.0, spawnWeight: 118, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_reed_song" },
+            new FishTemplate("湿地霸主鲤", 50, 27, 17, FishRarity.Legendary, 2.5, 12.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Shallow },
+            new FishTemplate("异变·毒沼巨鳄", 72, 38, 25, FishRarity.Legendary, 4.2, 17.0, spawnWeight: 118, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_poison_croc" },
         ]);
-        spots["芦苇湾"] = _芦苇湾;
+        spots["芦苇湿地"] = _芦苇湿地;
 
-        // ── 夜光引渠 Lv18 · ×1.5 · Middle ──
-        var _夜光引渠 = new FishingSpot("夜光引渠")
+        // ── 地下暗河 Lv18 · ×1.5 · Middle ──
+        var _地下暗河 = new FishingSpot("地下暗河")
         {
             FishingTime = 2,
             RequiredLevel = 18,
@@ -142,7 +142,7 @@ public static partial class FishingSpotCatalog
                 { FishRarity.Legendary, 6 }
             }
         };
-        _夜光引渠.FishTable.AddRange([
+        _地下暗河.FishTable.AddRange([
             new FishTemplate("夜光鲤", 14, 9, 5, FishRarity.Common, 0.8, 4.0, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("荧光蝌蚪", 14, 9, 5, FishRarity.Common, 0.4, 2.0, spawnWeight: 55, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("渠水虾", 14, 9, 5, FishRarity.Common, 0.3, 1.8, spawnWeight: 52, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Shallow },
@@ -152,15 +152,15 @@ public static partial class FishingSpotCatalog
             new FishTemplate("流光虾", 22, 13, 8, FishRarity.Rare, 0.6, 3.5, spawnWeight: 80, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Shallow },
             new FishTemplate("霁光蜓鱼", 22, 13, 8, FishRarity.Rare, 0.9, 4.5, spawnWeight: 88, wariness: 0.3, power: 0.28) { PreferredDepth = WaterDepth.Middle },
             new FishTemplate("彩光鲑", 35, 19, 12, FishRarity.Epic, 2.0, 10.0, spawnWeight: 100, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("运河幽灵鲶", 35, 19, 12, FishRarity.Epic, 2.5, 12.0, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("盲眼洞螈", 35, 19, 12, FishRarity.Epic, 2.5, 12.0, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("彩鳞鳍鱼", 35, 19, 12, FishRarity.Epic, 1.8, 9.5, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("引渠金鳍", 50, 27, 17, FishRarity.Legendary, 2.5, 12.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Middle },
-            new FishTemplate("神话·引渠幻龙", 72, 38, 25, FishRarity.Legendary, 4.5, 20.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_canal_dragon" },
+            new FishTemplate("地下金丝鲃", 50, 27, 17, FishRarity.Legendary, 2.5, 12.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Middle },
+            new FishTemplate("异变·白化巨螈", 72, 38, 25, FishRarity.Legendary, 4.5, 20.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Middle, TargetLureRecipeId = "lure_albino_salamander" },
         ]);
-        spots["夜光引渠"] = _夜光引渠;
+        spots["地下暗河"] = _地下暗河;
 
-        // ── 暗涌裂谷 Lv18 · ×1.55 · Deep ──
-        var _暗涌裂谷 = new FishingSpot("暗涌裂谷")
+        // ── 深水海湾 Lv18 · ×1.55 · Deep ──
+        var _深水海湾 = new FishingSpot("深水海湾")
         {
             FishingTime = 2,
             RequiredLevel = 18,
@@ -175,7 +175,7 @@ public static partial class FishingSpotCatalog
                 { FishRarity.Legendary, 6 }
             }
         };
-        _暗涌裂谷.FishTable.AddRange([
+        _深水海湾.FishTable.AddRange([
             new FishTemplate("裂谷小鳕", 14, 9, 5, FishRarity.Common, 0.5, 2.5, spawnWeight: 48, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("暗涌虾", 14, 9, 5, FishRarity.Common, 0.4, 2.0, spawnWeight: 52, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("矿渣浮游", 14, 9, 5, FishRarity.Common, 0.3, 1.5, spawnWeight: 50, wariness: 0.08, power: 0.06) { PreferredDepth = WaterDepth.Deep },
@@ -187,10 +187,10 @@ public static partial class FishingSpotCatalog
             new FishTemplate("暗涌巨口鱼", 35, 19, 12, FishRarity.Epic, 2.4, 11.0, spawnWeight: 95, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("裂谷银鳗", 35, 19, 12, FishRarity.Epic, 2.0, 10.0, spawnWeight: 92, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
             new FishTemplate("暗涌金鳞", 35, 19, 12, FishRarity.Epic, 2.6, 12.5, spawnWeight: 88, wariness: 0.55, power: 0.52) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("裂谷传说鳕", 50, 27, 17, FishRarity.Legendary, 3.0, 14.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Deep },
-            new FishTemplate("神话·暗涌裂谷兽", 72, 38, 25, FishRarity.Legendary, 4.8, 21.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Deep, TargetLureRecipeId = "lure_rift_beast" },
+            new FishTemplate("深湾老船长巨鳕", 50, 27, 17, FishRarity.Legendary, 3.0, 14.0, spawnWeight: 100, wariness: 0.75, power: 0.82) { PreferredDepth = WaterDepth.Deep },
+            new FishTemplate("异变·巨型魔鬼鱼", 72, 38, 25, FishRarity.Legendary, 4.8, 21.0, spawnWeight: 120, wariness: 0.88, power: 0.94) { PreferredDepth = WaterDepth.Deep, TargetLureRecipeId = "lure_mutant_ray" },
         ]);
-        spots["暗涌裂谷"] = _暗涌裂谷;
+        spots["深水海湾"] = _深水海湾;
 
         // ── 极光冰湾 Lv32 · ×1.8 · Deep ──
         var _极光冰湾 = new FishingSpot("极光冰湾")
@@ -437,12 +437,12 @@ public static partial class FishingSpotCatalog
 
     private static IReadOnlyDictionary<string, string[]> PreviewFishMap => new Dictionary<string, string[]>
     {
-        ["静溪"] = ["野生鲫鱼", "彩虹鳟鱼", "黄金锦鲤"],
-        ["浅塘"] = ["浅塘鲫", "浅塘鲤", "塘主金鲤"],
-        ["雾海深渊"] = ["夜光乌贼", "幽蓝安康", "雾海锦鳞"],
-        ["芦苇湾"] = ["芦苇鲈", "苇荡幽灵鲶", "苇歌传说鲤"],
-        ["夜光引渠"] = ["引渠泥鳅", "彩光鲑", "引渠金鳍"],
-        ["暗涌裂谷"] = ["暗涌旗鱼", "暗涌巨口鱼", "裂谷传说鳕"],
+        ["镇外溪流"] = ["野生鲫鱼", "彩虹鳟鱼", "纯色金化鲤"],
+        ["废弃鱼塘"] = ["废弃鱼塘鲫", "废弃鱼塘鲤", "塘主·独眼老鲤"],
+        ["近海礁石"] = ["夜光乌贼", "幽蓝安康", "斑斓石斑"],
+        ["芦苇湿地"] = ["芦苇鲈", "泥沼巨斑鲶", "湿地霸主鲤"],
+        ["地下暗河"] = ["引渠泥鳅", "彩光鲑", "地下金丝鲃"],
+        ["深水海湾"] = ["暗涌旗鱼", "暗涌巨口鱼", "深湾老船长巨鳕"],
         ["极光冰湾"] = ["冰晶鱼", "冰纹银鳗", "霜龙传说鱼"],
         ["沉船墓场"] = ["暗流旗鱼", "墓场幽灵鲨", "墓主传说鳕"],
         ["珊瑚暗流"] = ["礁影石斑", "珊瑚暗流鳗", "珊瑚心金鳞"],

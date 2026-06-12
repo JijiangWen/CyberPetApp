@@ -137,6 +137,142 @@ public class PlayerService
         return true;
     }
 
+    public static bool TryPrepareBuyShopItem(Player player, ShopItem item, out string error)
+    {
+        error = "";
+        if (player.Money < item.Price)
+        {
+            error = "金币不足";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ApplyBuyShopItemOptimistic(Player player, ShopItem item)
+    {
+        player.Money -= item.Price;
+        player.Backpack[item.Food.Name] = player.Backpack.GetValueOrDefault(item.Food.Name) + 1;
+    }
+
+    public static void RollbackBuyShopItem(Player player, ShopItem item)
+    {
+        player.Money += item.Price;
+        int left = player.Backpack.GetValueOrDefault(item.Food.Name) - 1;
+        if (left <= 0) player.Backpack.Remove(item.Food.Name);
+        else player.Backpack[item.Food.Name] = left;
+    }
+
+    /// <summary>乐观 UI 已扣费/加背包后，仅同步数据库。</summary>
+    public async Task<(bool Ok, string Message)> CommitBuyShopItemAsync(Player player, ShopItem item)
+    {
+        var tracked = await _context.Players.FindAsync(player.Id);
+        if (tracked is null)
+            return (false, "玩家不存在");
+
+        tracked.Money = player.Money;
+
+        int targetQty = player.Backpack.GetValueOrDefault(item.Food.Name);
+        if (targetQty <= 0)
+            return (false, "背包同步失败");
+
+        var backpackItem = await _context.BackpackItems
+            .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == item.Food.Name);
+        if (backpackItem is null)
+            _context.BackpackItems.Add(new BackpackItem { PlayerId = player.Id, ItemName = item.Food.Name, Quantity = targetQty });
+        else
+            backpackItem.Quantity = targetQty;
+
+        await _context.SaveChangesAsync();
+        return (true, "");
+    }
+
+    public static bool TryPrepareFishBackpackUpgrade(Player player, out int increment, out int cost, out string error)
+    {
+        increment = EconomySinks.FishBackpackNextIncrement(player.FishBackpackCapacity);
+        cost = EconomySinks.FishBackpackUpgradeCost(player.FishBackpackCapacity);
+        error = "";
+        if (increment <= 0 || cost <= 0)
+        {
+            error = "已达上限";
+            return false;
+        }
+
+        if (player.Money < cost)
+        {
+            error = "金币不足，升级失败";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ApplyFishBackpackUpgradeOptimistic(Player player, int increment, int cost)
+    {
+        player.Money -= cost;
+        player.FishBackpackCapacity = Math.Max(50, player.FishBackpackCapacity) + increment;
+    }
+
+    public static void RollbackFishBackpackUpgrade(Player player, int increment, int cost)
+    {
+        player.Money += cost;
+        player.FishBackpackCapacity = Math.Max(50, player.FishBackpackCapacity - increment);
+    }
+
+    /// <summary>乐观 UI 已扣费/加容量后，仅同步数据库。</summary>
+    public async Task<bool> CommitFishBackpackUpgradeAsync(Player player)
+    {
+        var tracked = await _context.Players.FindAsync(player.Id);
+        if (tracked is null) return false;
+        tracked.Money = player.Money;
+        tracked.FishBackpackCapacity = player.FishBackpackCapacity;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public static bool TryPrepareConsumeBackpack(Player player, string itemName, out string error, int amount = 1)
+    {
+        error = "";
+        if (!player.Backpack.TryGetValue(itemName, out int qty) || qty < amount)
+        {
+            error = $"背包里没有 {itemName}";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ApplyConsumeBackpackOptimistic(Player player, string itemName, int amount = 1)
+    {
+        int left = player.Backpack.GetValueOrDefault(itemName) - amount;
+        if (left <= 0) player.Backpack.Remove(itemName);
+        else player.Backpack[itemName] = left;
+    }
+
+    public static void RollbackConsumeBackpackOptimistic(Player player, string itemName, int amount = 1)
+    {
+        player.Backpack[itemName] = player.Backpack.GetValueOrDefault(itemName) + amount;
+    }
+
+    public async Task<bool> CommitConsumeBackpackAsync(Player player, string itemName)
+    {
+        var item = await _context.BackpackItems
+            .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == itemName);
+        int targetQty = player.Backpack.GetValueOrDefault(itemName);
+        if (targetQty <= 0)
+        {
+            if (item is not null) _context.BackpackItems.Remove(item);
+        }
+        else
+        {
+            if (item is null) return false;
+            item.Quantity = targetQty;
+        }
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     /// <summary>消耗背包物品（喂食/装入喂食器），同步 BackpackItems 与内存字典。</summary>
     public async Task<bool> ConsumeBackpackItemAsync(Player player, string itemName, int amount = 1)
     {
@@ -183,5 +319,22 @@ public class PlayerService
         var tracked = await _context.Players.FindAsync(player.Id);
         if (tracked is not null && !ReferenceEquals(tracked, player))
             tracked.Money = player.Money;
+    }
+
+    /// <summary>升级鱼背包容量：扣金币并增加容量（失败返回 false）。</summary>
+    public async Task<bool> TryUpgradeFishBackpackAsync(Player player, int additionalSlots, int cost)
+    {
+        if (additionalSlots <= 0) return false;
+        // 扣费（余额不足返回 false）
+        if (!await TrySpendGoldAsync(player, cost)) return false;
+
+        var tracked = await _context.Players.FindAsync(player.Id);
+        if (tracked is null) return false;
+
+        // 增加容量并同步内存对象
+        tracked.FishBackpackCapacity = Math.Max(50, tracked.FishBackpackCapacity) + additionalSlots;
+        player.FishBackpackCapacity = tracked.FishBackpackCapacity;
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

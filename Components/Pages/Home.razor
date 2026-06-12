@@ -62,6 +62,7 @@ else
                             ActiveFoodBuffs="activeFoodBuffs"
                             HasFood="HasBackpackFood"
                             OnFeed="FeedShopFood"
+                            OnFeedCooked="FeedCookedFood"
                             OnDrink="ManualDrinkWater"
                             OnStroke="ManualStroke"
                             OnSleep="ManualSleep"
@@ -255,24 +256,26 @@ else
                              OnEquipTargetLure="EquipTargetLureForGear"
                              OnUnequipTargetLure="UnequipTargetLureForGear"
                              OnGoAlchemy="GoAlchemyFromGear"
-                             OnBuyRod="BuyRod"
-                             OnBuyReel="BuyReel"
-                             OnBuyLine="BuyLine"
-                             OnBuyLure="BuyLure"
-                             OnEquipRod="EquipRod"
-                             OnEquipReel="EquipReel"
-                             OnEquipLine="EquipLine"
-                             OnEquipLure="EquipLure"
-                             OnRepairRod="RepairRodPartial"
-                             OnRepairReel="RepairReelPartial"
-                             OnRepairLine="RepairLinePartial" />
+                             OnBuyRodCommitted="FinalizeBuyRod"
+                             OnBuyReelCommitted="FinalizeBuyReel"
+                             OnBuyLineCommitted="FinalizeBuyLine"
+                             OnBuyLureCommitted="FinalizeBuyLure"
+                             OnEquipRodCommitted="FinalizeEquipRod"
+                             OnEquipReelCommitted="FinalizeEquipReel"
+                             OnEquipLineCommitted="FinalizeEquipLine"
+                             OnEquipLureCommitted="FinalizeEquipLure"
+                             OnRepairRodCommitted="FinalizeRepairRod"
+                             OnRepairReelCommitted="FinalizeRepairReel"
+                             OnRepairLineCommitted="FinalizeRepairLine" />
                 break;
                 case "cooking":
                 <HomeCookingTab IsActive="@(activeSection == "cooking")"
                                 TickGeneration="tickGeneration"
+                                HouseBuffs="GetHouseBuffs()"
                                 Message="cookMessage"
-                                OnCookAll="CookAll"
-                                OnCookFish="CookFishFromTab" />
+                                OnCookAllCommitted="FinalizeCookAll"
+                                OnCookFishCommitted="FinalizeCookFish"
+                                OnFeedCookedFood="FeedCookedFood" />
                 break;
                 case "alchemy":
                 <HomeAlchemyTab IsActive="@(activeSection == "alchemy")"
@@ -299,7 +302,7 @@ else
                                  TickGeneration="tickGeneration"
                                  Shop="shop"
                                  Message="lifeShopMessage"
-                                 OnBuyItem="BuyShopItem" />
+                                 OnBuyItemCommitted="FinalizeBuyShopItem" />
                 break;
                 case "expedition":
                 <HomeExpeditionTab IsActive="@(activeSection == "expedition")"
@@ -327,11 +330,11 @@ else
                                ListingLimit="@MarketListingLimit()"
                                Message="marketMessage"
                                OnRefreshBounty="RefreshBounty"
-                               OnDelist="DelistFish"
+                               OnDelist="FinalizeDelistFish"
                                OnAcceptOffer="AcceptOffer"
                                OnCounterOffer="CounterOffer"
                                OnRejectOffer="RejectOffer"
-                               OnListFishOnMarket="ListFishOnMarket" />
+                               OnListFishCommitted="FinalizeListFish" />
                 break;
                 case "milestones":
                 <HomeMilestonesTab IsActive="@(activeSection == "milestones")"
@@ -352,7 +355,8 @@ else
                                  OnSellFish="SellFish"
                                  OnDisassembleFish="DisassembleFish"
                                  OnListFishOnMarket="ListFishOnMarket"
-                                 OnGoToMarket="GoToMarketFromBackpack" />
+                                 OnGoToMarket="GoToMarketFromBackpack"
+                                 OnUpgradeBackpack="HandleUpgradeBackpack" />
                 break;
 
             }

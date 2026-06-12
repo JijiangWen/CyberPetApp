@@ -1,4 +1,5 @@
 @using CyberPetApp.Models
+@using CyberPetApp.Services
 @using static CyberPetApp.Components.Home.HomeUiHelpers
 @inherits HomeTabBase
 
@@ -13,6 +14,38 @@
         <code class="abar abar-hunger">@ABar(Session.Player.CookingXp, Player.XpToNext(Session.Player.CookingLevel))</code>
         <span class="s-val" style="font-size:10px;">@Session.Player.CookingXp/@Player.XpToNext(Session.Player.CookingLevel)</span>
     </div>
+
+    @{
+        var cookedEntries = Session.Player.Backpack
+            .Where(kv => CookBook.IsCookedFood(kv.Key) && kv.Value > 0)
+            .OrderBy(kv => kv.Key)
+            .ToList();
+    }
+    @if (cookedEntries.Count > 0)
+    {
+        <div class="section-lbl" style="margin-top:8px;">cooked // 已烹饪料理（可喂食）</div>
+        <div class="card-grid">
+            @foreach (var e in cookedEntries)
+            {
+                var recipe = CookBook.RecipeByName(e.Key)!;
+                <div class="g-card unlocked">
+                    <span class="c-name"><PixelIcon Name="food" /> @e.Key</span>
+                    <span class="c-qty">×@e.Value</span>
+                    <span class="c-meta">即时：@recipe.InstantEffectLabel</span>
+                    @if (recipe.AllBuffs().Any())
+                    {
+                        <span class="c-meta" style="color:#3fb950;">Buff：@recipe.BuffEffectLabel</span>
+                    }
+                    <button class="g-btn primary" style="margin-top:4px;"
+                            @onclick="() => FeedCookedClick(e.Key)">feed(@e.Key)</button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="hint" style="margin-top:8px;">// 暂无料理 — 烹饪后显示在此，也可在「背包」Tab 查看</p>
+    }
 
     <div class="section-lbl" style="margin-top:8px;">recipes // 食谱（稀有度 · 即时 · Buff · 加工费）</div>
     <div class="card-grid">
@@ -36,12 +69,12 @@
     </div>
 
     <div class="btn-row" style="margin-top:12px;">
-        <button class="g-btn primary" @onclick="() => OnCookAll.InvokeAsync(false)">CookAll(全部默认食谱)</button>
-        <button class="g-btn" @onclick="() => OnCookAll.InvokeAsync(true)">CookAll(仅普通→生鱼片)</button>
+        <button class="g-btn primary" @onclick="() => CookAllClick(false)">CookAll(全部默认食谱)</button>
+        <button class="g-btn" @onclick="() => CookAllClick(true)">CookAll(仅普通→生鱼片)</button>
     </div>
-    @if (Message is not null)
+    @if (DisplayMessage is not null)
     {
-        <p class="hint" style="margin-top:8px;">// @Message</p>
+        <p class="hint" style="margin-top:8px;">// @DisplayMessage</p>
     }
 
     @if (Session.Player.FishBackpack.Count > 0)
@@ -66,7 +99,7 @@
                         @foreach (var recipe in recipes)
                         {
                             <button class="g-btn primary" style="margin-top:4px;"
-                                    @onclick="() => OnCookFish.InvokeAsync((fish, recipe.RecipeId))">
+                                    @onclick="() => CookFishClick(fish, recipe.RecipeId)">
                                 cook(→@recipe.FoodName, @(CookBook.ProcessingFee(fish.Rarity))g)
                             </button>
                         }
@@ -85,6 +118,71 @@
     [CascadingParameter] public GameSessionState Session { get; set; } = null!;
 
     [Parameter] public string? Message { get; set; }
-    [Parameter] public EventCallback<bool> OnCookAll { get; set; }
-    [Parameter] public EventCallback<(Fish fish, string recipeId)> OnCookFish { get; set; }
+    [Parameter] public HouseBuffs HouseBuffs { get; set; }
+    [Parameter] public EventCallback<CyberPetApp.Components.Pages.Home.CookFishCommitArgs> OnCookFishCommitted { get; set; }
+    [Parameter] public EventCallback<CyberPetApp.Components.Pages.Home.CookAllCommitArgs> OnCookAllCommitted { get; set; }
+    [Parameter] public EventCallback<string> OnFeedCookedFood { get; set; }
+
+    private string? _localMessage;
+    private int _syncTick = -1;
+
+    private string? DisplayMessage => _localMessage ?? Message;
+
+    protected override void OnParametersSet()
+    {
+        if (TickGeneration != _syncTick)
+        {
+            _localMessage = null;
+            _syncTick = TickGeneration;
+        }
+    }
+
+    private void CookFishClick(Fish fish, string recipeId)
+    {
+        var player = Session.Player!;
+        var cat = Session.Cat;
+        if (!CookingService.TryPrepareCookFish(player, fish, recipeId, out var recipe, out var fee, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        var (levelUps, xpGain, snap) = CookingService.ApplyCookFishOptimistic(
+            player, cat, fish, recipe!, fee, HouseBuffs);
+        string msg = $"{fish.Name} → {recipe!.FoodName} (-{fee}g, +{xpGain} xp)"
+            + (levelUps > 0 ? $" · 烹饪升至 Lv.{player.CookingLevel}!" : "");
+        _localMessage = msg;
+        RequestRender();
+        _ = OnCookFishCommitted.InvokeAsync(new CyberPetApp.Components.Pages.Home.CookFishCommitArgs(
+            fish, recipeId, recipe, fee, xpGain, levelUps, snap, msg));
+    }
+
+    private void CookAllClick(bool commonOnlyOnly)
+    {
+        var player = Session.Player!;
+        var cat = Session.Cat;
+        if (!CookingService.TryPrepareCookAll(player, commonOnlyOnly, out var cookable, out var totalFee, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        var (levelUps, totalXp, cooked, snap) = CookingService.ApplyCookAllOptimistic(
+            player, cat, cookable, totalFee, HouseBuffs, commonOnlyOnly);
+        string scope = commonOnlyOnly ? "普通鱼→生鱼片" : "全部可烹饪";
+        string msg = $"批量烹饪 {cooked} 条（{scope}，-{totalFee}g，+{totalXp} xp）"
+            + (levelUps > 0 ? $" · 烹饪升至 Lv.{player.CookingLevel}!" : "");
+        _localMessage = msg;
+        RequestRender();
+        _ = OnCookAllCommitted.InvokeAsync(new CyberPetApp.Components.Pages.Home.CookAllCommitArgs(
+            commonOnlyOnly, snap, totalFee, totalXp, cooked, levelUps, msg));
+    }
+
+    private void FeedCookedClick(string foodName)
+    {
+        if (OnFeedCookedFood.HasDelegate)
+            _ = OnFeedCookedFood.InvokeAsync(foodName);
+    }
 }

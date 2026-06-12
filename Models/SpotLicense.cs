@@ -17,11 +17,11 @@ public static class SpotLicenseCatalog
     public static readonly IReadOnlyDictionary<string, string> LegacySpotNameMap =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["小溪"] = "静溪",
-            ["神秘深海"] = "雾海深渊",
-            ["霓虹运河"] = "夜光引渠",
-            ["霓虹引渠"] = "夜光引渠",
-            ["彩光水渠"] = "夜光引渠",
+            ["小溪"] = "镇外溪流",
+            ["神秘深海"] = "近海礁石",
+            ["霓虹运河"] = "地下暗河",
+            ["霓虹引渠"] = "地下暗河",
+            ["彩光水渠"] = "地下暗河",
             ["冰川子网"] = "极光冰湾",
             ["数据港外海"] = "远礁外海",
             ["旧港浅湾"] = "远礁外海",
@@ -30,7 +30,7 @@ public static class SpotLicenseCatalog
     /// <summary>需要许可证的钓点（Lv8+ 高级钓点；虚空钓域需全神话）。</summary>
     public static bool RequiresLicense(string spotName) => spotName switch
     {
-        "雾海深渊" or "芦苇湾" or "夜光引渠" or "暗涌裂谷" or "极光冰湾"
+        "近海礁石" or "芦苇湿地" or "地下暗河" or "深水海湾" or "极光冰湾"
             or "沉船墓场" or "珊瑚暗流" or "远礁外海" or "深渊回廊"
             or "星潮海沟" or "虚空钓域" => true,
         _ => false
@@ -41,10 +41,10 @@ public static class SpotLicenseCatalog
 
     public static string LicenseHint(string spotName) => spotName switch
     {
-        "雾海深渊" => $"永久 {EconomySinks.DeepSeaPermanentLicense}g · 日租 {EconomySinks.DeepSeaDailyRental}g/天",
-        "芦苇湾" => $"永久 {EconomySinks.ReedBayPermanentLicense}g · 日租 {EconomySinks.ReedBayDailyRental}g/天",
-        "夜光引渠" => $"永久 {EconomySinks.NeonCanalPermanentLicense}g · 日租 {EconomySinks.NeonCanalDailyRental}g/天",
-        "暗涌裂谷" => $"永久 {EconomySinks.RiftValleyPermanentLicense}g · 日租 {EconomySinks.RiftValleyDailyRental}g/天",
+        "近海礁石" => $"永久 {EconomySinks.DeepSeaPermanentLicense}g · 日租 {EconomySinks.DeepSeaDailyRental}g/天",
+        "芦苇湿地" => $"永久 {EconomySinks.ReedBayPermanentLicense}g · 日租 {EconomySinks.ReedBayDailyRental}g/天",
+        "地下暗河" => $"永久 {EconomySinks.NeonCanalPermanentLicense}g · 日租 {EconomySinks.NeonCanalDailyRental}g/天",
+        "深水海湾" => $"永久 {EconomySinks.RiftValleyPermanentLicense}g · 日租 {EconomySinks.RiftValleyDailyRental}g/天",
         "极光冰湾" => $"永久 {EconomySinks.GlacierNetPermanentLicense}g · 日租 {EconomySinks.GlacierNetDailyRental}g/天",
         "沉船墓场" => $"永久 {EconomySinks.WreckGravePermanentLicense}g · 日租 {EconomySinks.WreckGraveDailyRental}g/天",
         "珊瑚暗流" => $"永久 {EconomySinks.CoralReefPermanentLicense}g · 日租 {EconomySinks.CoralReefDailyRental}g/天",

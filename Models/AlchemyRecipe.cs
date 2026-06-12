@@ -68,18 +68,18 @@ public static class AlchemyRecipes
 {
     public static readonly List<GemAlchemyRecipe> GemRecipes =
     [
-        new("gem_hook_creek", "静溪抓口宝石", GemType.Hook, GearGemSlot.Rod,
-            [new FishRequirement("黄金锦鲤", 2, FishRarity.Legendary, "静溪")],
+        new("gem_hook_creek", "镇外溪流抓口宝石", GemType.Hook, GearGemSlot.Rod,
+            [new FishRequirement("纯色金化鲤", 2, FishRarity.Legendary, "镇外溪流")],
             [new MaterialRequirement(ExpeditionCatalog.ScrapItem, 3)],
-            EconomySinks.AlchemyGemCraftCost, "2×静溪传说鱼 + 赛博废料×3 → 抓口 +3~8%"),
+            EconomySinks.AlchemyGemCraftCost, "2×镇外溪流传说鱼 + 赛博废料×3 → 抓口 +3~8%"),
 
         new("gem_drag_abyss", "深渊卸力宝石", GemType.Drag, GearGemSlot.Reel,
-            [new FishRequirement("雾海锦鳞", 2, FishRarity.Legendary, "雾海深渊")],
+            [new FishRequirement("斑斓石斑", 2, FishRarity.Legendary, "近海礁石")],
             [new MaterialRequirement(ExpeditionCatalog.DataChipItem, 3)],
             EconomySinks.AlchemyGemCraftCost, "2×雾海传说鱼 + 数据碎片×3 → 卸力 +3~8%"),
 
         new("gem_luck_canal", "引渠幸运宝石", GemType.Luck, GearGemSlot.Lure,
-            [new FishRequirement("引渠金鳍", 2, FishRarity.Legendary, "夜光引渠")],
+            [new FishRequirement("地下金丝鲃", 2, FishRarity.Legendary, "地下暗河")],
             [new MaterialRequirement(ExpeditionCatalog.DecorTokenItem, 2)],
             EconomySinks.AlchemyGemCraftCost, "2×引渠传说鱼 + 装饰凭证×2 → 幸运 +3~8%"),
 
@@ -89,7 +89,7 @@ public static class AlchemyRecipes
             EconomySinks.AlchemyGemCraftCost + 100, "2×冰湾传说鱼 + 赛博废料×3 → 钓重 +3~8%"),
 
         new("gem_line_silk", "丝导敏锐宝石", GemType.Line, GearGemSlot.Line,
-            [new FishRequirement("引渠金鳍", 2, FishRarity.Epic, "夜光引渠")],
+            [new FishRequirement("地下金丝鲃", 2, FishRarity.Epic, "地下暗河")],
             [new MaterialRequirement(ExpeditionCatalog.DataChipItem, 2)],
             EconomySinks.AlchemyGemCraftCost, "2×引渠史诗鱼 + 数据碎片×2 → 抓口 +3~8%（鱼线槽）"),
     ];
@@ -111,8 +111,8 @@ public static class AlchemyRecipes
         new("line_dragon", "龙筋线", "龙筋线",
             55, 1.0, 0.20, 0.40, WaterDepth.Deep,
             [
-                new FishRequirement("黄金锦鲤", 1, FishRarity.Legendary, "静溪"),
-                new FishRequirement("雾海锦鳞", 1, FishRarity.Legendary, "雾海深渊"),
+                new FishRequirement("纯色金化鲤", 1, FishRarity.Legendary, "镇外溪流"),
+                new FishRequirement("斑斓石斑", 1, FishRarity.Legendary, "近海礁石"),
                 new FishRequirement("霜龙传说鱼", 1, FishRarity.Legendary, "极光冰湾")
             ],
             [],
@@ -121,41 +121,41 @@ public static class AlchemyRecipes
 
     public static readonly List<TargetLureRecipe> TargetLures =
     [
-        new("lure_mirror_koi", "镜湖灵饵", "神话·镜湖神鲤", "静溪", 6,
+        new("lure_mutant_piranha", "镜湖灵饵", "异变·巨型水虎鱼", "镇外溪流", 6,
             [
-                new FishRequirement("黄金锦鲤", 2, FishRarity.Legendary, "静溪"),
-                new FishRequirement("翠鳞银鳟", 1, FishRarity.Epic, "静溪")
+                new FishRequirement("纯色金化鲤", 2, FishRarity.Legendary, "镇外溪流"),
+                new FishRequirement("老油条鳟鱼", 1, FishRarity.Epic, "镇外溪流")
             ],
             [new MaterialRequirement(ExpeditionCatalog.DecorTokenItem, 1)],
             EconomySinks.AlchemyLureCraftCost,
-            "静溪专用 · 目标：镜湖神鲤（神话）"),
+            "镇外溪流专用 · 目标：镜湖神鲤（神话）"),
 
-        new("lure_creek_eel", "溪影软饵", "神话·翠影鳗王", "静溪", 7,
+        new("lure_mutant_eel", "溪影软饵", "异变·装甲溪鳗", "镇外溪流", 7,
             [
-                new FishRequirement("溪涧银龙", 1, FishRarity.Epic, "静溪"),
-                new FishRequirement("彩虹鳟鱼", 2, FishRarity.Rare, "静溪")
+                new FishRequirement("大个体溪哥", 1, FishRarity.Epic, "镇外溪流"),
+                new FishRequirement("彩虹鳟鱼", 2, FishRarity.Rare, "镇外溪流")
             ],
             [new MaterialRequirement(ExpeditionCatalog.ScrapItem, 3)],
             EconomySinks.AlchemyLureCraftCost + 200,
-            "静溪专用 · 目标：翠影鳗王（神话）"),
+            "镇外溪流专用 · 目标：翠影鳗王（神话）"),
 
-        new("lure_abyss_core", "深渊之核", "神话·雾海古神鱿", "雾海深渊", 5,
+        new("lure_giant_squid", "深渊之核", "异变·深海大王乌贼", "近海礁石", 5,
             [
-                new FishRequirement("雾海锦鳞", 2, FishRarity.Legendary, "雾海深渊"),
-                new FishRequirement("幽蓝安康", 1, FishRarity.Epic, "雾海深渊")
+                new FishRequirement("斑斓石斑", 2, FishRarity.Legendary, "近海礁石"),
+                new FishRequirement("幽蓝安康", 1, FishRarity.Epic, "近海礁石")
             ],
             [new MaterialRequirement(ExpeditionCatalog.ScrapItem, 5)],
             EconomySinks.AlchemyLureCraftCost + 300,
-            "雾海深渊专用 · 目标：雾海古神鱿（神话）"),
+            "近海礁石专用 · 目标：雾海古神鱿（神话）"),
 
-        new("lure_canal_dragon", "夜光核心饵", "神话·引渠幻龙", "夜光引渠", 6,
+        new("lure_albino_salamander", "夜光核心饵", "异变·白化巨螈", "地下暗河", 6,
             [
-                new FishRequirement("引渠金鳍", 1, FishRarity.Legendary, "夜光引渠"),
-                new FishRequirement("彩光鲑", 2, FishRarity.Epic, "夜光引渠")
+                new FishRequirement("地下金丝鲃", 1, FishRarity.Legendary, "地下暗河"),
+                new FishRequirement("彩光鲑", 2, FishRarity.Epic, "地下暗河")
             ],
             [new MaterialRequirement(ExpeditionCatalog.DataChipItem, 4)],
             EconomySinks.AlchemyLureCraftCost + 400,
-            "夜光引渠专用 · 目标：引渠幻龙（神话）"),
+            "地下暗河专用 · 目标：引渠幻龙（神话）"),
 
         new("lure_aurora_crystal", "极光冰晶饵", "神话·极光霜龙", "极光冰湾", 5,
             [
@@ -184,23 +184,23 @@ public static class AlchemyRecipes
             EconomySinks.AlchemyLureCraftCost + 700,
             "远礁外海专用 · 目标：金鳞海皇（神话）"),
 
-        new("lure_shallow_pond", "浅塘莲饵", "神话·浅塘幻鳞", "浅塘", 4,
-            [new FishRequirement("塘主金鲤", 1, FishRarity.Legendary, "浅塘")],
+        new("lure_swamp_devourer", "废弃鱼塘莲饵", "神话·废弃鱼塘幻鳞", "废弃鱼塘", 4,
+            [new FishRequirement("塘主·独眼老鲤", 1, FishRarity.Legendary, "废弃鱼塘")],
             [new MaterialRequirement(AlchemyMaterials.WaterWeed, 6)],
             EconomySinks.AlchemyLureCraftCost,
-            "浅塘专用 · 目标：浅塘幻鳞（神话）"),
+            "废弃鱼塘专用 · 目标：废弃鱼塘幻鳞（神话）"),
 
-        new("lure_reed_song", "苇歌软饵", "神话·芦苇幽歌", "芦苇湾", 5,
-            [new FishRequirement("苇歌传说鲤", 1, FishRarity.Legendary, "芦苇湾")],
+        new("lure_poison_croc", "苇歌软饵", "异变·毒沼巨鳄", "芦苇湿地", 5,
+            [new FishRequirement("湿地霸主鲤", 1, FishRarity.Legendary, "芦苇湿地")],
             [new MaterialRequirement(AlchemyMaterials.ReedFiber, 4)],
             EconomySinks.AlchemyLureCraftCost + 250,
-            "芦苇湾专用 · 目标：芦苇幽歌（神话）"),
+            "芦苇湿地专用 · 目标：芦苇幽歌（神话）"),
 
-        new("lure_rift_beast", "裂谷矿饵", "神话·暗涌裂谷兽", "暗涌裂谷", 6,
-            [new FishRequirement("裂谷传说鳕", 1, FishRarity.Legendary, "暗涌裂谷")],
+        new("lure_mutant_ray", "裂谷矿饵", "神话·深水海湾兽", "深水海湾", 6,
+            [new FishRequirement("深湾老船长巨鳕", 1, FishRarity.Legendary, "深水海湾")],
             [new MaterialRequirement(AlchemyMaterials.RiftSlag, 5)],
             EconomySinks.AlchemyLureCraftCost + 450,
-            "暗涌裂谷专用 · 目标：暗涌裂谷兽（神话）"),
+            "深水海湾专用 · 目标：深水海湾兽（神话）"),
 
         new("lure_wreck_soul", "亡魂铁锈饵", "神话·沉船亡魂", "沉船墓场", 7,
             [new FishRequirement("墓主传说鳕", 1, FishRarity.Legendary, "沉船墓场")],

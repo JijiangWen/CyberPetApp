@@ -5,7 +5,7 @@ public class FishingSpot
     public string Name { get; set; }
     public int RequiredLevel { get; set; }
     public int FishingTime { get; set; }
-    /// <summary>钓点售价系数（高级钓点略高于静溪，配合更短周期拉高分钟收益）。</summary>
+    /// <summary>钓点售价系数（高级钓点略高于镇外溪流，配合更短周期拉高分钟收益）。</summary>
     public double PriceMultiplier { get; set; } = 1.0;
 
     /// <summary>主水层：拟饵深度匹配钓点或鱼种时抓口加成。</summary>

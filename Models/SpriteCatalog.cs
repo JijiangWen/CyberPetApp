@@ -34,9 +34,9 @@ public static class SpriteCatalog
         // ── 神话层 (Row3: fish-25~32) ──────────────────────────────
         if (name.Contains("神话"))
         {
-            if (name.Contains("镜湖神鲤") || name.Contains("翠影鳗王") || name.Contains("浅塘幻鳞"))  return "fish-25";
+            if (name.Contains("镜湖神鲤") || name.Contains("翠影鳗王") || name.Contains("废弃鱼塘幻鳞"))  return "fish-25";
             if (name.Contains("雾海古神") || name.Contains("芦苇幽歌"))                                return "fish-26";
-            if (name.Contains("引渠幻龙") || name.Contains("暗涌裂谷兽"))                              return "fish-26";
+            if (name.Contains("引渠幻龙") || name.Contains("深水海湾兽"))                              return "fish-26";
             if (name.Contains("极光霜龙"))                                                             return "fish-28";
             if (name.Contains("沉船亡魂"))                                                             return "fish-27";
             if (name.Contains("珊瑚心海"))                                                             return "fish-29";
@@ -73,7 +73,7 @@ public static class SpriteCatalog
         // 珊瑚/礁/小丑 — 珊瑚系
         if (name.Contains("珊瑚") || name.Contains("礁") || name.Contains("小丑"))
             return rarity >= FishRarity.Legendary ? "fish-29" : rarity >= FishRarity.Epic ? "fish-23" : "fish-22";
-        // 暗涌裂谷/矿渣 — 裂谷暗鱼
+        // 深水海湾/矿渣 — 裂谷暗鱼
         if (name.Contains("裂谷") || name.Contains("暗涌") || name.Contains("矿渣"))
             return rarity >= FishRarity.Epic ? "fish-21" : "fish-20";
         // 幽蓝/深渊/暗流 — 深海巨口

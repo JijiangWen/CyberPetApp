@@ -5,7 +5,7 @@
 <div class="content-panel content-panel-stack">
     <div class="panel-head">
         <span class="panel-title"><PixelIcon Name="rod" /> GEAR.module</span>
-        <span class="panel-meta">balance: @Session.Player!.Money g · fishing Lv.@Session.Player.FishingLevel</span>
+        <span class="panel-meta">balance: @Session.Player!.Money g · fishing Lv.@(Session.Player.FishingLevel)</span>
     </div>
     <div class="sub-tab-bar">
         <button type="button" class="sub-tab @(gearSubTab=="loadout"?"active":"")" @onclick="SelectLoadoutTab">
@@ -21,7 +21,7 @@
                           Loadout="Session.Loadout"
                           PlayerGems="PlayerGems"
                           PlayerTargetLures="PlayerTargetLures"
-                          Message="GearMessage"
+                          Message="DisplayMessage"
                           OnSocketGem="OnSocketGem"
                           OnEquipTargetLure="OnEquipTargetLure"
                           OnUnequipTargetLure="OnUnequipTargetLure"
@@ -38,19 +38,19 @@
                        Reels="Reels"
                        Lines="Lines"
                        Lures="Lures"
-                       Message="GearMessage"
+                       Message="DisplayMessage"
                        OnGoAlchemy="OnGoAlchemy"
-                       OnBuyRod="OnBuyRod"
-                       OnBuyReel="OnBuyReel"
-                       OnBuyLine="OnBuyLine"
-                       OnBuyLure="OnBuyLure"
-                       OnEquipRod="OnEquipRod"
-                       OnEquipReel="OnEquipReel"
-                       OnEquipLine="OnEquipLine"
-                       OnEquipLure="OnEquipLure"
-                       OnRepairRod="OnRepairRod"
-                       OnRepairReel="OnRepairReel"
-                       OnRepairLine="OnRepairLine" />
+                       OnBuyRod="BuyRodClick"
+                       OnBuyReel="BuyReelClick"
+                       OnBuyLine="BuyLineClick"
+                       OnBuyLure="BuyLureClick"
+                       OnEquipRod="EquipRodClick"
+                       OnEquipReel="EquipReelClick"
+                       OnEquipLine="EquipLineClick"
+                       OnEquipLure="EquipLureClick"
+                       OnRepairRod="RepairRodClick"
+                       OnRepairReel="RepairReelClick"
+                       OnRepairLine="RepairLineClick" />
     }
 </div>
 
@@ -70,19 +70,184 @@
     [Parameter] public EventCallback<Guid> OnEquipTargetLure { get; set; }
     [Parameter] public EventCallback OnUnequipTargetLure { get; set; }
     [Parameter] public EventCallback OnGoAlchemy { get; set; }
-    [Parameter] public EventCallback<RodSpec> OnBuyRod { get; set; }
-    [Parameter] public EventCallback<ReelSpec> OnBuyReel { get; set; }
-    [Parameter] public EventCallback<LineSpec> OnBuyLine { get; set; }
-    [Parameter] public EventCallback<LureSpec> OnBuyLure { get; set; }
-    [Parameter] public EventCallback<FishingRod> OnEquipRod { get; set; }
-    [Parameter] public EventCallback<FishingReel> OnEquipReel { get; set; }
-    [Parameter] public EventCallback<FishingLine> OnEquipLine { get; set; }
-    [Parameter] public EventCallback<FishingLure> OnEquipLure { get; set; }
-    [Parameter] public EventCallback<FishingRod> OnRepairRod { get; set; }
-    [Parameter] public EventCallback<FishingReel> OnRepairReel { get; set; }
-    [Parameter] public EventCallback<FishingLine> OnRepairLine { get; set; }
+    [Parameter] public EventCallback<GearBuyRodEventArgs> OnBuyRodCommitted { get; set; }
+    [Parameter] public EventCallback<GearBuyReelEventArgs> OnBuyReelCommitted { get; set; }
+    [Parameter] public EventCallback<GearBuyLineEventArgs> OnBuyLineCommitted { get; set; }
+    [Parameter] public EventCallback<GearBuyLureEventArgs> OnBuyLureCommitted { get; set; }
+    [Parameter] public EventCallback<FishingRod> OnEquipRodCommitted { get; set; }
+    [Parameter] public EventCallback<FishingReel> OnEquipReelCommitted { get; set; }
+    [Parameter] public EventCallback<FishingLine> OnEquipLineCommitted { get; set; }
+    [Parameter] public EventCallback<FishingLure> OnEquipLureCommitted { get; set; }
+    [Parameter] public EventCallback<(FishingRod Rod, bool Full)> OnRepairRodCommitted { get; set; }
+    [Parameter] public EventCallback<(FishingReel Reel, bool Full)> OnRepairReelCommitted { get; set; }
+    [Parameter] public EventCallback<(FishingLine Line, bool Full)> OnRepairLineCommitted { get; set; }
 
     private string gearSubTab = "loadout";
+    private string? _localMessage;
+    private int _syncTick = -1;
+
+    private string? DisplayMessage => _localMessage ?? GearMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (TickGeneration != _syncTick)
+        {
+            _localMessage = null;
+            _syncTick = TickGeneration;
+        }
+    }
+
+    private bool HasLicense(string spot)
+    {
+        if (!SpotLicenseCatalog.RequiresLicense(spot)) return true;
+        var lic = Session.SpotLicenses.FirstOrDefault(l => l.SpotName == spot);
+        if (lic?.HasPermanent == true) return true;
+        return lic?.RentalPaidDate?.Date == DateTime.UtcNow.Date;
+    }
+
+    private void BuyRodClick(RodSpec spec)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareBuyRod(player, Rods, spec, Session.Cat.CatLevel, DexEntries, HasLicense, out var rod, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyBuyRodOptimistic(player, Rods, spec, rod);
+        _localMessage = $"已购入 {spec.Name}";
+        RequestRender();
+        _ = OnBuyRodCommitted.InvokeAsync(new GearBuyRodEventArgs { Spec = spec, Rod = rod });
+    }
+
+    private void BuyReelClick(ReelSpec spec)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareBuyReel(player, Reels, spec, Session.Cat.CatLevel, DexEntries, HasLicense, out var reel, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyBuyReelOptimistic(player, Reels, spec, reel);
+        _localMessage = $"已购入 {spec.Name}";
+        RequestRender();
+        _ = OnBuyReelCommitted.InvokeAsync(new GearBuyReelEventArgs { Spec = spec, Reel = reel });
+    }
+
+    private void BuyLineClick(LineSpec spec)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareBuyLine(player, Lines, spec, Session.Cat.CatLevel, DexEntries, HasLicense, out var line, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyBuyLineOptimistic(player, Lines, spec, line);
+        _localMessage = $"已购入 {spec.Name}";
+        RequestRender();
+        _ = OnBuyLineCommitted.InvokeAsync(new GearBuyLineEventArgs { Spec = spec, Line = line });
+    }
+
+    private void BuyLureClick(LureSpec spec)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareBuyLure(player, spec, Session.Cat.CatLevel, DexEntries, HasLicense, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        var lure = EquipmentService.ApplyBuyLureOptimistic(player, Lures, spec);
+        _localMessage = $"已购入 {spec.Name} ×{spec.PackSize}";
+        RequestRender();
+        _ = OnBuyLureCommitted.InvokeAsync(new GearBuyLureEventArgs { Spec = spec, Lure = lure });
+    }
+
+    private void EquipRodClick(FishingRod rod)
+    {
+        EquipmentService.ApplyEquipRodOptimistic(Rods, rod, Session.Loadout);
+        _localMessage = $"已装备 {rod.Name}";
+        RequestRender();
+        _ = OnEquipRodCommitted.InvokeAsync(rod);
+    }
+
+    private void EquipReelClick(FishingReel reel)
+    {
+        EquipmentService.ApplyEquipReelOptimistic(Reels, reel, Session.Loadout);
+        _localMessage = $"已装备 {reel.Name}";
+        RequestRender();
+        _ = OnEquipReelCommitted.InvokeAsync(reel);
+    }
+
+    private void EquipLineClick(FishingLine line)
+    {
+        EquipmentService.ApplyEquipLineOptimistic(Lines, line, Session.Loadout);
+        _localMessage = $"已装备 {line.Name}";
+        RequestRender();
+        _ = OnEquipLineCommitted.InvokeAsync(line);
+    }
+
+    private void EquipLureClick(FishingLure lure)
+    {
+        EquipmentService.ApplyEquipLureOptimistic(Lures, lure, Session.Loadout);
+        _localMessage = $"已装备 {lure.Name}";
+        RequestRender();
+        _ = OnEquipLureCommitted.InvokeAsync(lure);
+    }
+
+    private void RepairRodClick(FishingRod rod)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareRepairRod(player, rod, fullRepair: false, out var cost, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyRepairRodOptimistic(player, rod, fullRepair: false, cost, Session.Loadout);
+        _localMessage = $"[{rod.Name}] +{EconomySinks.GearRepairPartialAmount} 耐久";
+        RequestRender();
+        _ = OnRepairRodCommitted.InvokeAsync((rod, false));
+    }
+
+    private void RepairReelClick(FishingReel reel)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareRepairReel(player, reel, fullRepair: false, out var cost, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyRepairReelOptimistic(player, reel, fullRepair: false, cost, Session.Loadout);
+        _localMessage = $"[{reel.Name}] +{EconomySinks.GearRepairPartialAmount} 耐久";
+        RequestRender();
+        _ = OnRepairReelCommitted.InvokeAsync((reel, false));
+    }
+
+    private void RepairLineClick(FishingLine line)
+    {
+        var player = Session.Player!;
+        if (!EquipmentService.TryPrepareRepairLine(player, line, fullRepair: false, out var cost, out var error))
+        {
+            _localMessage = error;
+            RequestRender();
+            return;
+        }
+
+        EquipmentService.ApplyRepairLineOptimistic(player, line, fullRepair: false, cost, Session.Loadout);
+        _localMessage = $"[{line.Name}] +{EconomySinks.GearRepairPartialAmount} 耐久";
+        RequestRender();
+        _ = OnRepairLineCommitted.InvokeAsync((line, false));
+    }
 
     private void SelectLoadoutTab()
     {

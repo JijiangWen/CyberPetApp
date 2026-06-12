@@ -22,12 +22,12 @@ public static partial class FishingSpotCatalog
 {
     private static readonly Dictionary<string, FishingSpotRegionInfo> RegionBySpot = new()
     {
-        ["静溪"] = new(FishingSpotRegion.前期, "前期流域", "Lv1 · T1竿", 1),
-        ["浅塘"] = new(FishingSpotRegion.前期, "前期流域", "Lv1 · T1竿", 1),
-        ["雾海深渊"] = new(FishingSpotRegion.T2T3, "雾海/芦苇", "Lv8 · T2竿", 2),
-        ["芦苇湾"] = new(FishingSpotRegion.T2T3, "雾海/芦苇", "Lv12 · T3竿", 3),
-        ["夜光引渠"] = new(FishingSpotRegion.T4T5, "引渠/裂谷", "许可+Lv18 · T4竿", 4),
-        ["暗涌裂谷"] = new(FishingSpotRegion.T4T5, "引渠/裂谷", "许可+Lv18 · T5竿", 5),
+        ["镇外溪流"] = new(FishingSpotRegion.前期, "前期流域", "Lv1 · T1竿", 1),
+        ["废弃鱼塘"] = new(FishingSpotRegion.前期, "前期流域", "Lv1 · T1竿", 1),
+        ["近海礁石"] = new(FishingSpotRegion.T2T3, "雾海/芦苇", "Lv8 · T2竿", 2),
+        ["芦苇湿地"] = new(FishingSpotRegion.T2T3, "雾海/芦苇", "Lv12 · T3竿", 3),
+        ["地下暗河"] = new(FishingSpotRegion.T4T5, "引渠/裂谷", "许可+Lv18 · T4竿", 4),
+        ["深水海湾"] = new(FishingSpotRegion.T4T5, "引渠/裂谷", "许可+Lv18 · T5竿", 5),
         ["极光冰湾"] = new(FishingSpotRegion.T6T7, "冰湾/墓场/珊瑚", "许可+Lv32 · T6竿", 6),
         ["沉船墓场"] = new(FishingSpotRegion.T6T7, "冰湾/墓场/珊瑚", "许可+Lv32 · T7竿", 7),
         ["珊瑚暗流"] = new(FishingSpotRegion.T6T7, "冰湾/墓场/珊瑚", "许可+Lv32 · T6竿", 6),
