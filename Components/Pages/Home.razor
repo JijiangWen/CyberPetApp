@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @attribute [Authorize]
 @using CyberPetApp.Models
 @using CyberPetApp.Services
@@ -167,7 +167,7 @@ else
                     <button class="g-tab @(activeSection=="alchemy"?"active":"")"
                             @onclick='()=>SelectSectionAsync("alchemy")'>
                         <span class="t-dot"></span>
-                        <PixelIcon Name="coin" />
+                        <PixelIcon Name="alchemy" />
                         <span class="tab-text">
                             <span class="tab-cn">炼金</span>
                             <span class="tab-en">alchemy.lab</span>
@@ -185,7 +185,7 @@ else
                     <button class="g-tab @(activeSection=="milestones"?"active":"")"
                             @onclick='()=>SelectSectionAsync("milestones")'>
                         <span class="t-dot"></span>
-                        <PixelIcon Name="coin" />
+                        <PixelIcon Name="milestone" />
                         <span class="tab-text">
                             <span class="tab-cn">里程碑</span>
                             <span class="tab-en">mile.stone</span>
