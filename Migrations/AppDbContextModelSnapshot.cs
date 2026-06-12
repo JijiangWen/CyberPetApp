@@ -207,6 +207,10 @@ namespace CyberPetApp.Migrations
                     b.Property<double>("ActualWeight")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("EnergyRestore")
                         .HasColumnType("integer");
 

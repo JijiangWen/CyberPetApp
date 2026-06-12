@@ -87,9 +87,10 @@
                 var recipes = CookBook.RecipesFor(fish.Rarity)
                     .Where(r => Session.Player.CookingLevel >= r.RequiredCookingLevel).ToList();
                 <div class="g-card">
-                    <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                    <span class="sprite-frame"><span class="fish-sprite" style="@FishSpriteStyle(fish.Name)"></span></span>
                     <span class="c-name">@fish.Name</span>
                     <span class="c-meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · @fish.ActualWeight kg</span>
+                    <p class="hint" style="font-size:9px;margin-top:2px;line-height:1.2;color:var(--text-2);">@fish.Description</p>
                     @if (recipes.Count == 0)
                     {
                         <button class="g-btn" disabled>需烹饪 Lv.@defaultRecipe.RequiredCookingLevel</button>

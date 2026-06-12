@@ -221,7 +221,44 @@ MIGRATORY = [
 RARITY_MAP = {"C": "FishRarity.Common", "R": "FishRarity.Rare", "E": "FishRarity.Epic", "L": "FishRarity.Legendary", "M": "FishRarity.Legendary"}
 DEPTH_MAP = {"Shallow": "WaterDepth.Shallow", "Middle": "WaterDepth.Middle", "Deep": "WaterDepth.Deep"}
 
-def fish_line(name, r, mn, mx, dep, sp, lure=None):
+def make_desc(name, rarity_str, spot_name, depth_str):
+    rl = {"C": "普通", "R": "稀有", "E": "史诗", "L": "传说", "M": "神话"}[rarity_str]
+    depth_lbl = {"Shallow": "浅水", "Middle": "中层", "Deep": "深海"}[depth_str]
+    if "虾" in name:
+        return f"生活在{spot_name}{depth_lbl}区的{rl}小虾，外壳坚硬，肉质爽脆，极其适合作为猫咪的点心。"
+    if "蟹" in name:
+        return f"隐蔽在{spot_name}石缝中的{rl}螃蟹，双螯有力，是美味的熬汤食材。"
+    if "泥鳅" in name:
+        return f"栖息于{spot_name}泥沙之中的{rl}泥鳅，体表黏滑，极难徒手抓捕。"
+    if "鲫" in name:
+        return f"{spot_name}常见的{rl}鲫鱼，营养丰富，是给猫咪做鲜鱼汤的首选。"
+    if "鲈" in name:
+        return f"生活在{spot_name}水流中的{rl}鲈鱼，背鳍锐利，肉质肥嫩鲜美。"
+    if "鲤" in name:
+        return f"活跃于{spot_name}的{rl}鲤鱼，鳞片金黄闪耀，常在水面掀起阵阵波澜。"
+    if "鳗" in name:
+        return f"栖息在{spot_name}暗处的{rl}鳗鱼，身体修长，游动姿态宛如游蛇。"
+    if "鲨" in name:
+        return f"出没于{spot_name}的{rl}强悍鲨鱼，处于食物链顶端，体型庞大，充满攻击性。"
+    if "鳐" in name or "蝠鲼" in name:
+        return f"生活在{spot_name}的{rl}鳐鱼，身形如扁平飞翼，在水层中优雅滑翔。"
+    if "安康" in name or "琵琶" in name:
+        return f"生活在{spot_name}深渊处的{rl}安康鱼，头顶挂有发光灯笼，长相奇特。"
+    if "鱿" in name or "乌贼" in name:
+        return f"{spot_name}的{rl}软体动物，体型柔软，能喷射荧光墨汁逃避掠食者。"
+    if rarity_str == "C":
+        return f"生活在{spot_name}{depth_lbl}的常见鱼类，口感普通，深受新猫咪的喜爱。"
+    if rarity_str == "R":
+        return f"{spot_name}特产的稀有鱼类，拥有特殊的斑纹，极受老练钓手的欢迎。"
+    if rarity_str == "E":
+        return f"极其罕见的{spot_name}史诗级大鱼，捕食习惯独特，拉竿手感异常沉重。"
+    if rarity_str == "L":
+        return f"{spot_name}的领主级传说鱼，体形硕大，常掀起惊涛巨浪，是无数钓手追寻的目标。"
+    if rarity_str == "M":
+        return f"只存在于古老传说中的{spot_name}神话神兽，受神秘饵料吸引而来，拥有不可思议的光泽与灵性。"
+    return f"生活在{spot_name}{depth_lbl}区的神秘鱼类。"
+
+def fish_line(name, r, mn, mx, dep, sp, spot_name, lure=None):
     rr = RARITY_MAP[r]
     dd = DEPTH_MAP[dep]
     hun = {"C": 14, "R": 22, "E": 35, "L": 50, "M": 72}[r]
@@ -232,9 +269,10 @@ def fish_line(name, r, mn, mx, dep, sp, lure=None):
     display = f"神话·{name[3:]}" if myth and not name.startswith("神话") else name
     if myth and not name.startswith("神话"):
         display = name
+    desc = make_desc(name, r, spot_name, dep)
     return (
         f'            new FishTemplate("{name}", {hun}, {hun//2+2}, {hun//3+1}, {rr}, {mn}, {mx}, '
-        f'spawnWeight: {sp}, wariness: {war}, power: {pow}) {{ PreferredDepth = {dd}{lure_part} }},'
+        f'spawnWeight: {sp}, wariness: {war}, power: {pow}) {{ PreferredDepth = {dd}{lure_part}, Description = "{desc}" }},'
     )
 
 lines = [
@@ -269,11 +307,11 @@ for spot in SPOTS:
     lines.append(f'        _{spot["key"]}.FishTable.AddRange([')
     fish_names = {f[0] for f in spot["fish"]}
     for f in spot["fish"]:
-        lines.append(fish_line(*f))
+        lines.append(fish_line(*f, spot["key"]))
     for mig in MIGRATORY:
         if spot["key"] in mig[6]:
             if mig[0] not in fish_names:
-                lines.append(fish_line(mig[0], mig[1], mig[2], mig[3], mig[4], mig[5]))
+                lines.append(fish_line(mig[0], mig[1], mig[2], mig[3], mig[4], mig[5], spot["key"]))
     lines.append("        ]);")
     lines.append(f'        spots["{spot["key"]}"] = _{spot["key"]};')
     lines.append("")

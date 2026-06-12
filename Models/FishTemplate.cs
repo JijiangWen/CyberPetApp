@@ -11,6 +11,7 @@ public class FishTemplate
     public int SpawnWeight { get; set; }
     public double MinWeight { get; set; }
     public double MaxWeight { get; set; }
+    public string Description { get; set; } = "";
 
     /// <summary>精明度 0~1：越高咬钩窗口越短、越容易脱钩（降低抓口成功率）。</summary>
     public double Wariness { get; set; }

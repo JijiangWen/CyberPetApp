@@ -110,7 +110,8 @@ public class FishingSpot
             finalRarity,
             actualWeight)
         {
-            SizePercentage = Math.Round(sizePercentage * 100, 1)
+            SizePercentage = Math.Round(sizePercentage * 100, 1),
+            Description = baseFish.Description
         };
         return (rolledFish, baseFish);
     }

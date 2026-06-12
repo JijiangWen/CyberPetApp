@@ -12,7 +12,22 @@ internal static class HomeUiHelpers
     }
 
     public static string FishSpriteClass(string name, FishRarity rarity) =>
-        SpriteCatalog.Fish(name, rarity);
+        $"{SpriteCatalog.FishSheet(name)} {SpriteCatalog.Fish(name, rarity)}";
+
+    public static string FishSpriteStyle(string name)
+    {
+        var safeName = name
+            .Replace("\"", "")
+            .Replace("“", "")
+            .Replace("”", "")
+            .Replace(":", "")
+            .Replace("*", "")
+            .Replace("?", "")
+            .Replace("<", "")
+            .Replace(">", "")
+            .Replace("|", "");
+        return $"background-image: url('/assets/fish/{safeName}.png?v=2'); background-size: contain; background-position: center; background-repeat: no-repeat;";
+    }
 
     public static string RarityClass(FishRarity r) => r switch
     {

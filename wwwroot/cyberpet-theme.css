@@ -289,13 +289,16 @@ body::after {
     display: block;
     width: 48px;
     height: 48px;
-    background-image: url('/assets/fish-set.png?v=6');
     background-repeat: no-repeat;
     background-size: 800% 400%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     flex-shrink: 0;
 }
+.fish-sheet-1 { background-image: url('/assets/fish-set.png?v=6'); }
+.fish-sheet-2 { background-image: url('/assets/fish-set-2.png'); }
+.fish-sheet-3 { background-image: url('/assets/fish-set-3.png'); }
+.fish-sheet-4 { background-image: url('/assets/fish-set-4.png'); }
 /* row 0 — freshwater common */
 .fish-01 { background-position: 0%       0%; }
 .fish-02 { background-position: 14.285%  0%; }

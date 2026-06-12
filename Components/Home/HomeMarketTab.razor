@@ -179,9 +179,10 @@
                     @foreach (var fish in Session.Player.FishBackpack.ToList())
                     {
                         <div class="g-card">
-                            <span class="sprite-frame"><span class="fish-sprite sp-32 @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                            <span class="sprite-frame"><span class="fish-sprite sp-32" style="@FishSpriteStyle(fish.Name)"></span></span>
                             <span class="c-name">@fish.Name</span>
                             <span class="c-meta"><span class="@RarityClass(fish.Rarity)">@fish.Rarity</span> · 估价 @fish.SellPrice g</span>
+                            <p class="hint" style="font-size:9px;margin-top:2px;line-height:1.2;color:var(--text-2);">@fish.Description</p>
                             @{
                                 int listFee = EconomySinks.MarketListingFee(fish.SellPrice);
                             }

@@ -20,6 +20,7 @@ public class Fish
     public double ActualWeight { get; set; }
     public double SizePercentage { get; set; }
     public int SellPrice { get; set; }
+    public string Description { get; set; } = "";
 
     public Fish() => Name = "";
 

@@ -3,6 +3,38 @@ namespace CyberPetApp.Models;
 /// <summary>雪碧图 CSS 类名映射（furniture-set / fish-set）。</summary>
 public static class SpriteCatalog
 {
+    private static readonly System.Collections.Generic.Dictionary<string, string> FishSheetMap =
+        new(System.StringComparer.Ordinal);
+
+    static SpriteCatalog()
+    {
+        foreach (var kv in FishingSpotCatalog.BuildAll())
+        {
+            var spotName = kv.Key;
+            var spot = kv.Value;
+            string sheetClass = spotName switch
+            {
+                "镇外溪流" or "废弃鱼塘" or "近海礁石" => "fish-sheet-1",
+                "芦苇湿地" or "地下暗河" or "深水海湾" => "fish-sheet-2",
+                "极光冰湾" or "沉船墓场" or "珊瑚暗流" => "fish-sheet-3",
+                _ => "fish-sheet-4"
+            };
+            foreach (var fish in spot.FishTable)
+            {
+                var normName = fish.Name.StartsWith("超规格·") ? fish.Name["超规格·".Length..] : fish.Name;
+                FishSheetMap[normName] = sheetClass;
+            }
+        }
+    }
+
+    public static string FishSheet(string name)
+    {
+        var normName = name.StartsWith("超规格·") ? name["超规格·".Length..] : name;
+        if (FishSheetMap.TryGetValue(normName, out var sheet))
+            return sheet;
+        return "fish-sheet-1";
+    }
+
     public static string Furniture(string furnitureId) => furnitureId switch
     {
         "Sofa" => "furn-sofa",

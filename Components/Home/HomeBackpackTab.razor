@@ -75,7 +75,7 @@
                         @foreach (var fish in Session.Player.FishBackpack)
                         {
                             <div class="g-card">
-                                <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity)"></span></span>
+                                <span class="sprite-frame"><span class="fish-sprite" style="@FishSpriteStyle(fish.Name)"></span></span>
                                 <span class="c-name">@fish.Name</span>
                                 <span class="c-meta">
                                     <span class="@RarityClass(fish.Rarity)">@fish.Rarity</span>
@@ -83,6 +83,7 @@
                                 </span>
                                 <span class="c-meta">@fish.ActualWeight kg</span>
                                 <span class="c-price">估价 @fish.SellPrice g</span>
+                                <p class="hint" style="font-size:9px;margin-top:2px;line-height:1.2;color:var(--text-2);">@fish.Description</p>
                                 <button class="g-btn primary" style="margin-top:4px;"
                                         @onclick="() => OnSellFish.InvokeAsync(fish)">直售 85%(@MarketService.DirectSellPrice(fish) g)</button>
                                 <button class="g-btn" style="margin-top:4px;"

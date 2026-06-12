@@ -163,7 +163,7 @@
                         var lureDef = isHidden ? AlchemyRecipes.FindTargetLure(fish.TargetLureRecipeId!) : null;
                         var caughtHidden = isHidden && Session.FishRecords.Any(r => r.FishName == fish.Name);
                         <div class="g-card @(isHidden ? "target-fish-card" : "")">
-                            <span class="sprite-frame"><span class="fish-sprite @FishSpriteClass(fish.Name, fish.Rarity) @(isHidden && !caughtHidden ? "sprite-locked" : "")"></span></span>
+                            <span class="sprite-frame"><span class="fish-sprite @(isHidden && !caughtHidden ? "sprite-locked" : "")" style="@FishSpriteStyle(fish.Name)"></span></span>
                             <span class="c-name @(isHidden ? "rarity-myth" : "")">@(isHidden && !caughtHidden ? "???" : fish.Name)</span>
                             <span class="c-meta @(isHidden ? "rarity-myth" : RarityClass(fish.Rarity))">
                                 @(isHidden ? "神话" : RarityLabel(fish.Rarity))
@@ -172,6 +172,7 @@
                             @if (!isHidden || caughtHidden)
                             {
                                 <span class="c-meta">@GearCatalog.DepthLabel(fish.PreferredDepth)层 · 精明@((int)(fish.Wariness*100))% · 爆发@((int)(fish.Power*100))%</span>
+                                <p class="hint" style="font-size:9px;margin-top:2px;line-height:1.2;color:var(--text-2);">@fish.Description</p>
                             }
                         </div>
                     }
@@ -226,7 +227,7 @@
     @if (Session.FishingManager.LastCaughtFish is Fish last)
     {
         <div class="catch-line">
-            <span class="fish-sprite sp-24 sp-inline @FishSpriteClass(last.Name, last.Rarity)"></span>
+            <span class="fish-sprite sp-24 sp-inline" style="@FishSpriteStyle(last.Name)"></span>
             last_catch = {
             <span class="cname">@last.Name</span>,
             <span class="@RarityClass(last.Rarity)">@last.Rarity</span>,
