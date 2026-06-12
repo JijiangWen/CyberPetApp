@@ -86,7 +86,7 @@
                 <span class="s-val">@Waterer.WaterCount/@Waterer.MaxWaterCount</span>
             </div>
             <p class="hint auto-care-hint">
-                // 口渴&lt;600 自动补水 · 槽空自来水 +@WaterCatalog.Tap.ThirstRestore/2s · 纯净水 +@WaterCatalog.Purified.ThirstRestore · 装水 @EconomySinks.WatererProcessingFee g/份
+                // 口渴&lt;600 自动补水 · 槽空自来水 +@WaterCatalog.Tap.ThirstRestore/2s · 凉白开水 +@WaterCatalog.Purified.ThirstRestore · 装水 @EconomySinks.WatererProcessingFee g/份
             </p>
             <div class="auto-care-slots">
                 @for (int i = 0; i < Waterer.MaxWaterCount; i++)
@@ -108,7 +108,7 @@
             </div>
             <div class="btn-group auto-care-actions">
                 <button type="button" class="g-btn" disabled="@(!HasBackpackWater())"
-                        @onclick="OnAddWater">add(纯净水)</button>
+                        @onclick="OnAddWater">add(凉白开水)</button>
                 <button type="button" class="g-btn" @onclick="OnRemoveWater">remove(last)</button>
             </div>
         }

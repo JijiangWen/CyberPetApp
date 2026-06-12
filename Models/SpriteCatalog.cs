@@ -56,13 +56,13 @@ public static class SpriteCatalog
         // 虚空/终焉/裂隙 — 暗紫虚空
         if (name.Contains("虚空") || name.Contains("终焉") || name.Contains("裂隙"))
             return rarity >= FishRarity.Legendary ? "fish-32" : rarity >= FishRarity.Epic ? "fish-21" : "fish-20";
-        // 深渊回廊/凝胶 — 深渊安康/巨口
+        // 深渊回廊/凝胶 — 黑鬼安康鱼/巨口
         if (name.Contains("回廊") || name.Contains("凝胶") || name.Contains("安康"))
             return rarity >= FishRarity.Legendary ? "fish-30" : rarity >= FishRarity.Epic ? "fish-20" : "fish-19";
         // 墓场/亡魂/锈/幽灵 — 苍白幽灵鱼
         if (name.Contains("墓场") || name.Contains("亡魂") || name.Contains("幽灵") || name.Contains("锈"))
             return rarity >= FishRarity.Epic ? "fish-19" : "fish-18";
-        // 冰/霜/寒/雪/晶/极光 — 冰晶鱼
+        // 冰/霜/寒/雪/晶/极光 — 透明冰晶鱼
         if (name.Contains("冰") || name.Contains("霜") || name.Contains("寒") || name.Contains("雪") ||
             name.Contains("晶") || name.Contains("冻") || name.Contains("极光") || name.Contains("归潮"))
             return rarity >= FishRarity.Legendary ? "fish-28" : rarity >= FishRarity.Epic ? "fish-18" : "fish-17";

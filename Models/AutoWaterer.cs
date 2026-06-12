@@ -23,7 +23,7 @@ public class AutoWaterer
         return last;
     }
 
-    /// <summary>口渴&lt;500 时自动补水：优先槽内纯净水，否则免费自来水 +12。</summary>
+    /// <summary>口渴&lt;500 时自动补水：优先槽内凉白开水，否则免费自来水 +12。</summary>
     public bool CheckAndWater(CyberCat cat, bool dispenserUnlocked)
     {
         if (!dispenserUnlocked) return false;

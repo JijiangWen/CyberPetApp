@@ -63,13 +63,13 @@ public static class MilestoneCatalog
         new("cook_20", "厨房新星", "烹饪 20 次", 20, 10, AchievementTrackType.CookCount),
         new("deep_sea", "雾海通行证", "获得近海礁石永久许可证", 1, 15, AchievementTrackType.DeepSeaLicense),
 
-        new("target_fish_mirror_koi", "镜湖神话", "钓获异变·巨型水虎鱼", 1, 30, AchievementTrackType.NamedFishCatch, "异变·巨型水虎鱼"),
-        new("target_fish_creek_eel", "翠影鳗王", "钓获异变·装甲溪鳗", 1, 25, AchievementTrackType.NamedFishCatch, "异变·装甲溪鳗"),
-        new("target_fish_abyss_squid", "古神之鱿", "钓获异变·深海大王乌贼", 1, 30, AchievementTrackType.NamedFishCatch, "异变·深海大王乌贼"),
-        new("target_fish_canal_dragon", "引渠幻龙", "钓获异变·白化巨螈", 1, 30, AchievementTrackType.NamedFishCatch, "异变·白化巨螈"),
-        new("target_fish_aurora_dragon", "极光霜龙", "钓获神话·极光霜龙", 1, 35, AchievementTrackType.NamedFishCatch, "神话·极光霜龙"),
-        new("target_fish_reef_leviathan", "远海沧龙", "钓获神话·远海沧龙", 1, 40, AchievementTrackType.NamedFishCatch, "神话·远海沧龙"),
-        new("target_fish_sea_emperor", "金鳞海皇", "钓获神话·金鳞海皇", 1, 40, AchievementTrackType.NamedFishCatch, "神话·金鳞海皇"),
+        new("target_fish_mirror_koi", "镜湖神话", "钓获异变·“镜湖水虎兽”", 1, 30, AchievementTrackType.NamedFishCatch, "异变·“镜湖水虎兽”"),
+        new("target_fish_creek_eel", "翠影鳗王", "钓获异变·“铁骨溪鳗”", 1, 25, AchievementTrackType.NamedFishCatch, "异变·“铁骨溪鳗”"),
+        new("target_fish_abyss_squid", "古神之鱿", "钓获异变·“雾海古神鱿”", 1, 30, AchievementTrackType.NamedFishCatch, "异变·“雾海古神鱿”"),
+        new("target_fish_canal_dragon", "引渠幻龙", "钓获异变·“白化巨螈”", 1, 30, AchievementTrackType.NamedFishCatch, "异变·“白化巨螈”"),
+        new("target_fish_aurora_dragon", "极光霜龙", "钓获神话·“极光霜龙”", 1, 35, AchievementTrackType.NamedFishCatch, "神话·“极光霜龙”"),
+        new("target_fish_reef_leviathan", "远海沧龙", "钓获神话·“远海沧龙”", 1, 40, AchievementTrackType.NamedFishCatch, "神话·“远海沧龙”"),
+        new("target_fish_sea_emperor", "金鳞海皇", "钓获神话·“金鳞海皇”", 1, 40, AchievementTrackType.NamedFishCatch, "神话·“金鳞海皇”"),
         new("target_fish_collector", "神话收藏家", "图鉴收录 3 种神话鱼", 3, 50, AchievementTrackType.TargetFishSpecies),
     ];
 

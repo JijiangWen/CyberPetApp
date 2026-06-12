@@ -116,7 +116,7 @@ public class CookingService
 
 
 
-    /// <summary>批量烹饪；commonOnlyOnly 时仅把 Common 鱼做成默认生鱼片。</summary>
+    /// <summary>批量烹饪；commonOnlyOnly 时仅把 Common 鱼做成默认野溪杂鱼刺身。</summary>
 
     public async Task<CookResult> CookAllAsync(
 
@@ -142,7 +142,7 @@ public class CookingService
 
             return new CookResult(false, commonOnlyOnly
 
-                ? "没有可批量烹饪的普通鱼（需解锁生鱼片 Lv.1）"
+                ? "没有可批量烹饪的普通鱼（需解锁野溪杂鱼刺身 Lv.1）"
 
                 : "没有可烹饪的鱼（检查食谱解锁等级与金币）");
 
@@ -214,7 +214,7 @@ public class CookingService
 
         await _context.SaveChangesAsync();
 
-        string scope = commonOnlyOnly ? "普通鱼→生鱼片" : "全部可烹饪";
+        string scope = commonOnlyOnly ? "普通鱼→野溪杂鱼刺身" : "全部可烹饪";
 
         return new CookResult(true, $"批量烹饪 {cooked} 条（{scope}，-{totalFee}g，+{totalXp} xp）", ups);
 
@@ -478,7 +478,7 @@ public class CookingService
         if (cookable.Count == 0)
         {
             error = commonOnlyOnly
-                ? "没有可批量烹饪的普通鱼（需解锁生鱼片 Lv.1）"
+                ? "没有可批量烹饪的普通鱼（需解锁野溪杂鱼刺身 Lv.1）"
                 : "没有可烹饪的鱼（检查食谱解锁等级与金币）";
             return false;
         }

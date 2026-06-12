@@ -70,7 +70,7 @@
 
     <div class="btn-row" style="margin-top:12px;">
         <button class="g-btn primary" @onclick="() => CookAllClick(false)">CookAll(全部默认食谱)</button>
-        <button class="g-btn" @onclick="() => CookAllClick(true)">CookAll(仅普通→生鱼片)</button>
+        <button class="g-btn" @onclick="() => CookAllClick(true)">CookAll(仅普通→野溪杂鱼刺身)</button>
     </div>
     @if (DisplayMessage is not null)
     {
@@ -171,7 +171,7 @@
 
         var (levelUps, totalXp, cooked, snap) = CookingService.ApplyCookAllOptimistic(
             player, cat, cookable, totalFee, HouseBuffs, commonOnlyOnly);
-        string scope = commonOnlyOnly ? "普通鱼→生鱼片" : "全部可烹饪";
+        string scope = commonOnlyOnly ? "普通鱼→野溪杂鱼刺身" : "全部可烹饪";
         string msg = $"批量烹饪 {cooked} 条（{scope}，-{totalFee}g，+{totalXp} xp）"
             + (levelUps > 0 ? $" · 烹饪升至 Lv.{player.CookingLevel}!" : "");
         _localMessage = msg;

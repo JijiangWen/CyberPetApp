@@ -25,7 +25,7 @@ public static class EconomySinks
     // 喂食器：装入口粮加工费 / 份
     public const int FeederProcessingFee = 2;
 
-    // 饮水器：装入纯净水加工费 / 份
+    // 饮水器：装入凉白开水加工费 / 份
     public const int WatererProcessingFee = 1;
 
     // 每日求购：手动刷新（当日首次免费）

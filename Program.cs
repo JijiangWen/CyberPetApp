@@ -142,6 +142,20 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
+// Run DB Name Migration on Startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        CyberPetApp.Services.NameMigrationHelper.Migrate(db);
+    }
+    catch (System.Exception ex)
+    {
+        System.Console.WriteLine($"Failed to run DB migration on startup: {ex.Message}");
+    }
+}
+
 
 
 if (!app.Environment.IsDevelopment())

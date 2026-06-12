@@ -27,34 +27,34 @@ public enum GearTier
 /// <summary>炼金锻造素材（BackpackItem 名称常量）。</summary>
 public static partial class AlchemyMaterials
 {
-    public const string BambooStrip = "废弃木料";
-    public const string CarbonFiber = "强化纤维";
-    public const string DeepSeaCrystal = "深海结晶";
+    public const string BambooStrip = "河边烂木条";
+    public const string CarbonFiber = "工业碳纤维";
+    public const string DeepSeaCrystal = "沧海蓝晶石";
     public const string FishBone = "鱼骨";
     public const string FishScale = "鱼鳞";
-    public const string WaterWeed = "普通水草";
-    public const string GearSet = "齿轮组";
-    public const string Resin = "环氧树脂";
-    public const string Bearing = "精密轴承";
-    public const string AlloyFrame = "钛合金框";
-    public const string NylonFilament = "尼龙原丝";
-    public const string ScalePowder = "鱼鳞粉";
-    public const string MythScalePowder = "神话鳞粉";
-    public const string CanalGlowPowder = "引渠荧光粉";
-    public const string StarfallAlloy = "星陨合金";
-    public const string VoidCore = "虚空原核";
-    public const string AbyssEssence = "沧溟神髓";
-    public const string CoralShard = "珊瑚碎片";
-    public const string AuroraIceCrystal = "极光冰晶";
-    public const string AbyssGel = "深渊凝胶";
-    public const string WreckRust = "沉船铁锈";
-    public const string OpenSeaStarCore = "外海星核";
-    public const string DragonResin = "龙息树脂";
-    public const string VoidFiber = "虚空纤维";
-    public const string ReedFiber = "芦苇纤维";
-    public const string RiftSlag = "裂谷矿渣";
-    public const string StarTideShard = "星潮碎片";
-    public const string VoidMote = "虚空微粒";
+    public const string WaterWeed = "缠绕水草";
+    public const string GearSet = "生锈齿轮组";
+    public const string Resin = "工业粘合树脂";
+    public const string Bearing = "工业精密轴承";
+    public const string AlloyFrame = "轻质钛合金框架";
+    public const string NylonFilament = "工业尼龙单丝";
+    public const string ScalePowder = "研磨细鱼鳞粉";
+    public const string MythScalePowder = "五彩神话鳞粉";
+    public const string CanalGlowPowder = "地下荧光孢子粉";
+    public const string StarfallAlloy = "星陨粗铁胚";
+    public const string VoidCore = "裂隙虚空原核";
+    public const string AbyssEssence = "沧溟古鱼之髓";
+    public const string CoralShard = "红珊瑚碎屑";
+    public const string AuroraIceCrystal = "不融极地冰晶";
+    public const string AbyssGel = "深渊巨兽粘液";
+    public const string WreckRust = "百年沉船铁皮";
+    public const string OpenSeaStarCore = "落星陨铁晶核";
+    public const string DragonResin = "古树龙涎香";
+    public const string VoidFiber = "裂隙虚空丝线";
+    public const string ReedFiber = "老韧芦苇丝";
+    public const string RiftSlag = "热液喷口矿渣";
+    public const string StarTideShard = "月汐重力碎屑";
+    public const string VoidMote = "虚空幽浮微粒";
 
     public static readonly IReadOnlyList<string> All =
     [
@@ -215,66 +215,66 @@ public static class GearProgressionCatalog
     // ── 鱼竿（12）──
     public static readonly List<RodSpec> Rods =
     [
-        new("随手捡的树枝", 0.5, 5, 1, 1, 0, "敏锐+5% · 抛投1 · 钓重5kg", GearTier.T1),
-        new("手工打磨竹竿", 0.7, 7, 1, 1, 120, "入门加长 · 抛投1 · 钓重7kg", GearTier.T1),
-        new("二手玻璃钢竿", 1.2, 12, 2, 5, 500, "敏锐+12% · 抛投2 · 钓重12kg · 需钓鱼Lv5", GearTier.T2, RequiredCatLevel: 3),
-        new("量产碳纤路亚", 1.5, 15, 2, 5, 900, "均衡入门+ · 抛投2 · 钓重15kg", GearTier.T2, RequiredCatLevel: 3),
-        new("定制轻量化竿", 2.0, 30, 3, 12, 4500, "敏锐+20% · 抛投3 · 钓重30kg", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
-        new("老兵的溪流竿", 1.8, 25, 3, 10, 3200, "镇外溪流特化 · 浅层+5%等口", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.4),
-        new("精工碳纤竿", 2.4, 35, 3, 12, 0, "炼金 · 敏锐+24% · 抛投3", GearTier.T3, ShopAvailable: false, CraftOnly: true),
-        new("深海碳纤竿", 2.8, 50, 4, 20, 0, "炼金主路径 · 敏锐+28% · 抛投4", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("雾海潜行竿", 2.6, 45, 4, 18, 0, "炼金 · 深层隐蔽+ · 抛投4", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("量子折叠竿", 3.5, 80, 5, 30, 0, "炼金 · 敏锐+35% · 抛投5", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
-        new("神话龙脊竿", 3.8, 90, 5, 30, 0, "炼金 · 神话素材 · 钓重90kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
-        new("虚鲸神谕竿", 4.0, 100, 5, 32, 0, "炼金 T5 · 抛投5 · 钓重100kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.85),
+        new("随手捡的柳树条", 0.5, 5, 1, 1, 0, "敏锐+5% · 抛投1 · 钓重5kg", GearTier.T1),
+        new("外皮发青的自制竹竿", 0.7, 7, 1, 1, 120, "入门加长 · 抛投1 · 钓重7kg", GearTier.T1),
+        new("二手跳蚤市场玻璃钢竿", 1.2, 12, 2, 5, 500, "敏锐+12% · 抛投2 · 钓重12kg · 需钓鱼Lv5", GearTier.T2, RequiredCatLevel: 3),
+        new("“迪卡王”入门路亚竿", 1.5, 15, 2, 5, 900, "均衡入门+ · 抛投2 · 钓重15kg", GearTier.T2, RequiredCatLevel: 3),
+        new("“小溪流浪者”独节路亚", 2.0, 30, 3, 12, 4500, "敏锐+20% · 抛投3 · 钓重30kg", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
+        new("“老兵”碳纤斑驳直柄竿", 1.8, 25, 3, 10, 3200, "镇外溪流特化 · 浅层+5%等口", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.4),
+        new("“匠心”手工缠线高碳竿", 2.4, 35, 3, 12, 0, "炼金 · 敏锐+24% · 抛投3", GearTier.T3, ShopAvailable: false, CraftOnly: true),
+        new("“极昼”深水抗压实心竿", 2.8, 50, 4, 20, 0, "炼金主路径 · 敏锐+28% · 抛投4", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“夜行者”磨砂哑光隐匿竿", 2.6, 45, 4, 18, 0, "炼金 · 深层隐蔽+ · 抛投4", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“猎手”折叠伸缩直柄竿", 3.5, 80, 5, 30, 0, "炼金 · 敏锐+35% · 抛投5", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
+        new("“龙骨”仿生碳化直柄竿", 3.8, 90, 5, 30, 0, "炼金 · 神话素材 · 钓重90kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
+        new("“沧溟”特制重底锚竿", 4.0, 100, 5, 32, 0, "炼金 T5 · 抛投5 · 钓重100kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.85),
         ..GearT6T10Data.ExtraRods,
     ];
 
     // ── 渔轮（10）──
     public static readonly List<ReelSpec> Reels =
     [
-        new("生锈的铁线轴", 2, 5.0, 8, 0.30, 1, 0, "卸力+10% · 线杯8kg", GearTier.T1),
-        new("廉价塑料纺车", 2.5, 5.2, 10, 0.32, 1, 180, "轻便入门轮 · 线杯10kg", GearTier.T1),
-        new("二手水滴轮", 5, 6.2, 15, 0.50, 5, 600, "卸力+25% · 线杯15kg", GearTier.T2, RequiredCatLevel: 3),
-        new("入门级磁鼓轮", 6, 6.5, 18, 0.55, 5, 1100, "顺滑提升 · 线杯18kg", GearTier.T2, RequiredCatLevel: 3),
-        new("大功率电绞轮", 8, 7.5, 25, 0.65, 12, 5200, "卸力+40% · 线杯25kg", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.45),
-        new("精工纺车轮", 9, 7.8, 28, 0.70, 12, 0, "炼金 · 顺滑70%", GearTier.T3, ShopAvailable: false, CraftOnly: true),
-        new("深海纺车轮", 12, 8.5, 40, 0.78, 20, 0, "炼金主路径 · 线杯40kg", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("磁力刹车轮", 11, 8.2, 38, 0.76, 18, 0, "炼金 · 高顺滑", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("神经接口轮", 18, 10.0, 60, 0.92, 30, 0, "炼金神话轮 · 线杯60kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
-        new("沧龙液压轮", 16, 9.5, 55, 0.88, 28, 0, "炼金 · 远礁特化", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.75),
+        new("生锈的手拨铁线轴", 2, 5.0, 8, 0.30, 1, 0, "卸力+10% · 线杯8kg", GearTier.T1),
+        new("“两元店”塑料玩具轮", 2.5, 5.2, 10, 0.32, 1, 180, "轻便入门轮 · 线杯10kg", GearTier.T1),
+        new("“沙沙作响”的二手水滴轮", 5, 6.2, 15, 0.50, 5, 600, "卸力+25% · 线杯15kg", GearTier.T2, RequiredCatLevel: 3),
+        new("“开拓者”入门级鼓轮", 6, 6.5, 18, 0.55, 5, 1100, "顺滑提升 · 线杯18kg", GearTier.T2, RequiredCatLevel: 3),
+        new("“大力士”重型改装鼓轮", 8, 7.5, 25, 0.65, 12, 5200, "卸力+40% · 线杯25kg", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.45),
+        new("“水镜”双卸力纺车轮", 9, 7.8, 28, 0.70, 12, 0, "炼金 · 顺滑70%", GearTier.T3, ShopAvailable: false, CraftOnly: true),
+        new("“深蓝”密封防水防咸纺车轮", 12, 8.5, 40, 0.78, 20, 0, "炼金主路径 · 线杯40kg", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“游鹰”双离心制动鼓轮", 11, 8.2, 38, 0.76, 18, 0, "炼金 · 高顺滑", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“声呐反馈”电子计数鼓轮", 18, 10.0, 60, 0.92, 30, 0, "炼金神话轮 · 线杯60kg", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
+        new("“重压”大扭矩齿轮减速水滴", 16, 9.5, 55, 0.88, 28, 0, "炼金 · 远礁特化", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.75),
         ..GearT6T10Data.ExtraReels,
     ];
 
     // ── 鱼线（10）──
     public static readonly List<LineSpec> Lines =
     [
-        new("劣质缝纫线", 5, 0.3, 0.00, 0.00, WaterDepth.Shallow, 1, 0, "强度5kg · 敏锐+3%", GearTier.T1),
-        new("粗糙尼龙线", 8, 0.4, 0.01, 0.05, WaterDepth.Shallow, 1, 150, "入门加强 · 耐磨5%", GearTier.T1),
-        new("四编马力赛", 12, 0.6, 0.03, 0.10, WaterDepth.Shallow, 5, 400, "强度12kg · 隐蔽3%", GearTier.T2, RequiredCatLevel: 3),
-        new("夜钓专用PE线", 15, 0.7, 0.04, 0.12, WaterDepth.Middle, 5, 750, "夜钓向 · 中层", GearTier.T2, RequiredCatLevel: 3),
-        new("碳纤主线", 25, 0.9, 0.06, 0.20, WaterDepth.Middle, 12, 4200, "强度25kg · 耐磨20%", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
-        new("精工编织线", 30, 1.0, 0.08, 0.25, WaterDepth.Middle, 12, 0, "炼金 · 100m编织", GearTier.T3, ShopAvailable: false, CraftOnly: true),
-        new("钛合金织线", 45, 1.2, 0.10, 0.35, WaterDepth.Middle, 20, 0, "炼金深海线 · 强度45kg", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("深渊碳纤线", 52, 1.3, 0.12, 0.38, WaterDepth.Deep, 22, 0, "炼金 · 深层特化", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("量子丝导线", 70, 1.5, 0.15, 0.50, WaterDepth.Deep, 30, 0, "炼金神话线 · 耐磨50%", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
-        new("龙筋编织线", 65, 1.8, 0.18, 0.45, WaterDepth.Deep, 28, 0, "炼金 · 高敏锐", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.75),
+        new("外婆缝被子的红棉线", 5, 0.3, 0.00, 0.00, WaterDepth.Shallow, 1, 0, "强度5kg · 敏锐+3%", GearTier.T1),
+        new("“地摊货”粗尼龙单丝线", 8, 0.4, 0.01, 0.05, WaterDepth.Shallow, 1, 150, "入门加强 · 耐磨5%", GearTier.T1),
+        new("“大力马”4编基础PE线", 12, 0.6, 0.03, 0.10, WaterDepth.Shallow, 5, 400, "强度12kg · 隐蔽3%", GearTier.T2, RequiredCatLevel: 3),
+        new("“幽影”夜光涂层线", 15, 0.7, 0.04, 0.12, WaterDepth.Middle, 5, 750, "夜钓向 · 中层", GearTier.T2, RequiredCatLevel: 3),
+        new("“隐形”氟碳碳素前导线", 25, 0.9, 0.06, 0.20, WaterDepth.Middle, 12, 4200, "强度25kg · 耐磨20%", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
+        new("“顺滑”8编高密PE线", 30, 1.0, 0.08, 0.25, WaterDepth.Middle, 12, 0, "炼金 · 100m编织", GearTier.T3, ShopAvailable: false, CraftOnly: true),
+        new("“包钢”防咬金属钢丝前导", 45, 1.2, 0.10, 0.35, WaterDepth.Middle, 20, 0, "炼金深海线 · 强度45kg", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“重力”高比重沉水尼龙线", 52, 1.3, 0.12, 0.38, WaterDepth.Deep, 22, 0, "炼金 · 深层特化", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“微脉冲”电感应传导线", 70, 1.5, 0.15, 0.50, WaterDepth.Deep, 30, 0, "炼金神话线 · 耐磨50%", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8),
+        new("“巨兽”极限抗磨多股编织", 65, 1.8, 0.18, 0.45, WaterDepth.Deep, 28, 0, "炼金 · 高敏锐", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.75),
         ..GearT6T10Data.ExtraLines,
     ];
 
     // ── 拟饵（10）──
     public static readonly List<LureSpec> Lures =
     [
-        new("生锈的铁勺", 0.10, 0.0, WaterDepth.Shallow, 20, 1, 5, 25, "浅层 · 等口-10%", GearTier.T1),
-        new("逼真的软虫", 0.12, 0.0, WaterDepth.Shallow, 18, 1, 5, 40, "镇外溪流入门 · 浅层", GearTier.T1),
-        new("发光夜光管", 0.20, 0.3, WaterDepth.Middle, 15, 5, 5, 125, "中层 · 品质+30%", GearTier.T2, RequiredCatLevel: 3),
-        new("手工涂装米诺", 0.35, 0.8, WaterDepth.Middle, 12, 5, 5, 400, "中层 · 品质+80%", GearTier.T2, RequiredCatLevel: 3),
-        new("冰川幼虫", 0.28, 0.5, WaterDepth.Deep, 10, 12, 5, 680, "深层 · 品质+50%", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
-        new("精工磷光饵", 0.32, 0.6, WaterDepth.Deep, 10, 12, 3, 0, "炼金 · 深层 lure", GearTier.T3, ShopAvailable: false, CraftOnly: true),
-        new("深渊拟态饵", 0.42, 1.0, WaterDepth.Deep, 8, 20, 3, 0, "炼金 T4 · 品质+100%", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("雾海幽光饵", 0.38, 0.9, WaterDepth.Deep, 9, 18, 3, 0, "炼金 · 雾海特化", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
-        new("量子拟态饵", 0.50, 1.2, WaterDepth.Deep, 8, 30, 2, 0, "炼金神话饵 · 品质+120%", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8, MythicBonus: 0.05),
-        new("神谕鳞粉饵", 0.55, 1.5, WaterDepth.Deep, 6, 32, 2, 0, "神话饵率+8% · T5", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.85, MythicBonus: 0.08),
+        new("压扁的生锈铁勺", 0.10, 0.0, WaterDepth.Shallow, 20, 1, 5, 25, "浅层 · 等口-10%", GearTier.T1),
+        new("“大尾巴”橡胶红面包虫", 0.12, 0.0, WaterDepth.Shallow, 18, 1, 5, 40, "镇外溪流入门 · 浅层", GearTier.T1),
+        new("“夜魔”简易自发光塑料管", 0.20, 0.3, WaterDepth.Middle, 15, 5, 5, 125, "中层 · 品质+30%", GearTier.T2, RequiredCatLevel: 3),
+        new("“歪嘴”手工涂装浮水米诺", 0.35, 0.8, WaterDepth.Middle, 12, 5, 5, 400, "中层 · 品质+80%", GearTier.T2, RequiredCatLevel: 3),
+        new("“肥水”沙蚕软饵配铅头钩", 0.28, 0.5, WaterDepth.Deep, 10, 12, 5, 680, "深层 · 品质+50%", GearTier.T3, RequiredDexSpot: "镇外溪流", RequiredDexPercent: 0.5),
+        new("“反光”鳞片压制沉水VIB", 0.32, 0.6, WaterDepth.Deep, 10, 12, 3, 0, "炼金 · 深层 lure", GearTier.T3, ShopAvailable: false, CraftOnly: true),
+        new("“红头阿玛尼”经典米诺", 0.42, 1.0, WaterDepth.Deep, 8, 20, 3, 0, "炼金 T4 · 品质+100%", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“幽灵小飞贼”水面波扒", 0.38, 0.9, WaterDepth.Deep, 9, 18, 3, 0, "炼金 · 雾海特化", GearTier.T4, ShopAvailable: false, CraftOnly: true, RequiredLicenseSpot: "近海礁石"),
+        new("“激流斩”重盐沉水棒贝软虫", 0.50, 1.2, WaterDepth.Deep, 8, 30, 2, 0, "炼金神话饵 · 品质+120%", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.8, MythicBonus: 0.05),
+        new("“金蝉脱壳”避障防挂雷蛙", 0.55, 1.5, WaterDepth.Deep, 6, 32, 2, 0, "神话饵率+8% · T5", GearTier.T5, ShopAvailable: false, CraftOnly: true, RequiredOverallDexPercent: 0.85, MythicBonus: 0.08),
         ..GearT6T10Data.ExtraLures,
     ];
 
@@ -282,104 +282,104 @@ public static class GearProgressionCatalog
     public static readonly List<GearCraftRecipe> GearCraftRecipes =
     [
         // T3 竿
-        new("craft_rod_t3_carbon", "精工碳纤竿", GearCraftSlot.Rod, "精工碳纤竿", GearTier.T3,
+        new("craft_rod_t3_carbon", "“匠心”手工缠线高碳竿", GearCraftSlot.Rod, "“匠心”手工缠线高碳竿", GearTier.T3,
             [], [new(AlchemyMaterials.BambooStrip, 3), new(AlchemyMaterials.CarbonFiber, 2), new(AlchemyMaterials.Resin, 1)],
             EconomySinks.AlchemyGearCraftT3Cost, 12, 3, "镇外溪流", 0.5, null, 0,
-            "废弃木料×3 + 强化纤维×2 + 树脂×1 → 精工碳纤竿"),
+            "河边烂木条×3 + 工业碳纤维×2 + 树脂×1 → “匠心”手工缠线高碳竿"),
 
         // T4 竿/轮
-        new("craft_rod_t4_deep", "深海碳纤竿", GearCraftSlot.Rod, "深海碳纤竿", GearTier.T4,
-            [new FishRequirement("斑斓石斑", 1, FishRarity.Epic, "近海礁石")],
+        new("craft_rod_t4_deep", "“极昼”深水抗压实心竿", GearCraftSlot.Rod, "“极昼”深水抗压实心竿", GearTier.T4,
+            [new FishRequirement("斑斓大石斑", 1, FishRarity.Epic, "近海礁石")],
             [new(AlchemyMaterials.BambooStrip, 2), new(AlchemyMaterials.CarbonFiber, 4), new(AlchemyMaterials.Resin, 2)],
             EconomySinks.AlchemyGearCraftT4Cost, 20, 5, null, 0, "近海礁石", 0,
-            "雾海史诗鱼 + 碳纤维 → 深海碳纤竿"),
+            "雾海史诗鱼 + 碳纤维 → “极昼”深水抗压实心竿"),
 
-        new("craft_reel_t4_deep", "深海纺车轮", GearCraftSlot.Reel, "深海纺车轮", GearTier.T4,
+        new("craft_reel_t4_deep", "“深蓝”密封防水防咸纺车轮", GearCraftSlot.Reel, "“深蓝”密封防水防咸纺车轮", GearTier.T4,
             [],
             [new(AlchemyMaterials.GearSet, 2), new(AlchemyMaterials.Bearing, 1), new(AlchemyMaterials.AlloyFrame, 1)],
             EconomySinks.AlchemyGearCraftT4Cost, 20, 5, null, 0, "近海礁石", 0,
-            "齿轮组×2 + 轴承×1 + 合金框×1 → 深海纺车轮"),
+            "生锈齿轮组×2 + 轴承×1 + 合金框×1 → “深蓝”密封防水防咸纺车轮"),
 
         // T3 线
-        new("craft_line_t3_braid", "精工编织线", GearCraftSlot.Line, "精工编织线", GearTier.T3,
+        new("craft_line_t3_braid", "“顺滑”8编高密PE线", GearCraftSlot.Line, "“顺滑”8编高密PE线", GearTier.T3,
             [],
             [new(AlchemyMaterials.NylonFilament, 5), new(AlchemyMaterials.ScalePowder, 2)],
             EconomySinks.AlchemyGearCraftT3Cost, 12, 3, "镇外溪流", 0.5, null, 0,
-            "尼龙原丝×5 + 鱼鳞粉×2 → 100m编织线"),
+            "工业尼龙单丝×5 + 研磨细鱼鳞粉×2 → 100m编织线"),
 
         // T4 线
-        new("craft_line_t4_titan", "钛合金织线", GearCraftSlot.Line, "钛合金织线", GearTier.T4,
+        new("craft_line_t4_titan", "“包钢”防咬金属钢丝前导", GearCraftSlot.Line, "“包钢”防咬金属钢丝前导", GearTier.T4,
             [new FishRequirement("*", 2, FishRarity.Rare, "近海礁石")],
             [new(AlchemyMaterials.CarbonFiber, 3), new(AlchemyMaterials.NylonFilament, 3)],
             EconomySinks.AlchemyGearCraftT4Cost, 20, 5, null, 0, "近海礁石", 0,
-            "雾海稀有鱼×2 + 碳纤维 → 钛合金织线"),
+            "雾海稀有鱼×2 + 碳纤维 → “包钢”防咬金属钢丝前导"),
 
         // T3 饵
-        new("craft_lure_t3_glow", "精工磷光饵", GearCraftSlot.Lure, "精工磷光饵", GearTier.T3,
+        new("craft_lure_t3_glow", "“反光”鳞片压制沉水VIB", GearCraftSlot.Lure, "“反光”鳞片压制沉水VIB", GearTier.T3,
             [new FishRequirement("*", 3, FishRarity.Common, "镇外溪流")],
             [new(AlchemyMaterials.ScalePowder, 4), new(AlchemyMaterials.Resin, 1)],
             EconomySinks.AlchemyGearCraftT3Cost, 12, 3, "镇外溪流", 0.5, null, 0,
-            "镇外溪流普通鱼×3 + 鱼鳞粉 → 精工磷光饵×3"),
+            "镇外溪流普通鱼×3 + 研磨细鱼鳞粉 → “反光”鳞片压制沉水VIB×3"),
 
         // T4 饵
-        new("craft_lure_t4_abyss", "深渊拟态饵", GearCraftSlot.Lure, "深渊拟态饵", GearTier.T4,
-            [new FishRequirement("幽蓝安康", 1, FishRarity.Epic, "近海礁石")],
+        new("craft_lure_t4_abyss", "“红头阿玛尼”经典米诺", GearCraftSlot.Lure, "“红头阿玛尼”经典米诺", GearTier.T4,
+            [new FishRequirement("大灯笼安康鱼", 1, FishRarity.Epic, "近海礁石")],
             [new(AlchemyMaterials.ScalePowder, 6), new(AlchemyMaterials.CarbonFiber, 2)],
             EconomySinks.AlchemyGearCraftT4Cost, 20, 5, null, 0, "近海礁石", 0,
-            "雾海史诗鱼 + 材料 → 深渊拟态饵×3"),
+            "雾海史诗鱼 + 材料 → “红头阿玛尼”经典米诺×3"),
 
         // T5 竿
-        new("craft_rod_t5_quantum", "量子折叠竿", GearCraftSlot.Rod, "量子折叠竿", GearTier.T5,
-            [new FishRequirement("纯色金化鲤", 1, FishRarity.Legendary, "镇外溪流")],
+        new("craft_rod_t5_quantum", "“猎手”折叠伸缩直柄竿", GearCraftSlot.Rod, "“猎手”折叠伸缩直柄竿", GearTier.T5,
+            [new FishRequirement("金背鲤仙", 1, FishRarity.Legendary, "镇外溪流")],
             [new(AlchemyMaterials.DeepSeaCrystal, 3), new(AlchemyMaterials.CarbonFiber, 5), new(AlchemyMaterials.MythScalePowder, 2)],
             EconomySinks.AlchemyGearCraftT5Cost, 30, 10, null, 0, null, 0.8,
-            "传说鱼 + 深海结晶 + 神话鳞粉 → 量子折叠竿"),
+            "传说鱼 + 沧海蓝晶石 + 五彩神话鳞粉 → “猎手”折叠伸缩直柄竿"),
 
-        new("craft_rod_t5_dragon", "神话龙脊竿", GearCraftSlot.Rod, "神话龙脊竿", GearTier.T5,
-            [new FishRequirement("深湾巨口鲨", 1, FishRarity.Legendary, "远礁外海")],
+        new("craft_rod_t5_dragon", "“龙骨”仿生碳化直柄竿", GearCraftSlot.Rod, "“龙骨”仿生碳化直柄竿", GearTier.T5,
+            [new FishRequirement("大白鲨", 1, FishRarity.Legendary, "远礁外海")],
             [new(AlchemyMaterials.DeepSeaCrystal, 5), new(AlchemyMaterials.MythScalePowder, 3)],
             EconomySinks.AlchemyGearCraftT5Cost + 2000, 30, 12, null, 0, null, 0.8,
-            "远礁传说 + 深海结晶×5 + 神话鳞粉×3"),
+            "远礁传说 + 沧海蓝晶石×5 + 五彩神话鳞粉×3"),
 
         // T5 轮
-        new("craft_reel_t5_neural", "神经接口轮", GearCraftSlot.Reel, "神经接口轮", GearTier.T5,
-            [new FishRequirement("霜龙传说鱼", 1, FishRarity.Legendary, "极光冰湾")],
+        new("craft_reel_t5_neural", "“声呐反馈”电子计数鼓轮", GearCraftSlot.Reel, "“声呐反馈”电子计数鼓轮", GearTier.T5,
+            [new FishRequirement("极光冰川巨鳎", 1, FishRarity.Legendary, "极光冰湾")],
             [new(AlchemyMaterials.GearSet, 4), new(AlchemyMaterials.Bearing, 3), new(AlchemyMaterials.DeepSeaCrystal, 2)],
             EconomySinks.AlchemyGearCraftT5Cost, 30, 10, null, 0, null, 0.8,
-            "冰湾传说 + 齿轮组×4 + 轴承×3 → 神经接口轮"),
+            "冰湾传说 + 生锈齿轮组×4 + 轴承×3 → “声呐反馈”电子计数鼓轮"),
 
         // T5 线
-        new("craft_line_t5_quantum", "量子丝导线", GearCraftSlot.Line, "量子丝导线", GearTier.T5,
+        new("craft_line_t5_quantum", "“微脉冲”电感应传导线", GearCraftSlot.Line, "“微脉冲”电感应传导线", GearTier.T5,
             [new FishRequirement("*", 2, FishRarity.Legendary)],
             [new(AlchemyMaterials.CarbonFiber, 6), new(AlchemyMaterials.MythScalePowder, 2)],
             EconomySinks.AlchemyGearCraftT5Cost, 30, 10, null, 0, null, 0.8,
-            "传说鱼×2 + 碳纤维×6 + 神话鳞粉×2"),
+            "传说鱼×2 + 碳纤维×6 + 五彩神话鳞粉×2"),
 
         // T5 饵
-        new("craft_lure_t5_quantum", "量子拟态饵", GearCraftSlot.Lure, "量子拟态饵", GearTier.T5,
-            [new FishRequirement("异变·巨型水虎鱼", 1, FishRarity.Legendary, "镇外溪流")],
+        new("craft_lure_t5_quantum", "“激流斩”重盐沉水棒贝软虫", GearCraftSlot.Lure, "“激流斩”重盐沉水棒贝软虫", GearTier.T5,
+            [new FishRequirement("异变·“镜湖水虎兽”", 1, FishRarity.Legendary, "镇外溪流")],
             [new(AlchemyMaterials.MythScalePowder, 4), new(AlchemyMaterials.ScalePowder, 8)],
             EconomySinks.AlchemyGearCraftT5Cost, 30, 10, null, 0, null, 0.8,
-            "神话鱼 + 神话鳞粉×4 → 量子拟态饵×2"),
+            "神话鱼 + 五彩神话鳞粉×4 → “激流斩”重盐沉水棒贝软虫×2"),
 
-        new("craft_lure_t5_oracle", "神谕鳞粉饵", GearCraftSlot.Lure, "神谕鳞粉饵", GearTier.T5,
-            [new FishRequirement("神话·远海沧龙", 1, FishRarity.Legendary, "远礁外海")],
+        new("craft_lure_t5_oracle", "“金蝉脱壳”避障防挂雷蛙", GearCraftSlot.Lure, "“金蝉脱壳”避障防挂雷蛙", GearTier.T5,
+            [new FishRequirement("神话·“远海沧龙”", 1, FishRarity.Legendary, "远礁外海")],
             [new(AlchemyMaterials.MythScalePowder, 6), new(AlchemyMaterials.DeepSeaCrystal, 2)],
             EconomySinks.AlchemyGearCraftT5Cost + 1500, 32, 12, null, 0, null, 0.85,
-            "远海神话 + 神话鳞粉×6 → 神谕鳞粉饵×2"),
+            "远海神话 + 五彩神话鳞粉×6 → “金蝉脱壳”避障防挂雷蛙×2"),
 
         // T4 额外
-        new("craft_rod_t4_mist", "雾海潜行竿", GearCraftSlot.Rod, "雾海潜行竿", GearTier.T4,
-            [new FishRequirement("夜光乌贼", 2, FishRarity.Rare, "近海礁石")],
+        new("craft_rod_t4_mist", "“夜行者”磨砂哑光隐匿竿", GearCraftSlot.Rod, "“夜行者”磨砂哑光隐匿竿", GearTier.T4,
+            [new FishRequirement("荧光墨鱼", 2, FishRarity.Rare, "近海礁石")],
             [new(AlchemyMaterials.CarbonFiber, 3), new(AlchemyMaterials.WaterWeed, 4)],
             EconomySinks.AlchemyGearCraftT4Cost - 500, 18, 5, null, 0, "近海礁石", 0,
-            "雾海稀有鱼 + 普通水草 → 雾海潜行竿"),
+            "雾海稀有鱼 + 缠绕水草 → “夜行者”磨砂哑光隐匿竿"),
 
-        new("craft_reel_t4_mag", "磁力刹车轮", GearCraftSlot.Reel, "磁力刹车轮", GearTier.T4,
+        new("craft_reel_t4_mag", "“游鹰”双离心制动鼓轮", GearCraftSlot.Reel, "“游鹰”双离心制动鼓轮", GearTier.T4,
             [],
             [new(AlchemyMaterials.GearSet, 3), new(AlchemyMaterials.Bearing, 2), new(AlchemyMaterials.Resin, 2)],
             EconomySinks.AlchemyGearCraftT4Cost - 300, 18, 5, null, 0, "近海礁石", 0,
-            "齿轮组×3 + 轴承×2 + 树脂×2"),
+            "生锈齿轮组×3 + 轴承×2 + 树脂×2"),
         ..GearT6T10Data.ExtraCraftRecipes,
     ];
 
