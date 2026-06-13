@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CyberPetApp.Models;
 using CyberPetApp.Services;
 using Microsoft.AspNetCore.Components;
@@ -64,8 +64,8 @@ public partial class Home : IAsyncDisposable
         }
     }
 
-    private Food normalFood = new Food("普通猫粮", 15, 2, 2);
-    private Food luxuryFood = new Food("金枪鱼罐头", 35, 15, 5);
+    private Food normalFood = new Food("“猫乐滋”混合肉干粮", 20, 5, 5);
+    private Food luxuryFood = new Food("“猫主子”吞拿鱼大肉罐", 35, 10, 10);
 
     // ???? ??O??? ????
     private List<FishingRod> myRods = [];
@@ -857,4 +857,13 @@ public partial class Home : IAsyncDisposable
     private int UnlockedRoomCount() => playerHouse.Rooms.Values.Count(r => r.IsUnlocked);
     private int TotalFurnitureCount() => playerHouse.Rooms.Values.Sum(r => r.Furniture.Count);
     private int UnlockedFurnitureCount() => playerHouse.Rooms.Values.SelectMany(r => r.Furniture).Count(f => f.IsUnlocked);
+
+    private async Task SaveSkinAndRefreshAsync()
+    {
+        if (player is not null)
+            await _playerService.SaveProgressAsync(player);
+        if (cat is not null)
+            await _cyberCatService.SaveAsync(cat);
+        await InvokeAsync(StateHasChanged);
+    }
 }

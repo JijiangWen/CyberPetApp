@@ -26,7 +26,7 @@
 
             <div class="pc-stage">
 
-                <CatSprite State="@Vitals.CatState" />
+                <CatSprite State="@Vitals.CatState" SkinId="@CatSkinId" />
 
             </div>
 
@@ -195,17 +195,25 @@
 
             <div class="btn-group care-emergency-btns">
 
+                <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(cheapFood.Name))"
+
+                        @onclick="() => OnFeed.InvokeAsync(cheapFood)">促销粮</button>
+
+                <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(normalFood.Name))"
+
+                        @onclick="() => OnFeed.InvokeAsync(normalFood)">猫乐滋</button>
+
                 <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(premiumFood.Name))"
 
-                        @onclick="() => OnFeed.InvokeAsync(premiumFood)">高级猫粮</button>
+                        @onclick="() => OnFeed.InvokeAsync(premiumFood)">吞拿罐</button>
 
                 <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(catnipFood.Name))"
 
-                        @onclick="() => OnFeed.InvokeAsync(catnipFood)">猫薄荷</button>
+                        @onclick="() => OnFeed.InvokeAsync(catnipFood)">薄荷液</button>
 
                 <button type="button" class="g-btn g-btn-sm" disabled="@(!HasFood(energyDrink.Name))"
 
-                        @onclick="() => OnFeed.InvokeAsync(energyDrink)">能量饮</button>
+                        @onclick="() => OnFeed.InvokeAsync(energyDrink)">红牛</button>
 
                 <button type="button" class="g-btn g-btn-sm" @onclick="OnDrink">饮水</button>
 
@@ -233,20 +241,21 @@
 
 @code {
 
-    private static readonly Food normalFood  = new("普通猫粮", 15, 2, 2);
+    private static readonly Food cheapFood   = new("临期促销装猫粮", 10, 1, 0);
 
-    private static readonly Food premiumFood = new("高级猫粮", 25, 5, 3);
+    private static readonly Food normalFood  = new("“猫乐滋”混合肉干粮", 20, 5, 5);
 
-    private static readonly Food catnipFood  = new("猫薄荷包", 0, 0, 50);
+    private static readonly Food premiumFood = new("“猫主子”吞拿鱼大肉罐", 35, 10, 10);
 
-    private static readonly Food energyDrink = new("能量饮料", 0, 40, 0);
+    private static readonly Food catnipFood  = new("“神仙快乐水”浓缩薄荷液", 0, 0, 60);
+
+    private static readonly Food energyDrink = new("“超能红牛”精力补充液", 0, 50, -5);
 
 
 
     [Parameter, EditorRequired] public CatVitalsSnapshot Vitals { get; set; }
-
     [Parameter, EditorRequired] public Player   Player { get; set; } = null!;
-
+    [Parameter] public string CatSkinId { get; set; } = "default";
     [Parameter] public IReadOnlyList<string>?          DebuffLines    { get; set; }
 
     [Parameter] public IReadOnlyList<string>          PassiveSummary { get; set; } = [];
@@ -256,7 +265,7 @@
     [Parameter] public Func<string, bool> HasFood { get; set; } = _ => false;
 
     private bool HasAnyCareFood =>
-        HasFood(premiumFood.Name) || HasFood(catnipFood.Name) || HasFood(energyDrink.Name)
+        HasFood(cheapFood.Name) || HasFood(normalFood.Name) || HasFood(premiumFood.Name) || HasFood(catnipFood.Name) || HasFood(energyDrink.Name)
         || Player.Backpack.Any(kv => CookBook.IsCookedFood(kv.Key) && kv.Value > 0);
 
     [Parameter] public EventCallback<Food> OnFeed   { get; set; }

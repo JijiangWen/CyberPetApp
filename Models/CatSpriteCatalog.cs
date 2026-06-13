@@ -15,9 +15,15 @@ public static class CatSpriteCatalog
             ["wink"] = "wink",
         };
 
-    public static string ImagePath(string? state)
+    public static string ImagePath(string? skinId, string? state)
     {
         var slug = SlugByState.TryGetValue(state ?? "", out var file) ? file : "content";
-        return $"/assets/cat/{slug}.png?v=5";
+        
+        if (string.IsNullOrWhiteSpace(skinId) || skinId.Equals("default", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"/assets/cat/{slug}.png?v=5";
+        }
+        
+        return $"/assets/cat_skins/{skinId}/{slug}.png?v=5";
     }
 }

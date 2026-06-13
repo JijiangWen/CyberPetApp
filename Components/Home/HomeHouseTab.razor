@@ -13,6 +13,7 @@
                     MaintenanceFee="MaintenanceService.CalculateFee(Session.PlayerHouse, Session.Player!.MaintenanceOverdue)"
                     MaintenanceOverdue="Session.Player.MaintenanceOverdue"
                     CatState="@CatState"
+                    CatSkinId="@CatSkinId"
                     Feeder="Session.Feeder"
                     Waterer="Session.Waterer"
                     NormalFood="NormalFood"
@@ -37,6 +38,7 @@
 
     [Parameter] public HouseBuffs HouseBuffs { get; set; }
     [Parameter] public string CatState { get; set; } = "";
+    [Parameter] public string CatSkinId { get; set; } = "default";
     [Parameter] public Food NormalFood { get; set; } = null!;
     [Parameter] public Food LuxuryFood { get; set; } = null!;
     [Parameter] public string? FeedMessage { get; set; }

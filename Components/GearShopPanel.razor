@@ -60,7 +60,7 @@
                                 var unlocked = MeetsUnlock(spec);
                                 if (!MatchesRow(spec.Name, owned, unlocked, spec.CraftOnly)) continue;
                                 <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
-                                    <td class="td-name">🎣 @spec.Name</td>
+                                    <td class="td-name"><img src="@GearImgUrl("rod", spec.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(spec.Name)" alt="rod" /> @spec.Name</td>
                                     <td>@spec.Sensitivity</td>
                                     <td>@spec.CastRange</td>
                                     <td>@spec.MaxStrength kg</td>
@@ -101,7 +101,7 @@
                                 var unlocked = MeetsUnlock(spec);
                                 if (!MatchesRow(spec.Name, owned, unlocked, spec.CraftOnly)) continue;
                                 <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
-                                    <td class="td-name">⚙ @spec.Name</td>
+                                    <td class="td-name"><img src="@GearImgUrl("reel", spec.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(spec.Name)" alt="reel" /> @spec.Name</td>
                                     <td>@spec.DragPower</td>
                                     <td>@((int)(spec.Smoothness * 100))%</td>
                                     <td>@spec.LineCapacity kg</td>
@@ -137,13 +137,13 @@
                             <tr><th>名称</th><th>强度</th><th>敏锐</th><th>隐蔽</th><th>耐磨</th><th>水层</th><th>Lv</th><th>价格</th><th>耐久</th><th>操作</th></tr>
                         </thead>
                         <tbody>
-                            @foreach (var spec in GearCatalog.Lines.Where(l => l.Tier == tier && l.ShopAvailable))
+                            @foreach (var spec in GearCatalog.Lines.Where(l => l.Tier == tier))
                             {
                                 var owned = Lines.FirstOrDefault(l => l.Name == spec.Name);
                                 var unlocked = MeetsUnlock(spec);
                                 if (!MatchesRow(spec.Name, owned, unlocked, spec.CraftOnly)) continue;
                                 <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
-                                    <td class="td-name">🧵 @spec.Name</td>
+                                    <td class="td-name"><img src="@GearImgUrl("line", spec.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(spec.Name)" alt="line" /> @spec.Name</td>
                                     <td>@spec.LineStrength kg</td>
                                     <td>@spec.LineSensitivity</td>
                                     <td>@((int)(spec.LineStealth * 100))%</td>
@@ -180,13 +180,13 @@
                             <tr><th>名称</th><th>吸引</th><th>品质+</th><th>水层</th><th>耐久/枚</th><th>Lv</th><th>单价</th><th>库存</th><th>操作</th></tr>
                         </thead>
                         <tbody>
-                            @foreach (var spec in GearCatalog.Lures.Where(l => l.Tier == tier && l.ShopAvailable))
+                            @foreach (var spec in GearCatalog.Lures.Where(l => l.Tier == tier))
                             {
                                 var owned = Lures.FirstOrDefault(l => l.Name == spec.Name);
                                 var unlocked = MeetsUnlock(spec);
                                 if (!MatchesRow(spec.Name, owned, unlocked, spec.CraftOnly)) continue;
                                 <tr class="@RowClass(owned?.IsEquipped == true, unlocked, owned is not null)">
-                                    <td class="td-name">🪱 @spec.Name</td>
+                                    <td class="td-name"><img src="@GearImgUrl("lure", spec.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(spec.Name)" alt="lure" /> @spec.Name</td>
                                     <td>@((int)(spec.Attraction * 100))%</td>
                                     <td>+@((int)(spec.RarityBonus * 100))%</td>
                                     <td>@GearCatalog.DepthLabel(spec.TargetDepth)</td>
@@ -322,11 +322,11 @@
         GearCatalog.Reels.Any(r => r.Tier == tier && MatchesRow(r.Name, Reels.FirstOrDefault(x => x.Name == r.Name), MeetsUnlock(r), r.CraftOnly));
 
     private bool TierHasVisibleLines(GearTier tier) =>
-        GearCatalog.Lines.Any(l => l.Tier == tier && l.ShopAvailable
+        GearCatalog.Lines.Any(l => l.Tier == tier
             && MatchesRow(l.Name, Lines.FirstOrDefault(x => x.Name == l.Name), MeetsUnlock(l), l.CraftOnly));
 
     private bool TierHasVisibleLures(GearTier tier) =>
-        GearCatalog.Lures.Any(l => l.Tier == tier && l.ShopAvailable
+        GearCatalog.Lures.Any(l => l.Tier == tier
             && MatchesRow(l.Name, Lures.FirstOrDefault(x => x.Name == l.Name), MeetsUnlock(l), l.CraftOnly));
 
     private IEnumerable<FishingRod> VisibleCraftedRods =>
@@ -373,6 +373,14 @@
         spec.RequiredMythicCaught, spec.RequiredAllMythic,
         Player.FishingLevel, CatLevel, DexEntries, HasLicense);
 
+    private static string SanitizeGearName(string name) =>
+        name.Replace("\"", "").Replace("“", "").Replace("”", "")
+            .Replace(":", "").Replace("*", "").Replace("?", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "");
+
+    private static string GearImgUrl(string prefix, string name) =>
+        $"/assets/gear/{prefix}_{SanitizeGearName(name)}.png?v=1";
+
     private static string PriceLabel(int price, bool craftOnly) =>
         craftOnly ? "需炼金锻造" : price == 0 ? "赠送" : $"{price}g";
 
@@ -395,7 +403,7 @@
                         @foreach (var owned in items)
                         {
                             <tr class="@(owned.IsEquipped ? "row-equipped" : "")">
-                                <td class="td-name">🎣 @owned.Name</td>
+                                <td class="td-name"><img src="@GearImgUrl("rod", owned.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(owned.Name)" alt="rod" /> @owned.Name</td>
                                 <td>@owned.Sensitivity</td>
                                 <td>@owned.CastRange</td>
                                 <td>@owned.MaxStrength kg</td>
@@ -431,7 +439,7 @@
                         @foreach (var owned in items)
                         {
                             <tr class="@(owned.IsEquipped ? "row-equipped" : "")">
-                                <td class="td-name">⚙ @owned.Name</td>
+                                <td class="td-name"><img src="@GearImgUrl("reel", owned.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(owned.Name)" alt="reel" /> @owned.Name</td>
                                 <td>@owned.DragPower</td>
                                 <td>@((int)(owned.Smoothness * 100))%</td>
                                 <td>@owned.LineCapacity kg</td>
@@ -467,7 +475,7 @@
                         @foreach (var owned in items)
                         {
                             <tr class="@(owned.IsEquipped ? "row-equipped" : "")">
-                                <td class="td-name">🧵 @owned.Name</td>
+                                <td class="td-name"><img src="@GearImgUrl("line", owned.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(owned.Name)" alt="line" /> @owned.Name</td>
                                 <td>@owned.LineStrength kg</td>
                                 <td>@owned.LineSensitivity</td>
                                 <td>@((int)(owned.LineStealth * 100))%</td>
@@ -498,7 +506,7 @@
                         @foreach (var owned in items)
                         {
                             <tr class="@(owned.IsEquipped ? "row-equipped" : "")">
-                                <td class="td-name">🪱 @owned.Name</td>
+                                <td class="td-name"><img src="@GearImgUrl("lure", owned.Name)" class="gear-icon @HomeUiHelpers.GearTierClass(owned.Name)" alt="lure" /> @owned.Name</td>
                                 <td>@((int)(owned.Attraction * 100))%</td>
                                 <td>@GearCatalog.DepthLabel(owned.TargetDepth)</td>
                                 <td>×@owned.Quantity</td>
@@ -567,7 +575,11 @@
 
     private RenderFragment RenderLineActions(LineSpec spec, FishingLine? owned, bool unlocked) => __builder =>
     {
-        if (owned is null)
+        if (spec.CraftOnly)
+        {
+            <button type="button" class="g-btn link-btn" @onclick="() => OnGoAlchemy.InvokeAsync()">→ craft()</button>
+        }
+        else if (owned is null)
         {
             <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.Price)"
                     @onclick="() => OnBuyLine.InvokeAsync(spec)">
@@ -600,10 +612,17 @@
 
     private RenderFragment RenderLureActions(LureSpec spec, FishingLure? owned, bool unlocked) => __builder =>
     {
-        <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.PackPrice)"
-                @onclick="() => OnBuyLure.InvokeAsync(spec)">
-            @(unlocked ? "buy" : $"🔒Lv.{spec.RequiredLevel}")
-        </button>
+        if (spec.CraftOnly)
+        {
+            <button type="button" class="g-btn link-btn" @onclick="() => OnGoAlchemy.InvokeAsync()">→ craft()</button>
+        }
+        else if (owned is null || owned.Quantity == 0)
+        {
+            <button type="button" class="g-btn primary" disabled="@(!unlocked || Player.Money < spec.PackPrice)"
+                    @onclick="() => OnBuyLure.InvokeAsync(spec)">
+                @(unlocked ? "buy" : $"🔒Lv.{spec.RequiredLevel}")
+            </button>
+        }
         if (owned is not null && !owned.IsEquipped && owned.Quantity > 0)
         {
             <button type="button" class="g-btn" @onclick="() => OnEquipLure.InvokeAsync(owned)">equip()</button>

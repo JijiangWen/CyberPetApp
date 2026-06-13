@@ -126,8 +126,9 @@ public static class CatFishingStatsHelper
     /// <summary>喂食给猫的经验。</summary>
     public static int XpFromFood(string foodName)
     {
-        if (foodName == "金枪鱼罐头") return 12;
-        if (foodName == "普通猫粮") return 4;
+        if (foodName == "“猫主子”吞拿鱼大肉罐" || foodName == "金枪鱼罐头") return 12;
+        if (foodName == "“猫乐滋”混合肉干粮" || foodName == "普通猫粮") return 4;
+        if (foodName == "临期促销装猫粮") return 2;
         var recipe = CookBook.Recipes.FirstOrDefault(r => r.FoodName == foodName);
         return recipe is not null ? Math.Max(6, recipe.Xp / 2) : 2;
     }

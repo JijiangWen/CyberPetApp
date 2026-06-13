@@ -15,7 +15,7 @@
             var rodPct = Math.Clamp(Loadout.RodDurability, 0, 100);
         }
         <div class="slot-card slot-rod section-tw tw">
-            <div class="tw-header"><span class="tw-icon green"></span>鱼竿 // 🎣 @Loadout.RodName</div>
+            <div class="tw-header"><span class="tw-icon green"></span>鱼竿 // <img src="@GearImgUrl("rod", Loadout.RodName)" class="gear-icon @HomeUiHelpers.GearTierClass(Loadout.RodName)" alt="rod" /> @Loadout.RodName</div>
             <div class="tw-body slot-card-body">
                 <div class="kv-row"><span class="k">敏锐</span><span class="v">@Loadout.Sensitivity.ToString("0.#")</span></div>
                 <div class="kv-row"><span class="k">抛投</span><span class="v">@Loadout.CastRange</span></div>
@@ -43,7 +43,7 @@
             var reelPct = Math.Clamp(Loadout.ReelDurability, 0, 100);
         }
         <div class="slot-card slot-reel section-tw tw">
-            <div class="tw-header"><span class="tw-icon green"></span>卷线器 // ⚙ @Loadout.ReelName</div>
+            <div class="tw-header"><span class="tw-icon green"></span>卷线器 // <img src="@GearImgUrl("reel", Loadout.ReelName)" class="gear-icon @HomeUiHelpers.GearTierClass(Loadout.ReelName)" alt="reel" /> @Loadout.ReelName</div>
             <div class="tw-body slot-card-body">
                 <div class="kv-row"><span class="k">卸力</span><span class="v">@Loadout.DragPower.ToString("0.#")</span></div>
                 <div class="kv-row"><span class="k">顺滑</span><span class="v">@((int)(Loadout.Smoothness * 100))%</span></div>
@@ -72,7 +72,7 @@
             var linePct = Math.Clamp(Loadout.LineDurability, 0, 100);
         }
         <div class="slot-card slot-line section-tw tw">
-            <div class="tw-header"><span class="tw-icon green"></span>鱼线 // 🧵 @Loadout.LineName</div>
+            <div class="tw-header"><span class="tw-icon green"></span>鱼线 // <img src="@GearImgUrl("line", Loadout.LineName)" class="gear-icon @HomeUiHelpers.GearTierClass(Loadout.LineName)" alt="line" /> @Loadout.LineName</div>
             <div class="tw-body slot-card-body">
                 <div class="kv-row"><span class="k">强度</span><span class="v">@Loadout.LineStrength kg · 承重下限 @Loadout.EffectiveWeightLimit.ToString("0.#") kg</span></div>
                 <div class="kv-row"><span class="k">敏锐</span><span class="v">@Loadout.LineSensitivity.ToString("0.#")</span></div>
@@ -103,7 +103,7 @@
             var lureLow = Loadout.LureDurabilityRemaining <= lureMax / 4;
         }
         <div class="slot-card slot-lure section-tw tw">
-            <div class="tw-header"><span class="tw-icon green"></span>拟饵 // 🪱 @Loadout.LureName</div>
+            <div class="tw-header"><span class="tw-icon green"></span>拟饵 // <img src="@GearImgUrl("lure", Loadout.LureName)" class="gear-icon @HomeUiHelpers.GearTierClass(Loadout.LureName)" alt="lure" /> @Loadout.LureName</div>
             <div class="tw-body slot-card-body">
                 <div class="kv-row"><span class="k">吸引</span><span class="v">@((int)(Loadout.Attraction * 100))%</span></div>
                 <div class="kv-row"><span class="k">品质+</span><span class="v">+@((int)(Loadout.RarityBonus * 100))%</span></div>
@@ -305,6 +305,14 @@
     [Parameter] public EventCallback OnUnequipTargetLure { get; set; }
     [Parameter] public EventCallback OnGoAlchemy { get; set; }
     [Parameter] public EventCallback OnGoShop { get; set; }
+
+    private static string SanitizeGearName(string name) =>
+        name.Replace("\"", "").Replace("“", "").Replace("”", "")
+            .Replace(":", "").Replace("*", "").Replace("?", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "");
+
+    private static string GearImgUrl(string prefix, string name) =>
+        $"/assets/gear/{prefix}_{SanitizeGearName(name)}.png?v=1";
 
     private PlayerGem? _pendingGem;
     private GearGemSlot? _pendingSlot;

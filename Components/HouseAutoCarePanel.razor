@@ -46,11 +46,11 @@
             <div class="btn-group auto-care-actions">
                 <button type="button" class="g-btn" disabled="@(!HasBackpackFood(NormalFood.Name))"
                         @onclick="() => OnAddFood.InvokeAsync(NormalFood)">
-                    <span class="item-sprite sp-24 item-food"></span>add(普通猫粮)
+                    <span class="item-sprite sp-24 item-food"></span>add(@NormalFood.Name)
                 </button>
                 <button type="button" class="g-btn" disabled="@(!HasBackpackFood(LuxuryFood.Name))"
                         @onclick="() => OnAddFood.InvokeAsync(LuxuryFood)">
-                    <span class="item-sprite sp-24 item-can"></span>add(金枪鱼罐头)
+                    <span class="item-sprite sp-24 item-can"></span>add(@LuxuryFood.Name)
                 </button>
                 @foreach (var cooked in CookBook.Recipes.Where(r => r.AllowAutoFeeder))
                 {

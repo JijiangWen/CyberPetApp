@@ -26,7 +26,16 @@ public class PlayerService
             .Where(b => b.PlayerId == playerId)
             .ToListAsync();
 
-        player.Backpack = backpackItems.ToDictionary(b => b.ItemName, b => b.Quantity);
+        player.Backpack = backpackItems
+            .Where(b => !b.ItemName.StartsWith("skin_"))
+            .ToDictionary(b => b.ItemName, b => b.Quantity);
+
+        player.UnlockedCatSkins = backpackItems
+            .Where(b => b.ItemName.StartsWith("skin_"))
+            .Select(b => b.ItemName.Substring(5))
+            .ToHashSet();
+        player.UnlockedCatSkins.Add("default");
+
         player.Items = [];
 
         // 老玩家已选非默认工种：视为已解锁，避免重复扣培训费
@@ -335,6 +344,20 @@ public class PlayerService
         tracked.FishBackpackCapacity = Math.Max(50, tracked.FishBackpackCapacity) + additionalSlots;
         player.FishBackpackCapacity = tracked.FishBackpackCapacity;
         await _context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>解锁猫咪皮肤：扣费并存入 BackpackItems（"skin_X"）。</summary>
+    public async Task<bool> TryUnlockSkinAsync(Player player, string skinId, int price)
+    {
+        if (player.UnlockedCatSkins.Contains(skinId)) return true;
+        
+        if (price > 0 && !await TrySpendGoldAsync(player, price)) return false;
+
+        await UpsertBackpackItemAsync(player.Id, "skin_" + skinId, 1);
+        await _context.SaveChangesAsync();
+        
+        player.UnlockedCatSkins.Add(skinId);
         return true;
     }
 }

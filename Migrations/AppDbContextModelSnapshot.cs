@@ -116,6 +116,10 @@ namespace CyberPetApp.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(10);
 
+                    b.Property<string>("CurrentSkinId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("Energy")
                         .HasColumnType("integer");
 
@@ -322,9 +326,7 @@ namespace CyberPetApp.Migrations
                         .HasDefaultValue(1);
 
                     b.Property<int>("TargetDepth")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -375,9 +377,7 @@ namespace CyberPetApp.Migrations
                         .HasDefaultValue(1);
 
                     b.Property<int>("TargetDepth")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -519,17 +519,12 @@ namespace CyberPetApp.Migrations
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("RoomId1")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("UpgradeLevel")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RoomId1");
 
                     b.HasIndex("RoomId", "FurnitureId")
                         .IsUnique();
@@ -1153,14 +1148,10 @@ namespace CyberPetApp.Migrations
             modelBuilder.Entity("CyberPetApp.Models.Furniture", b =>
                 {
                     b.HasOne("CyberPetApp.Models.Room", null)
-                        .WithMany()
+                        .WithMany("Furniture")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("CyberPetApp.Models.Room", null)
-                        .WithMany("Furniture")
-                        .HasForeignKey("RoomId1");
                 });
 
             modelBuilder.Entity("CyberPetApp.Models.GameAccount", b =>

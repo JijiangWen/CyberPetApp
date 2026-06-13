@@ -4,6 +4,7 @@ import re
 import colorsys
 import hashlib
 import random
+import math
 from PIL import Image, ImageDraw
 
 # Setup paths
@@ -118,24 +119,39 @@ def get_base_sprite(name, rarity_str):
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "tadpole_base.png")).convert("RGBA")
     if "虾" in name or "浮游" in name or "磷虾" in name or "沙蚕" in name:
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "shrimp_base.png")).convert("RGBA")
-    if "泥鳅" in name or "鱥" in name or "鳗" in name:
+    if "泥鳅" in name or "鱥" in name or "爬子" in name or "爬岩鱼" in name:
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "loach_base.png")).convert("RGBA")
+    if "带鱼" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "hairtail_base.png")).convert("RGBA")
+    if "鳗" in name or "鳝" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "eel_base.png")).convert("RGBA")
+    if "鲨" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "shark_base.png")).convert("RGBA")
+    if "龙" in name or "巨兽" in name or "海皇" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "dragon_base.png")).convert("RGBA")
+    if "鲸" in name or "鲲" in name or "亡魂" in name or "钓主" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "whale_base.png")).convert("RGBA")
+    if "鳄" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "crocodile_base.png")).convert("RGBA")
+    if "鲵" in name or "巨螈" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "salamander_base.png")).convert("RGBA")
+    if "水虎兽" in name or "巨齿" in name or "巡礼者" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "piranha_base.png")).convert("RGBA")
+    if "鲤" in name or "鲫" in name or "鲦" in name or "白条" in name or "鲤仙" in name or "麦穗" in name or "鲩" in name or "草鱼" in name or "鳙" in name or "马口" in name or "柳根" in name or "金丝鲃" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "carp_base.png")).convert("RGBA")
+    if "剑鱼" in name or "旗鱼" in name or "马鲛" in name or "金枪" in name or "枪鱼" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "swordfish_base.png")).convert("RGBA")
+    if "鲈" in name or "石斑" in name or "鳜" in name or "鳕" in name or "青鱼" in name or "黑鱼" in name or "鲷" in name or "沙丁" in name or "鳎" in name or "鲑" in name or "鳟" in name or "黄姑" in name or "罗非" in name or "黄腊丁" in name or "黄骨" in name or "昂刺" in name or "石九公" in name or "刺盖" in name or "加吉鱼" in name or "黄鸡鱼" in name or "扁头鱼" in name or "鲱" in name or "鳂" in name or "鲂" in name or "小丑鱼" in name:
+        return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "bass_base.png")).convert("RGBA")
     if "鱿" in name or "乌贼" in name or "墨鱼" in name or "章鱼" in name or "八爪" in name:
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "squid_base.png")).convert("RGBA")
-    if "鳐" in name or "蝠鲼" in name:
+    if "鳐" in name or "蝠鲼" in name or "飞蝠" in name:
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "ray_base.png")).convert("RGBA")
-    if "安康" in name or "琵琶" in name:
+    if "安康" in name or "琵琶" in name or "巨口" in name or "宽咽" in name or "小鳚" in name:
         return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "angler_base.png")).convert("RGBA")
         
-    # Standard fish - crop from the original fish-set.png
-    sprite_class = get_sprite_class(name, rarity_str)
-    slot_idx = int(sprite_class.split('-')[1]) - 1
-    col = slot_idx % 8
-    row = slot_idx // 8
-    
-    cell_w, cell_h = 192, 256
-    box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
-    return original_sheet.crop(box)
+    # Standard fish - fallback to generic beautiful shape
+    return Image.open(os.path.join(ROOT, "tools", "assets_src", "fish", "generic_fish_base.png")).convert("RGBA")
 
 def sanitize_filename(name):
     return name.replace("\"", "").replace("“", "").replace("”", "").replace(":", "").replace("*", "").replace("?", "").replace("<", "").replace(">", "").replace("|", "")
@@ -346,12 +362,58 @@ def apply_patterns(img, name, rarity_str):
         
     return img
 
+def complex_deform(img, name):
+    name_hash = int(hashlib.md5(name.encode('utf-8')).hexdigest(), 16)
+    random.seed(name_hash)
+    
+    w, h = img.size
+    
+    # 1. Random aspect ratio stretch
+    scale_x = random.uniform(0.85, 1.15)
+    scale_y = random.uniform(0.85, 1.15)
+    
+    new_w = int(w * scale_x)
+    new_h = int(h * scale_y)
+    if new_w <= 0 or new_h <= 0: return img
+    img = img.resize((new_w, new_h), Image.Resampling.BICUBIC)
+    w, h = new_w, new_h
+    
+    # 2. Wave deformation (bend the fish)
+    amplitude = random.uniform(-0.15, 0.15) * h
+    frequency = random.uniform(0.5, 1.5) * 3.14159 / w
+    phase = random.uniform(0, 3.14159 * 2)
+    
+    out = Image.new('RGBA', (w, int(h + abs(amplitude)*2)))
+    pixels_in = img.load()
+    pixels_out = out.load()
+    
+    for x in range(w):
+        y_shift = int(math.sin(x * frequency + phase) * amplitude)
+        for y in range(h):
+            new_y = y + y_shift + int(abs(amplitude))
+            if 0 <= new_y < out.size[1]:
+                pixels_out[x, new_y] = pixels_in[x, y]
+                
+    # 3. Crop to bbox to fit properly
+    bbox = out.getbbox()
+    if bbox:
+        out = out.crop(bbox)
+        
+    # Scale back down slightly to fit inside the 192x192 box if it got too large
+    if out.size[0] > 192 or out.size[1] > 192:
+        out.thumbnail((192, 192), Image.Resampling.LANCZOS)
+        
+    return out
+
 # 5. Process and generate
 print("Generating individual species-accurate fish assets...")
 generated_count = 0
 for name, rarity in unique_fish:
     # Load correct base sprite shape (drawn programmatically or from tools/assets_src/fish)
     sprite = get_base_sprite(name, rarity)
+    
+    # Apply physical shape deformation
+    sprite = complex_deform(sprite, name)
     
     # Process color shifts
     h_shift, s_mult, v_mult, a_mult = get_hsv_adjustment(name, rarity)

@@ -14,6 +14,7 @@
                     MaintenanceFee="MaintenanceFee"
                     MaintenanceOverdue="MaintenanceOverdue"
                     CatState="CatState"
+                    CatSkinId="CatSkinId"
                     OnSelectRoom="SelectRoom" />
 
     @if (!string.IsNullOrEmpty(EffectiveSelectedRoomKey))
@@ -54,6 +55,7 @@
     [Parameter] public int MaintenanceFee { get; set; }
     [Parameter] public bool MaintenanceOverdue { get; set; }
     [Parameter] public string CatState { get; set; } = "content";
+    [Parameter] public string CatSkinId { get; set; } = "default";
     [Parameter] public AutoFeeder Feeder { get; set; } = null!;
     [Parameter] public AutoWaterer Waterer { get; set; } = null!;
     [Parameter] public Food NormalFood { get; set; } = null!;

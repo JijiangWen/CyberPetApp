@@ -1,0 +1,81 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inject PlayerService PlayerService
+
+<div class="shop-panel slide-in fade-in">
+    <div class="shop-header">
+        <h2 class="text-gradient">猫咪外观商店</h2>
+        <div class="shop-stats">
+            <span class="gold-text"><i class="bi bi-coin"></i> @Player.Money</span>
+        </div>
+    </div>
+
+    <div class="shop-desc mb-3 text-muted">
+        购买并装备新的猫咪皮肤，展现与众不同的魅力。
+    </div>
+
+    <div class="shop-grid">
+        @foreach (var skin in CatSkinCatalog.Skins)
+        {
+            var isUnlocked = Player.UnlockedCatSkins.Contains(skin.Id);
+            var isEquipped = Cat.CurrentSkinId == skin.Id;
+
+            <div class="shop-card @(isEquipped ? "equipped-card" : "")">
+                <div class="item-icon-box">
+                    <img src="@CatSpriteCatalog.ImagePath(skin.Id, "content")" alt="@skin.Name" class="item-img cat-skin-img" />
+                </div>
+                
+                <div class="item-info">
+                    <div class="item-name">@skin.Name</div>
+                    <div class="item-desc">@skin.Description</div>
+                    
+                    @if (isUnlocked)
+                    {
+                        @if (isEquipped)
+                        {
+                            <span class="text-success mt-2 d-block"><i class="bi bi-check-circle-fill"></i> 已装备</span>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="() => EquipSkin(skin)">
+                                <i class="bi bi-stars"></i> 装备
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="item-price mt-2">
+                            <span class="gold-text">@skin.Price <i class="bi bi-coin"></i></span>
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" @onclick="() => UnlockSkin(skin)" disabled="@(Player.Money < skin.Price)">
+                            <i class="bi bi-unlock"></i> 解锁
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Player Player { get; set; } = default!;
+    [Parameter, EditorRequired] public CyberCat Cat { get; set; } = default!;
+    [Parameter, EditorRequired] public EventCallback OnChanged { get; set; }
+
+    private async Task UnlockSkin(CatSkin skin)
+    {
+        if (await PlayerService.TryUnlockSkinAsync(Player, skin.Id, skin.Price))
+        {
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+    private async Task EquipSkin(CatSkin skin)
+    {
+        if (Player.UnlockedCatSkins.Contains(skin.Id))
+        {
+            Cat.CurrentSkinId = skin.Id;
+            await OnChanged.InvokeAsync();
+        }
+    }
+}

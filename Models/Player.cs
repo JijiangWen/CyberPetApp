@@ -21,6 +21,8 @@ public class Player
     public bool IsWorking { get; set; }
     public WorkJobType SelectedWorkJob { get; set; } = WorkJobType.Construction;
 
+    public HashSet<string> UnlockedCatSkins { get; set; } = ["default"];
+
     /// <summary>上次房屋维护费扣款时间（UTC）。</summary>
     public DateTime? LastMaintenanceAt { get; set; }
 

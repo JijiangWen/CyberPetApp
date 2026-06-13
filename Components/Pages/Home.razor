@@ -57,6 +57,7 @@ else
             <CatCareSidebar @key="tickGeneration"
                             Vitals="catVitalsSnapshot"
                             Player="player"
+                            CatSkinId="@cat.CurrentSkinId"
                             DebuffLines="_sidebarDebuffLines"
                             PassiveSummary="PassiveCareSummaryLines()"
                             ActiveFoodBuffs="activeFoodBuffs"
@@ -174,12 +175,19 @@ else
                         </span>
                     </button>
                     <button class="g-tab @(activeSection=="lifeshop"?"active":"")"
-                            @onclick='()=>SelectSectionAsync("lifeshop")'>
-                        <span class="t-dot"></span>
-                        <PixelIcon Name="shop" />
+                        @onclick='() => SelectSectionAsync("lifeshop")' title="生活商店">
+                        <i class="bi bi-shop"></i>
                         <span class="tab-text">
                             <span class="tab-cn">生活商店</span>
                             <span class="tab-en">shop.market</span>
+                        </span>
+                    </button>
+                    <button class="g-tab @(activeSection=="catskin"?"active":"")"
+                        @onclick='() => SelectSectionAsync("catskin")' title="外观">
+                        <i class="bi bi-palette"></i>
+                        <span class="tab-text">
+                            <span class="tab-cn">外观</span>
+                            <span class="tab-en">cat.skin</span>
                         </span>
                     </button>
                     <button class="g-tab @(activeSection=="milestones"?"active":"")"
@@ -209,6 +217,7 @@ else
                 case "house":
                 <HomeHouseTab HouseBuffs="GetHouseBuffs()"
                               CatState="@CatState()"
+                              CatSkinId="@cat.CurrentSkinId"
                               NormalFood="normalFood"
                               LuxuryFood="luxuryFood"
                               FeedMessage="feedMessage"
@@ -303,6 +312,9 @@ else
                                  Shop="shop"
                                  Message="lifeShopMessage"
                                  OnBuyItemCommitted="FinalizeBuyShopItem" />
+                break;
+                case "catskin":
+                <CatSkinPanel Player="player!" Cat="cat" OnChanged="SaveSkinAndRefreshAsync" />
                 break;
                 case "expedition":
                 <HomeExpeditionTab IsActive="@(activeSection == "expedition")"

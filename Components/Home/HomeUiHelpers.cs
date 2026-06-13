@@ -26,7 +26,24 @@ internal static class HomeUiHelpers
             .Replace("<", "")
             .Replace(">", "")
             .Replace("|", "");
-        return $"background-image: url('/assets/fish/{safeName}.png?v=2'); background-size: contain; background-position: center; background-repeat: no-repeat;";
+        return $"background-image: url('/assets/fish/{safeName}.png?v=4'); background-size: contain; background-position: center; background-repeat: no-repeat;";
+    }
+
+    public static string GearSpriteUrl(string prefix, string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "";
+        var safeName = name
+            .Replace("\"", "").Replace("“", "").Replace("”", "")
+            .Replace(":", "").Replace("*", "").Replace("?", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "");
+        return $"/assets/gear/{prefix}_{safeName}.png?v=1";
+    }
+
+    public static string GearTierClass(string? gearName)
+    {
+        if (string.IsNullOrEmpty(gearName)) return "gear-tier-t1";
+        int tier = GearProgressionCatalog.GetGearTier(gearName);
+        return $"gear-tier-t{tier}";
     }
 
     public static string RarityClass(FishRarity r) => r switch

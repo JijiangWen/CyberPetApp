@@ -64,7 +64,7 @@
                                 @if (isSelected && ShowCat)
                                 {
                                     <div class="floor-cat">
-                                        <CatSprite State="@CatState" Size="64" />
+                                        <CatSprite State="@CatState" SkinId="@CatSkinId" Size="64" />
                                     </div>
                                 }
                             }
@@ -109,7 +109,7 @@
                         @if (gardenSelected && ShowCat)
                         {
                             <div class="floor-cat">
-                                <CatSprite State="@CatState" Size="64" />
+                                <CatSprite State="@CatState" SkinId="@CatSkinId" Size="64" />
                             </div>
                         }
                     }
@@ -142,6 +142,7 @@
     [Parameter] public int MaintenanceFee { get; set; }
     [Parameter] public bool MaintenanceOverdue { get; set; }
     [Parameter] public string CatState { get; set; } = "content";
+    [Parameter] public string CatSkinId { get; set; } = "default";
     [Parameter] public bool ShowCat { get; set; } = true;
     [Parameter] public EventCallback<string> OnSelectRoom { get; set; }
 

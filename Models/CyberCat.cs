@@ -10,6 +10,7 @@ public class CyberCat
     public string Name { get; set; } = "猫";
     public int CatLevel { get; set; } = 1;
     public int CatXp { get; set; }
+    public string CurrentSkinId { get; set; } = "default";
 
     // 战斗属性（1~100 显示刻度，与四维饱食等 0~1000 分离）
     public int Str { get; set; } = CatFishingStatsHelper.BaseStat;

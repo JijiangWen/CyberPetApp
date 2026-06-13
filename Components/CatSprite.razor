@@ -2,12 +2,13 @@
 @* State-driven pixel cat — transparent PNG from wwwroot/assets/cat *@
 
 <img class="cat-sprite cat-@State"
-     src="@CatSpriteCatalog.ImagePath(State)"
+     src="@CatSpriteCatalog.ImagePath(SkinId, State)"
      width="@Size" height="@Size"
      alt="cat @State"
      role="img" />
 
 @code {
     [Parameter] public string State { get; set; } = "content";
+    [Parameter] public string SkinId { get; set; } = "default";
     [Parameter] public int Size { get; set; } = 132;
 }

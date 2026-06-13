@@ -119,7 +119,10 @@
                     Session.Player.FishingLevel, Session.Cat.CatLevel, DexEntries, HasSpotAccess);
             }
             <div class="g-card alchemy-recipe-card @(canCraft ? "unlocked" : "")">
-                <span class="c-name">@(recipe.Slot switch { GearCraftSlot.Rod => "🎣", GearCraftSlot.Reel => "⚙", GearCraftSlot.Line => "🧵", _ => "🪱" }) @recipe.DisplayName</span>
+                <span class="c-name">
+                    <img src="@HomeUiHelpers.GearSpriteUrl(recipe.Slot.ToString().ToLower(), recipe.OutputGearName)" class="gear-icon @HomeUiHelpers.GearTierClass(recipe.OutputGearName)" alt="@recipe.Slot" />
+                    @recipe.DisplayName
+                </span>
                 <span class="c-meta">[@GearProgressionCatalog.TierLabel(recipe.Tier)] · @recipe.Description</span>
                 <div class="recipe-mats">
                     @foreach (var line in matStatus)

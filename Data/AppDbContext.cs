@@ -36,6 +36,12 @@ public class AppDbContext : DbContext
     public DbSet<PlayerTargetLure> PlayerTargetLures { get; set; } = null!;
     public DbSet<PlayerCatBuff> PlayerCatBuffs { get; set; } = null!;
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        base.OnConfiguring(optionsBuilder);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Player>(entity =>
@@ -44,6 +50,8 @@ public class AppDbContext : DbContext
             entity.Ignore(p => p.Backpack);
             entity.Ignore(p => p.FishBackpack);
             entity.Ignore(p => p.Items);
+            entity.Ignore(p => p.UnlockedCatSkins);
+
             // 老玩家数据迁移时默认 1 级 0 经验
             entity.Property(p => p.FishingLevel).HasDefaultValue(1);
             entity.Property(p => p.FishingXp).HasDefaultValue(0);
@@ -128,7 +136,7 @@ public class AppDbContext : DbContext
             entity.Property(f => f.UpgradeLevel).HasDefaultValue(0);
             entity.HasIndex(f => new { f.RoomId, f.FurnitureId }).IsUnique();
             entity.HasOne<Room>()
-                .WithMany()
+                .WithMany(r => r.Furniture)
                 .HasForeignKey(f => f.RoomId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -216,7 +224,6 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(l => l.Id);
             entity.HasIndex(l => new { l.PlayerId, l.Name }).IsUnique();
-            entity.Property(l => l.TargetDepth).HasDefaultValue(WaterDepth.Middle);
             entity.Property(l => l.Durability).HasDefaultValue(100);
             entity.Property(l => l.RequiredLevel).HasDefaultValue(1);
             entity.Property(l => l.IsCrafted).HasDefaultValue(false);
@@ -230,7 +237,6 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(l => l.Id);
             entity.HasIndex(l => new { l.PlayerId, l.Name }).IsUnique();
-            entity.Property(l => l.TargetDepth).HasDefaultValue(WaterDepth.Middle);
             entity.Property(l => l.DurabilityRemaining).HasDefaultValue(20);
             entity.Property(l => l.RequiredLevel).HasDefaultValue(1);
             entity.Property(l => l.IsCrafted).HasDefaultValue(false);
