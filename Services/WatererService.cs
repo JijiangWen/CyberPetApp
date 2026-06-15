@@ -56,7 +56,16 @@ public class WatererService
         item.Quantity--;
         if (item.Quantity <= 0) _context.BackpackItems.Remove(item);
 
-        int slot = waterer.WaterCount;
+        int slot = 0;
+        var existingSlots = await _context.WatererWaters
+            .Where(w => w.AutoWatererId == waterer.Id)
+            .Select(w => w.SlotIndex)
+            .ToListAsync();
+        while (existingSlots.Contains(slot))
+        {
+            slot++;
+        }
+
         _context.WatererWaters.Add(new WatererWater
         {
             AutoWatererId = waterer.Id,
@@ -94,12 +103,13 @@ public class WatererService
             .OrderBy(w => w.SlotIndex)
             .ToListAsync();
 
-        if (rows.Count != waterer.Waters.Count)
+        var waters = waterer.GetWatersSnapshot();
+        if (rows.Count != waters.Count)
         {
             _context.WatererWaters.RemoveRange(rows);
-            for (int i = 0; i < waterer.Waters.Count; i++)
+            for (int i = 0; i < waters.Count; i++)
             {
-                var w = waterer.Waters[i];
+                var w = waters[i];
                 _context.WatererWaters.Add(new WatererWater
                 {
                     AutoWatererId = waterer.Id,

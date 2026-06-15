@@ -7,6 +7,7 @@
 <div class="content-panel content-panel-stack">
   <div class="featured-cat">
     <img src="@CatSpriteCatalog.ImagePath(Cat.CurrentSkinId, "idle")" alt="Featured Cat" class="featured-image" />
+    <div class="featured-cat-badge">ACTIVE SKIN: @GetActiveSkinName()</div>
   </div>
   <div class="panel-head">
     <span class="panel-title"><i class="bi bi-cat"></i> WARDROBE.skins · 外观橱柜</span>
@@ -21,7 +22,7 @@
       CAT.skins · 猫咪皮肤
     </div>
     <div class="tw-body">
-      <div class="skin-grid">
+      <div class="card-grid">
         @foreach (var skin in CatSkinCatalog.Skins)
         {
           var isUnlocked = Player.UnlockedCatSkins.Contains(skin.Id);
@@ -75,5 +76,11 @@
             Cat.CurrentSkinId = skin.Id;
             await OnChanged.InvokeAsync();
         }
+    }
+
+    private string GetActiveSkinName()
+    {
+        var activeSkin = CatSkinCatalog.GetSkin(Cat.CurrentSkinId);
+        return activeSkin?.Name ?? "默认皮肤";
     }
 }

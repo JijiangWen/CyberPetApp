@@ -29,6 +29,8 @@ public partial class Home
             return;
         }
 
+        GameSessionRegistry.Register(playerId, CircuitId);
+
         isLoading = false;
         cat = await _cyberCatService.GetOrCreateAsync(playerId);
         feeder = await _feederService.LoadOrCreateAsync(playerId);
@@ -119,6 +121,18 @@ public partial class Home
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
         if (player is null) return;
+
+        if (!GameSessionRegistry.IsSessionValid(player.Id, CircuitId))
+        {
+            isSessionKicked = true;
+            if (gameTimer != null)
+            {
+                gameTimer.Stop();
+                gameTimer.Elapsed -= OnTimerElapsed;
+            }
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
 
         if (_isTickProcessing)
         {
@@ -308,6 +322,9 @@ public partial class Home
             FishingSessionRegistry.Stop(player.Id, CircuitId);
         fishingManager.Dispose();
         if (player is not null)
+        {
+            GameSessionRegistry.Remove(player.Id, CircuitId);
             await PersistGameStateAsync();
+        }
     }
 }

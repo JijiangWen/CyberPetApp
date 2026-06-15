@@ -16,7 +16,8 @@ internal static class HomeUiHelpers
 
     public static string FishSpriteStyle(string name)
     {
-        var safeName = name
+        var normName = name.StartsWith("超规格·", System.StringComparison.Ordinal) ? name["超规格·".Length..] : name;
+        var safeName = normName
             .Replace("\"", "")
             .Replace("“", "")
             .Replace("”", "")

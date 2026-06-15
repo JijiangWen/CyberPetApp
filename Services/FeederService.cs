@@ -65,7 +65,16 @@ public class FeederService
         item.Quantity--;
         if (item.Quantity <= 0) _context.BackpackItems.Remove(item);
 
-        int slot = feeder.FoodCount;
+        int slot = 0;
+        var existingSlots = await _context.FeederFoods
+            .Where(f => f.AutoFeederId == feeder.Id)
+            .Select(f => f.SlotIndex)
+            .ToListAsync();
+        while (existingSlots.Contains(slot))
+        {
+            slot++;
+        }
+
         _context.FeederFoods.Add(new FeederFood
         {
             AutoFeederId = feeder.Id,
@@ -107,12 +116,13 @@ public class FeederService
             .OrderBy(f => f.SlotIndex)
             .ToListAsync();
 
-        if (rows.Count != feeder.Foods.Count)
+        var foods = feeder.GetFoodsSnapshot();
+        if (rows.Count != foods.Count)
         {
             _context.FeederFoods.RemoveRange(rows);
-            for (int i = 0; i < feeder.Foods.Count; i++)
+            for (int i = 0; i < foods.Count; i++)
             {
-                var f = feeder.Foods[i];
+                var f = foods[i];
                 _context.FeederFoods.Add(new FeederFood
                 {
                     AutoFeederId = feeder.Id,

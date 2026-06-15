@@ -58,7 +58,7 @@ test.describe('CYBERPET OS', () => {
   test('无猫粮时显示购买提示', async ({ page }) => {
     await registerAndEnter(page);
     await expect(page.locator('.care-no-food-hint')).toContainText('生活商店');
-    await expect(page.locator('button:has-text("高级猫粮")')).toBeDisabled();
+    await expect(page.locator('button:has-text("吞拿罐")')).toBeDisabled();
   });
 
   test('核心玩法：打工、钓鱼、商店购买', async ({ page }) => {

@@ -18,6 +18,7 @@ public sealed class FishingCircuitHandler : CircuitHandler
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
         FishingSessionRegistry.StopByCircuit(circuit.Id);
+        GameSessionRegistry.RemoveByCircuit(circuit.Id);
         return Task.CompletedTask;
     }
 }

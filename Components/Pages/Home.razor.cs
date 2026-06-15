@@ -105,6 +105,22 @@ public partial class Home : IAsyncDisposable
     private IReadOnlyList<FishDexEntry> _fishDexCache = [];
     private CancellationTokenSource? _leaderboardDebounceCts;
     private bool leaderboardRefreshing;
+    private bool isSessionKicked;
+    private bool isSettingsOpen;
+    private bool showScanlines = true;
+    private string currentTheme = "blue";
+    private bool enableSfx = true;
+    private bool isMobileTabExpanded;
+
+    private void ToggleSettings()
+    {
+        isSettingsOpen = !isSettingsOpen;
+    }
+
+    private void ToggleMobileTabs()
+    {
+        isMobileTabExpanded = !isMobileTabExpanded;
+    }
 
     // ???s?? scoped DbContext ??
     private readonly SemaphoreSlim dbLock = new(1, 1);
@@ -264,6 +280,7 @@ public partial class Home : IAsyncDisposable
 
     private static string SectionTabLabel(string section) => section switch
     {
+        "cat" => "猫咪",
         "house" => "家园",
         "fishing" => "钓鱼",
         "work" => "打工",
@@ -280,6 +297,7 @@ public partial class Home : IAsyncDisposable
     private async Task SelectSectionAsync(string s)
     {
         activeSection = s;
+        isMobileTabExpanded = false;
         if (s == "market" && player is not null)
             await WithDbLock(ReloadMarketAsync);
         if (s == "milestones" && player is not null)

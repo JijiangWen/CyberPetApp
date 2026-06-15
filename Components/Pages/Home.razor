@@ -8,7 +8,16 @@
 
 <PageTitle>CYBERPET OS</PageTitle>
 
-@if (isLoading || player is null)
+@if (isSessionKicked)
+{
+    <div class="kicked-screen">
+        <div class="kicked-logo">⚠️ CONNECTION CONFLICT</div>
+        <div class="kicked-msg">检测到您的账号已在其他标签页/窗口登录。</div>
+        <div class="kicked-hint">本窗口的游戏模拟与挂机操作已自动暂停，以防止数据冲突。</div>
+        <button class="g-btn primary" onclick="window.location.reload();">重新连接并登录</button>
+    </div>
+}
+else if (isLoading || player is null)
 {
     <div class="loading-screen">
         <div class="loading-logo">◈ CYBERPET OS</div>
@@ -19,24 +28,19 @@
 else
 {
 <CascadingValue Value="gameSession" IsFixed="true">
-<div class="geek-root">
+<div class="geek-root @(showScanlines ? "crt-scanlines" : "") theme-@currentTheme">
 
     <!-- ══ Titlebar ══ -->
     <div class="titlebar">
-        <div class="titlebar-dots">
-            <span class="dot close"></span>
-            <span class="dot min"></span>
-            <span class="dot max"></span>
-        </div>
         <span class="titlebar-title">◈ CYBERPET OS</span>
         <span class="titlebar-sep">│</span>
         <span class="titlebar-stat"><PixelIcon Name="user" /><span class="v">@username</span></span>
         <span class="titlebar-sep">·</span>
         <span class="titlebar-stat"><PixelIcon Name="coin" /><span class="v">@player.Money g</span></span>
-        <span class="titlebar-sep">·</span>
-        <span class="titlebar-stat"><PixelIcon Name="bag" /><span class="v">@BackpackTotalCount()</span></span>
-        <span class="titlebar-sep">·</span>
-        <span class="titlebar-stat"><PixelIcon Name="house" /><span class="v">lv.@playerHouse.House_Level</span></span>
+        <span class="titlebar-sep mobile-hide">·</span>
+        <span class="titlebar-stat mobile-hide"><PixelIcon Name="bag" /><span class="v">@BackpackTotalCount()</span></span>
+        <span class="titlebar-sep mobile-hide">·</span>
+        <span class="titlebar-stat mobile-hide"><PixelIcon Name="house" /><span class="v">lv.@playerHouse.House_Level</span></span>
         <div class="titlebar-spacer"></div>
         <span class="titlebar-pill @(player.IsWorking ? "active" : "")">
             @(player.IsWorking ? "⚙ WORKING" : "○ IDLE")
@@ -44,9 +48,9 @@ else
         <span class="titlebar-pill @(fishingManager.IsFishing ? "active" : "")">
             @(fishingManager.IsFishing ? "◎ FISHING" : "— FISH")
         </span>
-        <form method="post" action="/api/auth/logout" style="margin-left:8px;">
-            <button type="submit" class="g-btn danger" style="height:26px;font-size:10px;padding:0 8px;">logout</button>
-        </form>
+        <button type="button" class="titlebar-settings-btn" @onclick="ToggleSettings" title="Game Settings">
+            <PixelIcon Name="settings" />
+        </button>
     </div>
 
     <!-- ══ Body ══ -->
@@ -71,7 +75,7 @@ else
         </aside>
 
         <!-- ═ Main area ═ -->
-        <div class="main-area">
+        <div class="main-area @(isMobileTabExpanded ? "tab-expanded" : "")">
 
             @if (catchBroadcast is not null)
             {
@@ -89,9 +93,21 @@ else
                 </div>
             }
 
-            <div class="tab-strip tab-strip-grouped">
+            <div class="tab-strip tab-strip-grouped @(isMobileTabExpanded ? "expanded" : "")">
+                <button type="button" class="tab-toggle-btn mobile-only" @onclick="ToggleMobileTabs" title="Toggle Sidebar">
+                    <span>@(isMobileTabExpanded ? "«" : "»")</span>
+                </button>
                 <div class="tab-group tab-group-core">
                     <span class="tab-group-label">核心</span>
+                    <button class="g-tab mobile-only-tab @(activeSection=="cat"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("cat")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="cat" />
+                        <span class="tab-text">
+                            <span class="tab-cn">猫咪</span>
+                            <span class="tab-en">cat.status</span>
+                        </span>
+                    </button>
                     <button class="g-tab @(activeSection=="house"?"active":"")"
                             @onclick='()=>SelectSectionAsync("house")'>
                         <span class="t-dot"></span>
@@ -175,16 +191,18 @@ else
                         </span>
                     </button>
                     <button class="g-tab @(activeSection=="lifeshop"?"active":"")"
-                        @onclick='() => SelectSectionAsync("lifeshop")' title="生活商店">
-                        <i class="bi bi-shop"></i>
+                        @onclick='() => SelectSectionAsync("lifeshop")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="shop" />
                         <span class="tab-text">
                             <span class="tab-cn">生活商店</span>
                             <span class="tab-en">shop.market</span>
                         </span>
                     </button>
                     <button class="g-tab @(activeSection=="catskin"?"active":"")"
-                        @onclick='() => SelectSectionAsync("catskin")' title="外观">
-                        <i class="bi bi-palette"></i>
+                        @onclick='() => SelectSectionAsync("catskin")'>
+                        <span class="t-dot"></span>
+                        <PixelIcon Name="palette" />
                         <span class="tab-text">
                             <span class="tab-cn">外观</span>
                             <span class="tab-en">cat.skin</span>
@@ -214,6 +232,24 @@ else
             <div class="content-scroll">
             @switch (activeSection)
             {
+                case "cat":
+                <div class="mobile-cat-tab-content">
+                    <CatCareSidebar @key="tickGeneration"
+                                    Vitals="catVitalsSnapshot"
+                                    Player="player!"
+                                    CatSkinId="@cat.CurrentSkinId"
+                                    DebuffLines="_sidebarDebuffLines"
+                                    PassiveSummary="PassiveCareSummaryLines()"
+                                    ActiveFoodBuffs="activeFoodBuffs"
+                                    HasFood="HasBackpackFood"
+                                    OnFeed="FeedShopFood"
+                                    OnFeedCooked="FeedCookedFood"
+                                    OnDrink="ManualDrinkWater"
+                                    OnStroke="ManualStroke"
+                                    OnSleep="ManualSleep"
+                                    OnTreat="TreatCat" />
+                </div>
+                break;
                 case "house":
                 <HomeHouseTab HouseBuffs="GetHouseBuffs()"
                               CatState="@CatState()"
@@ -382,19 +418,85 @@ else
 
     <!-- ══ Status bar ══ -->
     <div class="statusbar">
-        <span class="sb-item">◈ CYBERPET OS</span>
-        <span class="sb-sep">│</span>
-        <span class="sb-item">utf-8</span>
-        <span class="sb-sep">│</span>
-        <span class="sb-item">@(player.IsWorking ? "⚙ work: on" : "○ work: off")</span>
-        <span class="sb-sep">│</span>
-        <span class="sb-item">@(fishingManager.IsFishing ? "◎ fishing: on" : "— fishing: off")</span>
+        <span class="sb-item"><span class="mobile-hide">◈ CYBERPET OS</span><span class="mobile-only">◈</span></span>
+        <span class="sb-sep mobile-hide">│</span>
+        <span class="sb-item mobile-hide">utf-8</span>
+        <span class="sb-sep mobile-hide">│</span>
+        <span class="sb-item mobile-hide">@(player.IsWorking ? "⚙ work: on" : "○ work: off")</span>
+        <span class="sb-sep mobile-hide">│</span>
+        <span class="sb-item mobile-hide">@(fishingManager.IsFishing ? "◎ fishing: on" : "— fishing: off")</span>
         <div class="sb-right">
             <span class="sb-item">tab: @SectionTabLabel(activeSection)</span>
             <span class="sb-sep">│</span>
-            <span class="sb-item"><span class="sb-key">鱼市</span> @(PendingOfferCount()>0?$"待处理 {PendingOfferCount()} 条":"")</span>
+            <span class="sb-item"><span class="sb-key">鱼市</span> @(PendingOfferCount() > 0 ? $"待处理 {PendingOfferCount()} 条" : "")</span>
         </div>
     </div>
+
+    @if (isSettingsOpen)
+    {
+        <div class="settings-modal-overlay" @onclick="ToggleSettings">
+            <div class="settings-modal-card" @onclick:stopPropagation="true">
+                <div class="settings-modal-header">
+                    <span class="settings-modal-title">◈ SYSTEM.config — 设置</span>
+                    <button type="button" class="settings-close-btn" @onclick="ToggleSettings">&times;</button>
+                </div>
+                <div class="settings-modal-body">
+                    <div class="settings-section">
+                        <div class="settings-section-title">// display.settings</div>
+                        <div class="settings-row">
+                            <label class="settings-label">Accent Theme (主题色)</label>
+                            <div class="theme-picker">
+                                <button class="theme-opt blue @(currentTheme == "blue" ? "active" : "")" @onclick='() => currentTheme = "blue"'>BLUE</button>
+                                <button class="theme-opt green @(currentTheme == "green" ? "active" : "")" @onclick='() => currentTheme = "green"'>GREEN</button>
+                                <button class="theme-opt amber @(currentTheme == "amber" ? "active" : "")" @onclick='() => currentTheme = "amber"'>AMBER</button>
+                                <button class="theme-opt crimson @(currentTheme == "crimson" ? "active" : "")" @onclick='() => currentTheme = "crimson"'>CRIMSON</button>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <label class="settings-label">CRT Scanline Overlay (扫描线滤镜)</label>
+                            <div class="toggle-switch">
+                                <button class="toggle-btn @(showScanlines ? "active" : "")" @onclick="() => showScanlines = true">ON</button>
+                                <button class="toggle-btn @(!showScanlines ? "active" : "")" @onclick="() => showScanlines = false">OFF</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-section-title">// audio.settings</div>
+                        <div class="settings-row">
+                            <label class="settings-label">Game Sound Effects (音效)</label>
+                            <div class="toggle-switch">
+                                <button class="toggle-btn @(enableSfx ? "active" : "")" @onclick="() => enableSfx = true">ON</button>
+                                <button class="toggle-btn @(!enableSfx ? "active" : "")" @onclick="() => enableSfx = false">OFF</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-section-title">// account.profile</div>
+                        <div class="settings-row info-row">
+                            <span class="info-label">Username (当前账号):</span>
+                            <span class="info-val">@username</span>
+                        </div>
+                        <div class="settings-row info-row">
+                            <span class="info-label">Player Level (等级):</span>
+                            <span class="info-val">lv.@playerHouse.House_Level</span>
+                        </div>
+                        <div class="settings-row info-row">
+                            <span class="info-label">Balance (金币):</span>
+                            <span class="info-val" style="color:var(--gold);">@player.Money g</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <form method="post" action="/api/auth/logout">
+                            <button type="submit" class="g-btn danger" style="width: 100%; height: 32px; font-weight: bold;">LOGOUT (退出登录)</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
 </div>
 </CascadingValue>
