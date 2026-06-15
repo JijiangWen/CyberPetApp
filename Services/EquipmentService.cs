@@ -513,9 +513,16 @@ public class EquipmentService
         if (rod.Durability >= 100) return (false, "耐久已满");
 
         int tier = GearProgressionCatalog.GetGearTier(rod.Name);
-        int cost = fullRepair
-            ? EconomySinks.GearFullRepairCost(rod.MaxStrength, tier)
-            : EconomySinks.GearRepairPartialCost(tier);
+        int cost;
+        if (fullRepair)
+        {
+            int rawFullCost = EconomySinks.GearFullRepairCost(rod.MaxStrength, tier);
+            cost = (int)Math.Ceiling(rawFullCost * (100.0 - rod.Durability) / 100.0);
+        }
+        else
+        {
+            cost = EconomySinks.GearRepairPartialCost(tier);
+        }
         if (!await TrySpendAsync(player, cost)) return (false, $"金币不足，修理需 {cost}g");
 
         rod.Durability = fullRepair ? 100 : Math.Min(100, rod.Durability + EconomySinks.GearRepairPartialAmount);
@@ -532,9 +539,16 @@ public class EquipmentService
         if (reel.Durability >= 100) return (false, "耐久已满");
 
         int tier = GearProgressionCatalog.GetGearTier(reel.Name);
-        int cost = fullRepair
-            ? EconomySinks.GearFullRepairCost(reel.DragPower, tier)
-            : EconomySinks.GearRepairPartialCost(tier);
+        int cost;
+        if (fullRepair)
+        {
+            int rawFullCost = EconomySinks.GearFullRepairCost(reel.DragPower, tier);
+            cost = (int)Math.Ceiling(rawFullCost * (100.0 - reel.Durability) / 100.0);
+        }
+        else
+        {
+            cost = EconomySinks.GearRepairPartialCost(tier);
+        }
         if (!await TrySpendAsync(player, cost)) return (false, $"金币不足，修理需 {cost}g");
 
         reel.Durability = fullRepair ? 100 : Math.Min(100, reel.Durability + EconomySinks.GearRepairPartialAmount);
@@ -551,9 +565,16 @@ public class EquipmentService
         if (line.Durability >= 100) return (false, "耐久已满");
 
         int tier = GearProgressionCatalog.GetGearTier(line.Name);
-        int cost = fullRepair
-            ? EconomySinks.GearFullRepairCost(line.LineStrength, tier)
-            : EconomySinks.GearRepairPartialCost(tier);
+        int cost;
+        if (fullRepair)
+        {
+            int rawFullCost = EconomySinks.GearFullRepairCost(line.LineStrength, tier);
+            cost = (int)Math.Ceiling(rawFullCost * (100.0 - line.Durability) / 100.0);
+        }
+        else
+        {
+            cost = EconomySinks.GearRepairPartialCost(tier);
+        }
         if (!await TrySpendAsync(player, cost)) return (false, $"金币不足，修理需 {cost}g");
 
         line.Durability = fullRepair ? 100 : Math.Min(100, line.Durability + EconomySinks.GearRepairPartialAmount);

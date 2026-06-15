@@ -34,5 +34,7 @@ public class Shop
         ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.Resin, 0, 0, 0), 80, "craft", "炼制竿/轮 · 工业粘合树脂"));
         ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.Bearing, 0, 0, 0), 200, "craft", "炼制渔轮 · 工业精密轴承"));
         ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.AlloyFrame, 0, 0, 0), 350, "craft", "炼制渔轮 · 轻质钛合金框架"));
+        ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.GearSet, 0, 0, 0), 2000, "craft", "高端装配素材 · 生锈齿轮组"));
+        ShopItems.Add(new ShopItem(new Food(AlchemyMaterials.WreckRust, 0, 0, 0), 3000, "craft", "高阶防锈材料 · 百年沉船铁皮"));
     }
 }

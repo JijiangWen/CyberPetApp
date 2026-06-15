@@ -24,12 +24,20 @@ flowchart TD
     J --> K[StartFishing → 状态机循环]
     K --> L[等口 Waiting]
     L --> M[咬钩 Biting + 抓口判定]
-    M -->|失败| N[脱钩 · 扣耐久 · 扣猫精力]
+    M -->|失败| N[脱钩 · 扣猫精力]
     M -->|成功·Common| P[入护]
     M -->|成功·Rare+| O[遛鱼 Reeling + 起鱼判定]
-    O -->|切线| Q[扣线耐久/拟饵 · 修理费5g · 额外耐久]
+    O -->|切线| Q[扣线耐久/拟饵 · 扣金币5g]
     O -->|成功| P
-    P --> R[背包+DB · 钓鱼XP · 猫XP · 图鉴 · 副产素材]
+    N --> WEAR[计算装备磨损 HandleGearWearAsync]
+    Q --> WEAR
+    P --> WEAR
+    WEAR --> AR{自动修复解锁&开启?}
+    AR -->|是: 达到阈值且金币足| AR_DO[自动扣费全修] --> POST_WEAR
+    AR -->|否 / 余额不足| AR_FAIL[常规扣除/保留磨损] --> POST_WEAR
+    POST_WEAR --> CHECK_STATE{起鱼成功?}
+    CHECK_STATE -->|是| R[背包+DB · 钓鱼XP · 猫XP · 图鉴 · 副产素材]
+    CHECK_STATE -->|否| K
     R --> S{鱼怎么处理?}
     S --> T[直售 85%]
     S --> U[鱼市挂单 · NPC报价/还价]
@@ -41,8 +49,6 @@ flowchart TD
     Y --> Z[炼金锻造 T3~T5 · 宝石 · 特殊饵]
     Z --> AA[更强装备/宝石/神话饵]
     AA --> B
-    N --> K
-    Q --> K
 ```
 
 ### 1.2 分步说明（numbered）
@@ -72,8 +78,9 @@ flowchart TD
    - **分解**：`GearMaterialService.DisassembleFishAsync`，鱼从背包移除换素材  
    - **炼金消耗**：配方扣背包鱼 + 素材 + 金币加工费
 
-7. **反哺**  
-   金币买商店 T1~T3、修耐久、许可证；素材+鱼炼 T3~T5；图鉴% 解锁商店/锻造；钓鱼 Lv 解锁钓点与装备。
+7. **反哺与自动维护**  
+   - 金币买商店 T1~T3、修耐久、许可证；素材+鱼炼 T3~T5；图鉴% 解锁商店/锻造；钓鱼 Lv 解锁钓点与装备。
+   - **智能自动修复系统**：玩家可在商店购买该工具后，在挂机/钓鱼期间当装备耐久低于设定阈值（5%~50%）时，自动消耗金币进行全修，避免高频手动操作打断钓鱼循环。
 
 ---
 
@@ -154,6 +161,22 @@ flowchart TD
 
 **注意**：脱钩与成功都会 `OnCycleComplete`，均扣 `FishingCycle` 猫精力（-10⚡ 等）；抛竿费仅在**开始**扣 3g。
 
+### 2.4 智能自动修复机制
+
+为了解决手动修复装备过于频繁的问题，引入了**智能自动修复系统**。
+
+* **解锁条件**：可在渔具商店中花费 `3000g` 一次性购买“自动修复工具”解锁（保存在 [Player.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/Player.cs) 的 `AutoRepairUnlocked` 中）。
+* **参数配置**：
+  - **开关**：解锁后可随时在 UI 中开启或关闭自动修复。
+  - **阈值**：设置触发自动修复的耐久度百分比（范围 5%~50%，步长为 5%）。
+* **工作流与触发时机**：
+  - 触发点嵌入在**磨损结算**阶段（`HandleGearWearAsync`），该操作在数据库写锁（`WithDbLock`）内执行。
+  - 每次抛竿挂机发生耐久度变化时（无论是成功钓获、脱钩还是切线），系统会检查当前已装备的 **鱼竿**、**卷线器**、**鱼线** 耐久度百分比。
+  - 如果任意一件装备的耐久度 $\le$ 设定的阈值，且玩家拥有的金币足够支付该装备的**全额修复费用**（遵循 [EconomySinks.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/EconomySinks.cs) 的标准定价），则会自动扣款执行满额修复。
+  - **控制台输出**：
+    - 修复成功：在钓鱼终端日志中打印 `[时间] 自动修复: [物品名]已完全修复，消耗 [X] 金币`（绿色显示）。
+    - 金币不足导致修复失败：打印 `[时间] 自动修复失败: 金币不足，需要 [X] 金币`（红色显示），挂机不会中断，但装备耐久会继续消耗。
+
 ---
 
 ## 3. 资源闭环图
@@ -229,9 +252,11 @@ flowchart LR
 ### 3.2 并列 Sink（金币/耐久流出）
 
 ```
-钓鱼会话
+钓鱼会话与维护
   ├─ CastFeeForSpot 3~58g （开始挂机，一次，随钓点阶）
   ├─ LineRepairFee 5g    （切线，OnLureConsumed）
+  ├─ 自动修复工具 3000g   （渔具商店一次性解锁购买）
+  ├─ 自动全额修复扣费      （装备耐久度降至阈值时自动全修，直接扣除等量金币）
   ├─ 装备耐久 1~3/轮      （脱钩/成功/切线；切线+5；远礁+3 …）
   ├─ 拟饵次数             （切线-1；耗尽扣库存）
   ├─ 鱼线内存耐久         （切线 -8×(1-耐磨)，<30 顺滑减半）
@@ -288,23 +313,24 @@ flowchart LR
 
 | 系统 | 从钓鱼获得 | 反哺钓鱼 |
 |------|-----------|----------|
-| **钓鱼状态机** (`FishingManager`) | — | 核心产出节奏；装备/猫 buff 决定成功率 |
-| **持久化** (`FishingService`) | 鱼入库 | — |
-| **玩家钓鱼等级** (`Player.AddFishingXp`) | Common9/Rare26/Epic65/Legendary160；Lv40+×0.85；超规格×1.6 | 解锁钓点、装备 `RequiredLevel`、公式内 Lv 项 |
-| **猫等级/六维** (`CatFishingStatsHelper`) | `XpFromFish` 4/10/22/48；神话×1.25；Lv40+ XP 指数放缓 | 抓口/起鱼/等口/咬钩窗/精力消耗减免 |
-| **猫状态** (`CatBuffHelper`) | — | 开心+稀有权重；低饥疲-成功率；维护拖欠-8% |
-| **装备四槽** (`EquipmentService` + `FishingLoadout`) | 磨损触发修理 sink | 敏锐/卸力/饵品质/承重/水层匹配 |
-| **钓点** (`FishingSpotCatalog`) | `PriceMultiplier` 抬高售价 | `RequiredLevel`、稀有度表、神话鱼表 |
-| **许可证** (`SpotLicenseService`) | — | Lv3+ 钓点准入；T4 锻造需雾海证 |
-| **图鉴** (`FishDexCatalog` + `FishRecordService`) | 记录钓获 | 商店/锻造门槛（静溪50%、全图鉴80%等） |
-| **素材** (`GearMaterialService`) | 钓获~22%副产；直售35%回收；分解主产出 | 炼金配方输入 |
-| **炼金** (`AlchemyService`) | — | T3~T10装备、宝石、特殊神话饵 |
-| **鱼市** (`MarketService`) | 高于直售的 NPC 价；摊位券扩上限 | 金币回流；鱼市搬运工加速报价 |
-| **里程碑** (`AchievementService`) | 钓获/卖鱼进度 | `MilestoneRarityBonus`、`CounterBonus` 还价 |
-| **每日求购** (`DailyBountyService`) | 指定鱼额外金币 | 引导留鱼而非直售 |
-| **烹饪** (`CookingService`) | 鱼消耗 | 猫食 buff → `CatBuffService` 合并进钓鱼 |
+| **钓鱼状态机** ([FishingManager.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/FishingManager.cs)) | — | 核心产出节奏；装备/猫 buff 决定成功率 |
+| **持久化** ([FishingService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/FishingService.cs)) | 鱼入库 | — |
+| **玩家钓鱼等级** ([Player.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/Player.cs)) | Common9/Rare26/Epic65/Legendary160；Lv40+×0.85；超规格×1.6 | 解锁钓点、装备 `RequiredLevel`、公式内 Lv 项 |
+| **猫等级/六维** ([CatFishingStats.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/CatFishingStats.cs)) | `XpFromFish` 4/10/22/48；神话×1.25；Lv40+ XP 指数放缓 | 抓口/起鱼/等口/咬钩窗/精力消耗减免 |
+| **猫状态** ([CatBuffHelper.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/CatBuffHelper.cs)) | — | 开心+稀有权重；低饥疲-成功率；维护拖欠-8% |
+| **装备与自动修复** ([EquipmentService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/EquipmentService.cs) + [FishingLoadout](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingGear.cs)) | 磨损触发耐久流失；低于阈值时触发自动扣款全修 | 敏锐/卸力/饵品质/承重/水层匹配；开启自动全修降低高频手动操作的频率 |
+| **玩家配置** ([Player.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/Player.cs)) | — | 提供 `AutoRepairUnlocked`、`AutoRepairEnabled`、`AutoRepairThreshold` 控制状态 |
+| **钓点** ([FishingSpotCatalog.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingSpotCatalog.cs)) | `PriceMultiplier` 抬高售价 | `RequiredLevel`、稀有度表、神话鱼表 |
+| **许可证** ([SpotLicenseService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/SpotLicenseService.cs)) | — | Lv3+ 钓点准入；T4 锻造需雾海证 |
+| **图鉴** ([FishDexCatalog.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishDexCatalog.cs) + [FishRecordService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/FishRecordService.cs)) | 记录钓获 | 商店/锻造门槛（静溪50%、全图鉴80%等） |
+| **素材** ([GearMaterialService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/GearMaterialService.cs)) | 钓获~22%副产；直售35%回收；分解主产出 | 炼金配方输入 |
+| **炼金** ([AlchemyService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/AlchemyService.cs)) | — | T3~T10装备、宝石、特殊神话饵 |
+| **鱼市** ([MarketService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/MarketService.cs)) | 高于直售 of NPC 价；摊位券扩上限 | 金币回流；鱼市搬运工加速报价 |
+| **里程碑** ([AchievementService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/AchievementService.cs)) | 钓获/卖鱼进度 | `MilestoneRarityBonus`、`CounterBonus` 还价 |
+| **每日求购** ([DailyBountyService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/DailyBountyService.cs)) | 指定鱼额外金币 | 引导留鱼而非直售 |
+| **烹饪** ([CookingService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/CookingService.cs)) | 鱼消耗 | 猫食 buff → [CatBuffService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/CatBuffService.cs) 合并进钓鱼 |
 | **派遣/打工** | 齿轮组、打工金币 | 金币买装备/许可；与钓鱼争猫精力 |
-| **房屋维护** (`MaintenanceService`) | — | 拖欠 debuff 钓鱼；家具 buff 降开心阈值等 |
+| **房屋维护** ([MaintenanceService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/MaintenanceService.cs)) | — | 拖欠 debuff 钓鱼；家具 buff 降开心阈值等 |
 | **CHM 魅力** | 升级时分配 | **当前未接入钓鱼/市场公式**（见 §7） |
 
 ---
@@ -461,17 +487,20 @@ flowchart LR
 
 | 职责 | 文件 |
 |------|------|
-| 状态机 | `Services/FishingManager.cs` |
-| 鱼持久化/直售 | `Services/FishingService.cs` |
-| UI 流程与回调 | `Components/Pages/Home.razor` |
-| 钓点/鱼表 | `Models/FishingSpot.cs`, `FishingSpotCatalog.cs`, `FishingSpotCatalog.Generated.cs` |
-| 装备快照 | `Models/FishingGear.cs` → `FishingLoadout` |
-| 锻造/炼金 | `Models/GearProgressionCatalog.cs`, `Services/AlchemyService.cs` |
-| 素材 | `Services/GearMaterialService.cs` |
-| 鱼市 | `Services/MarketService.cs` |
-| 猫消耗 | `Models/CatActivityCost.cs` |
-| 猫战斗属性 | `Models/CatFishingStats.cs`, `CatBuffHelper.cs` |
-| 许可/维护/sink | `SpotLicenseService`, `MaintenanceService`, `EconomySinks` |
+| 状态机 | [FishingManager.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/FishingManager.cs) |
+| 鱼持久化/直售 | [FishingService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/FishingService.cs) |
+| UI 流程与回调 | [Home.razor](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Components/Pages/Home.razor) |
+| 钓点/鱼表 | [FishingSpot.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingSpot.cs), [FishingSpotCatalog.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingSpotCatalog.cs), [FishingSpotCatalog.Generated.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingSpotCatalog.Generated.cs) |
+| 装备快照 | [FishingGear.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/FishingGear.cs) → `FishingLoadout` |
+| 锻造/炼金 | [GearProgressionCatalog.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/GearProgressionCatalog.cs), [AlchemyService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/AlchemyService.cs) |
+| 素材 | [GearMaterialService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/GearMaterialService.cs) |
+| 鱼市 | [MarketService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/MarketService.cs) |
+| 猫消耗 | [CatActivityCost.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/CatActivityCost.cs) |
+| 猫战斗属性 | [CatFishingStats.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/CatFishingStats.cs), [CatBuffHelper.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/CatBuffHelper.cs) |
+| 许可/维护/sink | [SpotLicenseService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/SpotLicenseService.cs), [MaintenanceService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/MaintenanceService.cs), [EconomySinks.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/EconomySinks.cs) |
+| 自动修复配置与持久化 | [Player.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Models/Player.cs), [AppDbContext.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Data/AppDbContext.cs), [PlayerService.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Services/PlayerService.cs) |
+| 自动修复逻辑触发 | [Home.Fishing.cs](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Components/Pages/Home.Fishing.cs) |
+| 自动修复面板 UI | [GearShopPanel.razor](file:///c:/Users/wen.jijiang/Desktop/blazor_test/CyberPetApp/Components/GearShopPanel.razor) |
 
 ---
 

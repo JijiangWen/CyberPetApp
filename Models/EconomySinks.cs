@@ -94,7 +94,8 @@ public static class EconomySinks
             4 => 1.15,
             _ => 1.0
         };
-        return (int)Math.Ceiling(baseCost * tierMult);
+        int fullCost = (int)Math.Ceiling(baseCost * tierMult);
+        return Math.Min(800, fullCost); // 封顶 800g 限制，防止高阶大强度装备（如 T10 鱼线）修复费过高
     }
 
     // 钓点许可证（日租 / 永久）— 中期费用提高，需重复周常维护
