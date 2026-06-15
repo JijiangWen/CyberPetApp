@@ -73,7 +73,7 @@ public static partial class AlchemyMaterials
         FishBone => "任意鱼分解",
         FishScale => "任意鱼分解",
         WaterWeed => "镇外溪流/common 分解",
-        GearSet => "派遣/打工",
+        GearSet => "派遣/打工 · 高阶钓点机械鱼分解",
         Resin => "生活商店",
         Bearing => "生活商店",
         AlloyFrame => "生活商店",

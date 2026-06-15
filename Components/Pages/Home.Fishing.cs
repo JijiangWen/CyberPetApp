@@ -5,6 +5,8 @@ namespace CyberPetApp.Components.Pages;
 
 public partial class Home
 {
+    private int _fishingCycleCount = 0;
+
     private async Task StartFishingAsync(FishingSpot spot)
     {
         if (player!.IsFishBackpackFull)
@@ -48,6 +50,8 @@ public partial class Home
             return;
         }
 
+        _fishingCycleCount = 0;
+
         // ── 乐观 UI 更新 ──
         player.Money -= castFee;
         fishingBlockMessage = null;
@@ -82,7 +86,7 @@ public partial class Home
                 if (success)
                 {
                     // 同步一下装备的最新状态
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
 
@@ -184,17 +188,17 @@ public partial class Home
             {
                 catchBroadcastLegendary = false;
                 var lure = TargetFishCatalog.RequiredLure(fish.Name);
-                catchBroadcast = $"??????{fish.Name} � {fish.ActualWeight}kg � ?? {fish.SellPrice}g � ??? {(lure?.DisplayName ?? "?")} -1";
+                catchBroadcast = $"神话神兽！{fish.Name} · {fish.ActualWeight}kg · 售价 {fish.SellPrice}g · 拟饵 {(lure?.DisplayName ?? "?")} -1";
             }
             else if (fish.Rarity == FishRarity.Legendary || fish.SizePercentage > 100)
             {
                 catchBroadcastLegendary = true;
-                catchBroadcast = $"?????{fish.Name} � {fish.ActualWeight}kg � ?? {fish.SellPrice}g";
+                catchBroadcast = $"传说巨物！{fish.Name} · {fish.ActualWeight}kg · 售价 {fish.SellPrice}g";
             }
             else if (fish.Rarity == FishRarity.Epic)
             {
                 catchBroadcastLegendary = false;
-                catchBroadcast = $"???? {fish.Name} � {fish.ActualWeight}kg � {fish.SellPrice}g";
+                catchBroadcast = $"史诗大鱼 {fish.Name} · {fish.ActualWeight}kg · {fish.SellPrice}g";
             }
             else
             {
@@ -212,54 +216,64 @@ public partial class Home
 
     private void OnLureConsumed() => _ = HandleLureConsumedAsync();
 
-    private void OnGearWear(bool lineBreak) => _ = HandleGearWearAsync(lineBreak);
+    private void OnGearWear(bool lineBreak, bool isEscape) => _ = HandleGearWearAsync(lineBreak, isEscape);
 
-    private async Task HandleGearWearAsync(bool lineBreak)
+    private async Task HandleGearWearAsync(bool lineBreak, bool isEscape)
     {
         try
         {
+            List<string> wearLogs = [];
+            List<string> autoRepairLogs = [];
             await WithDbLock(async () =>
             {
-                await _equipmentService.WearEquippedGearAsync(player!.Id, lineBreak, fishingManager.CurrentSpot?.Name);
+                wearLogs = await _equipmentService.WearEquippedGearAsync(player!.Id, lineBreak, fishingManager.CurrentSpot?.Name, isEscape);
+                
+                // 自动修复工具逻辑
+                if (player.AutoRepairUnlocked && player.AutoRepairEnabled)
+                {
+                    var rod = await _equipmentService.GetEquippedRodAsync(player.Id);
+                    var reel = await _equipmentService.GetEquippedReelAsync(player.Id);
+                    var line = await _equipmentService.GetEquippedLineAsync(player.Id);
+
+                    if (rod is not null && rod.Durability <= player.AutoRepairThreshold)
+                    {
+                        var (ok, msg) = await _equipmentService.RepairRodAsync(player, rod.Id, fullRepair: true);
+                        if (ok) autoRepairLogs.Add($"自动修复: {msg}");
+                        else autoRepairLogs.Add($"自动修复失败: {msg}");
+                    }
+                    if (reel is not null && reel.Durability <= player.AutoRepairThreshold)
+                    {
+                        var (ok, msg) = await _equipmentService.RepairReelAsync(player, reel.Id, fullRepair: true);
+                        if (ok) autoRepairLogs.Add($"自动修复: {msg}");
+                        else autoRepairLogs.Add($"自动修复失败: {msg}");
+                    }
+                    if (line is not null && line.Durability <= player.AutoRepairThreshold)
+                    {
+                        var (ok, msg) = await _equipmentService.RepairLineAsync(player, line.Id, fullRepair: true);
+                        if (ok) autoRepairLogs.Add($"自动修复: {msg}");
+                        else autoRepairLogs.Add($"自动修复失败: {msg}");
+                    }
+                }
+
+                await ReloadGearAsync(acquireLock: false);
             });
-            var eqRod = myRods.FirstOrDefault(r => r.IsEquipped);
-            var eqReel = myReels.FirstOrDefault(r => r.IsEquipped);
-            var eqLine = myLines.FirstOrDefault(l => l.IsEquipped);
-            if (eqRod is not null || eqReel is not null || eqLine is not null)
+
+            foreach (var log in wearLogs)
             {
-                myRods = await _equipmentService.GetRodsAsync(player!.Id);
-                myReels = await _equipmentService.GetReelsAsync(player.Id);
-                myLines = await _equipmentService.GetLinesAsync(player.Id);
-                eqRod = myRods.FirstOrDefault(r => r.IsEquipped);
-                eqReel = myReels.FirstOrDefault(r => r.IsEquipped);
-                eqLine = myLines.FirstOrDefault(l => l.IsEquipped);
-                if (eqRod is not null)
-                {
-                    loadout.RodDurability = eqRod.Durability;
-                    loadout.Sensitivity = eqRod.Sensitivity;
-                    loadout.CastRange = eqRod.CastRange;
-                }
-                if (eqReel is not null)
-                {
-                    loadout.ReelDurability = eqReel.Durability;
-                    loadout.DragPower = eqReel.DragPower;
-                    loadout.Smoothness = eqReel.Smoothness;
-                    loadout.LineCapacity = eqReel.LineCapacity;
-                }
-                if (eqLine is not null)
-                {
-                    loadout.LineDurability = eqLine.Durability;
-                    loadout.LineStrength = eqLine.LineStrength;
-                    loadout.LineSensitivity = eqLine.LineSensitivity;
-                    loadout.LineStealth = eqLine.LineStealth;
-                    loadout.AbrasionResistance = eqLine.AbrasionResistance;
-                }
+                string time = DateTime.Now.ToString("HH:mm:ss");
+                fishingManager.Log($"[{time}] {log}", "bad");
             }
+            foreach (var log in autoRepairLogs)
+            {
+                string time = DateTime.Now.ToString("HH:mm:ss");
+                fishingManager.Log($"[{time}] {log}", log.Contains("失败") ? "bad" : "good");
+            }
+
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "HandleGearWearAsync ??");
+            Logger.LogWarning(ex, "HandleGearWearAsync 失败");
         }
     }
 
@@ -275,14 +289,58 @@ public partial class Home
                     feedMessage = $"切线维修 {EconomySinks.LineRepairFee}g · 线耐久 {loadout.LineDurability} · 饵 {loadout.LureDurabilityRemaining}";
                 else
                     feedMessage = $"金币不足，切线维修需 {EconomySinks.LineRepairFee}g";
+                
+                await ReloadGearAsync(acquireLock: false);
             });
-            myLures = await _equipmentService.GetLuresAsync(player!.Id);
             TryRefreshSidebarVitals();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "HandleLureConsumedAsync ??");
+            Logger.LogWarning(ex, "HandleLureConsumedAsync 失败");
+        }
+    }
+
+    private async Task ChargeCastFeeDuringFishingAsync(FishingSpot spot, int castFee)
+    {
+        try
+        {
+            if (player!.Money < castFee)
+            {
+                fishingBlockMessage = $"金币不足，需要抛竿费 {castFee}g，已自动停止钓鱼";
+                StopFishing();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            // 乐观 UI 更新
+            player.Money -= castFee;
+            feedMessage = $"已付抛竿费 {castFee}g (挂机每 10 轮扣除)";
+            TryRefreshSidebarVitals();
+            await InvokeAsync(StateHasChanged);
+
+            bool success = false;
+            await WithDbLock(async () =>
+            {
+                success = await _playerService.TrySpendGoldAsync(player!, castFee);
+                if (success)
+                {
+                    await ReloadGearAsync(acquireLock: false);
+                }
+            });
+
+            if (!success)
+            {
+                // 回滚并自动停止钓鱼
+                player!.Money += castFee;
+                fishingBlockMessage = "抛竿扣费失败，已自动停止钓鱼。";
+                StopFishing();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "ChargeCastFeeDuringFishingAsync 失败，spot={SpotName}", spot.Name);
         }
     }
 }

@@ -592,14 +592,90 @@ private async Task WithDbLock(Func<Task> action)
     }
 }
 ```
-项目中的每一处数据库操作，都应该包裹在 `WithDbLock` 中：
+```
+
+---
+
+### 5.4 EF Core 并发冲突故障（DbContext Concurrency Crash）与高级防护 🛡️
+
+在游戏的挂机钓鱼和频繁的主页面交互过程中，容易遇到以下重大技术故障：
+
+#### 1. 现象与错误日志
+当玩家挂机钓鱼一段时间，或者在钓鱼的同时频繁切换选项卡（如“装备”、“炼金”、“里程碑”）时，系统偶发“收鱼失败，请稍后重试”的红色提示，日志中伴随以下高频崩溃异常：
+```text
+System.InvalidOperationException: A second operation was started on this context instance before a previous operation completed. This is usually caused by different threads concurrently using the same instance of DbContext.
+```
+
+#### 2. 根本原因深度分析
+* **DbContext 的非线程安全设计**：EF Core 的 `DbContext` 实例绝非线程安全。它设计上只期望同时处理一个数据库查询或提交。
+* **Blazor Server 模式下的生命周期错配**：在 `Program.cs` 中，`AppDbContext` 注册为 `Scoped` 作用域。在 Blazor Server 中，`Scoped` 生命周期绑定于该浏览器的 **Circuit（连接电路）**。即整个 `Home` 页面的生存期内，所有的异步调用、后台定时器触发，共享**同一个** `DbContext` 实例。
+* **多线程交叉访问**：
+  * **主心跳定时器**：每 2s 触发一次的计时器 `OnTimerElapsed` 在独立线程池线程上执行，并触发了未 `await` 的 `SaveGameTickAsync` 和 `TryMarketNpcOffersAsync`。
+  * **钓鱼循环后台线程**：`FishingManager` 起鱼成功时触发 `HandleFishCaughtAsync`，在锁内访问数据库。
+  * **UI 交互线程**：当玩家在页面上快速点击选项卡切换，UI 会并发调用 `ReloadGearPanelAsync`、`ReloadMilestonesAsync` 等进行查询，而这些查询此前均暴露在锁外，导致与后台心跳、收鱼发生多线程资源争抢。
+
+#### 3. 非重入锁死锁风险（Deadlock Warning）
+由于我们使用信号量 `SemaphoreSlim(1, 1)` 对数据库读写进行了串行化封装（`WithDbLock`），该锁是**不可重入**的。
+当一个嵌套业务流程中：
 ```csharp
-await WithDbLock(async () =>
-{
-    await _marketService.TryGenerateNpcOffersAsync(player.Id, cat.Happiness);
-    await ReloadMarketAsync();
+await WithDbLock(async () => {
+    // 1. 执行某些数据库写入
+    await _achievementService.TryBuyShopItemAsync(player, id);
+    // 2. 调用 ReloadMilestonesAsync 刷新内存属性
+    await ReloadMilestonesAsync(); // ❌ 试图二次获取 dbLock，造成自我死锁！
 });
 ```
+如果直接调用 `ReloadMilestonesAsync`，它会再次尝试请求锁，由于前一个锁未释放，它将永远等待下去，直接导致页面挂起死锁。
+
+#### 4. 终极防护解决方案：有条件锁定（Conditional Locking Pattern）
+为了解决并发冲突同时杜绝死锁，我们采用了有条件锁定模式：
+
+1. **方法签名参数化**：将所有只读/数据加载方法（如 `ReloadGearAsync`, `ReloadMilestonesAsync`, `ReloadSpotLicensesAsync`, `ReloadAlchemyAsync` 等）重构为接收可选参数 `bool acquireLock = true`：
+   ```csharp
+   private async Task ReloadGearAsync(bool acquireLock = true)
+   {
+       Func<Task> body = async () =>
+       {
+           myRods = await _equipmentService.GetRodsAsync(player!.Id);
+           // ... 加载数据
+       };
+
+       if (acquireLock)
+       {
+           await WithDbLock(body); // 外层调用，没有持锁，主动加锁安全防冲突
+       }
+       else
+       {
+           await body(); // 嵌套调用，外层已持锁，直接运行避免死锁
+       }
+   }
+   ```
+
+2. **写读合并原子操作**：在 UI 线程与后台钓鱼收鱼的回调方法中，彻底废除“先锁外执行写，再直接 reload”的危险操作。改在单次持锁块中，串行完成写操作与 reload 读取，并显示传递 `acquireLock: false` 规避死锁：
+   ```csharp
+   private async Task HandleGearWearAsync(bool lineBreak)
+   {
+       try
+       {
+           await WithDbLock(async () =>
+           {
+               // 1. 写操作
+               await _equipmentService.WearEquippedGearAsync(player!.Id, lineBreak, fishingManager.CurrentSpot?.Name);
+               // 2. 读操作（传入 false 避开锁重入死锁）
+               await ReloadGearAsync(acquireLock: false);
+           });
+           await InvokeAsync(StateHasChanged);
+       }
+       catch (Exception ex)
+       {
+           Logger.LogWarning(ex, "HandleGearWearAsync 失败");
+       }
+   }
+   ```
+
+3. **心跳计时器防重叠标志**：在 `Home.GameLoop.cs` 的 `OnTimerElapsed` 方法中引入 `_isTickProcessing` 布尔标记。当上一轮心跳的数据库操作未完成时，跳过本轮心跳，防范密集事务排队积压。
+
+通过这套机制，整个游戏完美的将 UI 触发与定时器心跳的 DbContext 访问进行了线程间串行化，同时兼顾了高并发与零死锁。
 
 ---
 

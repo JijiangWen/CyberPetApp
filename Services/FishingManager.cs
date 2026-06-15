@@ -48,7 +48,7 @@ public class FishingManager : IDisposable
     public Action? OnLureConsumed { get; set; }
     /// <summary>特殊饵成功钓获后扣耐久。</summary>
     public Action? OnTargetLureConsumed { get; set; }
-    public Action<bool>? OnGearWear { get; set; }
+    public Action<bool, bool>? OnGearWear { get; set; }
 
     public Dictionary<string, FishingSpot> FishingSpots { get; set; } = FishingSpotCatalog.BuildAll();
 
@@ -129,7 +129,7 @@ public class FishingManager : IDisposable
                 if (_random.NextDouble() >= hookChance)
                 {
                     Log($"鱼儿脱钩溜走了... (抓口率 {hookChance:P0})", "bad");
-                    OnGearWear?.Invoke(false);
+                    OnGearWear?.Invoke(false, true);
                     CompleteCycle();
                     continue;
                 }
@@ -160,13 +160,13 @@ public class FishingManager : IDisposable
                         Log($"大物发力！不幸切线/爆轮... 😭 ({fish.Name} {fish.ActualWeight}kg 跑了)", "bad");
                         ConsumeLineDurability();
                         ConsumeLureDurability();
-                        OnGearWear?.Invoke(true);
+                        OnGearWear?.Invoke(true, false);
                         CompleteCycle();
                         continue;
                     }
                 }
 
-                OnGearWear?.Invoke(false);
+                OnGearWear?.Invoke(false, false);
                 LastCaughtFish = fish;
                 if (Loadout.TargetLureMatchesSpot(spot.Name) && template.TargetLureRecipeId == Loadout.ActiveTargetLureRecipeId)
                     OnTargetLureConsumed?.Invoke();
@@ -267,7 +267,7 @@ public class FishingManager : IDisposable
         Changed?.Invoke();
     }
 
-    private void Log(string text, string kind)
+    public void Log(string text, string kind)
     {
         lock (EventLog)
         {

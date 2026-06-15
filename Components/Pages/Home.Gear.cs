@@ -106,7 +106,7 @@ public partial class Home
                 {
                     EquipmentService.RollbackBuyRod(player!, myRods, spec, rod);
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -114,7 +114,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistBuyRod failed for {RodName}", spec.Name);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -130,7 +130,7 @@ public partial class Home
                 {
                     EquipmentService.RollbackBuyReel(player!, myReels, spec, reel);
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -138,7 +138,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistBuyReel failed for {ReelName}", spec.Name);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -154,7 +154,7 @@ public partial class Home
                 {
                     EquipmentService.RollbackBuyLine(player!, myLines, spec, line);
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -162,7 +162,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistBuyLine failed for {LineName}", spec.Name);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -178,7 +178,7 @@ public partial class Home
                 {
                     EquipmentService.RollbackBuyLure(player!, myLures, spec);
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -186,7 +186,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistBuyLure failed for {LureName}", spec.Name);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -200,7 +200,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistEquipRod failed for {RodId}", rod.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -214,7 +214,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistEquipReel failed for {ReelId}", reel.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -228,7 +228,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistEquipLine failed for {LineId}", line.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -242,7 +242,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistEquipLure failed for {LureId}", lure.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -257,7 +257,7 @@ public partial class Home
                 if (!ok)
                 {
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -265,7 +265,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistRepairRod failed for {RodId}", rod.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -280,7 +280,7 @@ public partial class Home
                 if (!ok)
                 {
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -288,7 +288,7 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistRepairReel failed for {ReelId}", reel.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
         }
     }
@@ -303,7 +303,7 @@ public partial class Home
                 if (!ok)
                 {
                     gearMessage = msg;
-                    await ReloadGearAsync();
+                    await ReloadGearAsync(acquireLock: false);
                 }
             });
             NotifyGearChrome();
@@ -311,8 +311,59 @@ public partial class Home
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PersistRepairLine failed for {LineId}", line.Id);
-            await WithDbLock(ReloadGearAsync);
+            await ReloadGearAsync(acquireLock: true);
             NotifyGearChrome();
+        }
+    }
+
+    private Task FinalizeBuyAutoRepair()
+    {
+        if (player is null || player.AutoRepairUnlocked) return Task.CompletedTask;
+        if (player.Money < 3000)
+        {
+            gearMessage = "金币不足，购买自动修复工具需要 3000g";
+            return Task.CompletedTask;
+        }
+
+        player.Money -= 3000;
+        player.AutoRepairUnlocked = true;
+        player.AutoRepairEnabled = true; // Auto enable on purchase
+        gearMessage = "已购入自动修复工具！";
+        _ = SaveAutoRepairSettingsAsync();
+        return Task.CompletedTask;
+    }
+
+    private Task FinalizeToggleAutoRepair(bool enabled)
+    {
+        if (player is null || !player.AutoRepairUnlocked) return Task.CompletedTask;
+        player.AutoRepairEnabled = enabled;
+        gearMessage = enabled ? "自动修复已开启" : "自动修复已关闭";
+        _ = SaveAutoRepairSettingsAsync();
+        return Task.CompletedTask;
+    }
+
+    private Task FinalizeChangeAutoRepairThreshold(int threshold)
+    {
+        if (player is null || !player.AutoRepairUnlocked) return Task.CompletedTask;
+        player.AutoRepairThreshold = threshold;
+        gearMessage = $"已设置自动修复阈值为 {threshold}%";
+        _ = SaveAutoRepairSettingsAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAutoRepairSettingsAsync()
+    {
+        try
+        {
+            await WithDbLock(async () =>
+            {
+                await _playerService.SaveProgressAsync(player!);
+            });
+            NotifyGearChrome();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SaveAutoRepairSettings failed");
         }
     }
 }

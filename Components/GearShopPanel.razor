@@ -17,23 +17,26 @@
         }
     </div>
 
-    <div class="gear-shop-toolbar">
-        <input type="search"
-               class="gear-shop-search"
-               placeholder="搜索装备名称…"
-               @bind="_searchTerm"
-               @bind:event="oninput" />
-        <div class="gear-shop-filters" role="group" aria-label="筛选">
-            <button type="button" class="filter-chip @(_filter == ShopFilter.All ? "active" : "")"
-                    @onclick="() => SetFilter(ShopFilter.All)">全部</button>
-            <button type="button" class="filter-chip @(_filter == ShopFilter.Buyable ? "active" : "")"
-                    @onclick="() => SetFilter(ShopFilter.Buyable)">可购买</button>
-            <button type="button" class="filter-chip @(_filter == ShopFilter.Owned ? "active" : "")"
-                    @onclick="() => SetFilter(ShopFilter.Owned)">已拥有</button>
-            <button type="button" class="filter-chip @(_filter == ShopFilter.Equipped ? "active" : "")"
-                    @onclick="() => SetFilter(ShopFilter.Equipped)">已装备</button>
+    @if (_category != "autorepair")
+    {
+        <div class="gear-shop-toolbar">
+            <input type="search"
+                   class="gear-shop-search"
+                   placeholder="搜索装备名称…"
+                   @bind="_searchTerm"
+                   @bind:event="oninput" />
+            <div class="gear-shop-filters" role="group" aria-label="筛选">
+                <button type="button" class="filter-chip @(_filter == ShopFilter.All ? "active" : "")"
+                        @onclick="() => SetFilter(ShopFilter.All)">全部</button>
+                <button type="button" class="filter-chip @(_filter == ShopFilter.Buyable ? "active" : "")"
+                        @onclick="() => SetFilter(ShopFilter.Buyable)">可购买</button>
+                <button type="button" class="filter-chip @(_filter == ShopFilter.Owned ? "active" : "")"
+                        @onclick="() => SetFilter(ShopFilter.Owned)">已拥有</button>
+                <button type="button" class="filter-chip @(_filter == ShopFilter.Equipped ? "active" : "")"
+                        @onclick="() => SetFilter(ShopFilter.Equipped)">已装备</button>
+            </div>
         </div>
-    </div>
+    }
 
     @if (_category == "rod")
     {
@@ -204,6 +207,56 @@
         }
         @RenderCraftedLures()
     }
+    else if (_category == "autorepair")
+    {
+        <div class="auto-repair-tab-content">
+            <div class="auto-repair-header">
+                <h3>🔧 智能自动修复系统</h3>
+                <p class="hint">// 购买自动修复工具后，在挂机或手动钓鱼时，当装备耐久度低于设定阈值时会自动扣款进行全修。</p>
+            </div>
+            
+            @if (!Player.AutoRepairUnlocked)
+            {
+                <div class="auto-repair-buy-card">
+                    <div class="card-details">
+                        <span class="tool-title">自动修复工具 (Auto-Repair Tool)</span>
+                        <p class="tool-desc">高科技纳米修复液与内置检测芯片。开启后，在钓鱼期间检测到装备耐久度低于阈值时，自动全修（扣除金币与手动全修一致）。</p>
+                        <span class="tool-price">售价：<strong>3000 金币</strong></span>
+                    </div>
+                    <button type="button" class="g-btn primary" disabled="@(Player.Money < 3000)" @onclick="BuyAutoRepairTool">
+                        购买 (3000g)
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="auto-repair-settings-card">
+                    <div class="settings-header">
+                        <span class="status-badge @(Player.AutoRepairEnabled ? "active" : "inactive")">
+                            @(Player.AutoRepairEnabled ? "● 自动修复已启用" : "○ 自动修复已禁用")
+                        </span>
+                    </div>
+                    <div class="settings-body">
+                        <div class="setting-item">
+                            <label class="switch-container">
+                                <input type="checkbox" checked="@Player.AutoRepairEnabled" @onchange="ToggleAutoRepair" />
+                                <span class="slider round"></span>
+                                <span class="label-text">启用自动修复</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label for="repair-threshold">自动修复触发阈值 (当前: @Player.AutoRepairThreshold% 耐久):</label>
+                            <div class="slider-wrapper">
+                                <input type="range" id="repair-threshold" min="5" max="50" step="5" value="@Player.AutoRepairThreshold" @onchange="ChangeThreshold" />
+                                <span class="range-val">@Player.AutoRepairThreshold%</span>
+                            </div>
+                            <p class="hint">// 耐久低于或等于此百分比时将自动触发全修。建议设置在 10% - 30% 之间。</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     @if (CurrentCategoryEmpty)
     {
@@ -251,13 +304,17 @@
     [Parameter] public EventCallback<FishingRod> OnRepairRod { get; set; }
     [Parameter] public EventCallback<FishingReel> OnRepairReel { get; set; }
     [Parameter] public EventCallback<FishingLine> OnRepairLine { get; set; }
+    [Parameter] public EventCallback OnBuyAutoRepair { get; set; }
+    [Parameter] public EventCallback<bool> OnToggleAutoRepair { get; set; }
+    [Parameter] public EventCallback<int> OnChangeAutoRepairThreshold { get; set; }
 
     private IEnumerable<(string Key, string Label, int OwnedCount)> CategoryTabs =>
     [
         ("rod", "🎣 鱼竿", Rods.Count),
         ("reel", "⚙ 卷线器", Reels.Count),
         ("line", "🧵 鱼线", Lines.Count),
-        ("lure", "🪱 拟饵", Lures.Count(l => l.Quantity > 0))
+        ("lure", "🪱 拟饵", Lures.Count(l => l.Quantity > 0)),
+        ("autorepair", "🔧 自动修复", Player.AutoRepairUnlocked ? 1 : 0)
     ];
 
     private bool CurrentCategoryEmpty => _category switch
@@ -629,4 +686,25 @@
         }
         else if (owned?.IsEquipped == true) { <span class="tag on">EQUIPPED</span> }
     };
+
+    private async Task BuyAutoRepairTool()
+    {
+        await OnBuyAutoRepair.InvokeAsync();
+    }
+
+    private async Task ToggleAutoRepair(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnToggleAutoRepair.InvokeAsync(val);
+        }
+    }
+
+    private async Task ChangeThreshold(ChangeEventArgs e)
+    {
+        if (e.Value is string str && int.TryParse(str, out int val))
+        {
+            await OnChangeAutoRepairThreshold.InvokeAsync(val);
+        }
+    }
 }

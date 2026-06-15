@@ -122,7 +122,7 @@ public partial class Home : IAsyncDisposable
     private static string ABar(int value, int max = CyberCat.StatMax, int w = 10)
     {
         var f = Math.Clamp((int)Math.Round((double)value / max * w), 0, w);
-        return new string('?', f) + new string('?', w - f);
+        return new string('█', f) + new string('░', w - f);
     }
 
     private string CatState()
@@ -224,9 +224,9 @@ public partial class Home : IAsyncDisposable
 
     private string WorkJobHint() => workingPlace.Job switch
     {
-        WorkJobType.Construction => "?H?n +1g/tick?C???? 150 tick/?",
-        WorkJobType.CatCafe => "?L? +0g?C?L?K?? +3/tick?C???? 180 tick/?",
-        WorkJobType.FishMarketPorter => "??s??? +0g?C???? 120 tick/??CNPC ????X???",
+        WorkJobType.Construction => "工地 +1g/tick，摊位券 150 tick/张",
+        WorkJobType.CatCafe => "猫咖 +0g，幸福 +3/tick，摊位券 180 tick/张",
+        WorkJobType.FishMarketPorter => "鱼市搬运 +0g，摊位券 120 tick/张，NPC 报价更频",
         _ => ""
     };
 
@@ -294,20 +294,35 @@ public partial class Home : IAsyncDisposable
 
     private Task GoToMarketFromBackpack() => SelectSectionAsync("market");
     // Reload gear panel
-    private async Task ReloadGearPanelAsync()
+    private async Task ReloadGearPanelAsync(bool acquireLock = true)
     {
         if (player is null) return;
-        playerGems = await _alchemyService.GetGemsAsync(player.Id);
-        playerTargetLures = await _alchemyService.GetTargetLuresAsync(player.Id);
-        await ReloadGearAsync();
+        Func<Task> body = async () =>
+        {
+            playerGems = await _alchemyService.GetGemsAsync(player.Id);
+            playerTargetLures = await _alchemyService.GetTargetLuresAsync(player.Id);
+            await ReloadGearAsync(acquireLock: false);
+        };
+
+        if (acquireLock)
+        {
+            await WithDbLock(body);
+        }
+        else
+        {
+            await body();
+        }
     }
 
     private async Task HandleLoadoutSocketGem((Guid GemId, GearGemSlot Slot) args)
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.SocketGemAsync(player!, args.GemId, args.Slot));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.SocketGemAsync(player!, args.GemId, args.Slot);
+            await ReloadGearPanelAsync(acquireLock: false);
+        });
         gearMessage = result!.Message;
-        await ReloadGearPanelAsync();
     }
 
     private async Task GoAlchemyFromGear() => await SelectSectionAsync("alchemy");
@@ -315,63 +330,81 @@ public partial class Home : IAsyncDisposable
     private async Task EquipTargetLureForGear(Guid lureId)
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.EquipTargetLureAsync(player!.Id, lureId));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.EquipTargetLureAsync(player!.Id, lureId);
+            await ReloadGearPanelAsync(acquireLock: false);
+        });
         gearMessage = result!.Message;
-        await ReloadGearPanelAsync();
     }
 
     private async Task UnequipTargetLureForGear()
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.UnequipTargetLureAsync(player!.Id));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.UnequipTargetLureAsync(player!.Id);
+            await ReloadGearPanelAsync(acquireLock: false);
+        });
         gearMessage = result!.Message;
-        await ReloadGearPanelAsync();
     }
 
-    private async Task ReloadGearAsync()
+    private async Task ReloadGearAsync(bool acquireLock = true)
     {
-        myRods = await _equipmentService.GetRodsAsync(player!.Id);
-        myReels = await _equipmentService.GetReelsAsync(player.Id);
-        myLines = await _equipmentService.GetLinesAsync(player.Id);
-        myLures = await _equipmentService.GetLuresAsync(player.Id);
+        Func<Task> body = async () =>
+        {
+            myRods = await _equipmentService.GetRodsAsync(player!.Id);
+            myReels = await _equipmentService.GetReelsAsync(player.Id);
+            myLines = await _equipmentService.GetLinesAsync(player.Id);
+            myLures = await _equipmentService.GetLuresAsync(player.Id);
 
-        var fresh = await _equipmentService.BuildLoadoutAsync(player.Id, player.FishingLevel, milestoneBuffs.RarityBonus);
-        loadout.RodName = fresh.RodName;
-        loadout.Sensitivity = fresh.Sensitivity;
-        loadout.CastRange = fresh.CastRange;
-        loadout.MaxStrength = fresh.MaxStrength;
-        loadout.RodRequiredLevel = fresh.RodRequiredLevel;
-        loadout.ReelName = fresh.ReelName;
-        loadout.DragPower = fresh.DragPower;
-        loadout.GearRatio = fresh.GearRatio;
-        loadout.LineCapacity = fresh.LineCapacity;
-        loadout.Smoothness = fresh.Smoothness;
-        loadout.ReelRequiredLevel = fresh.ReelRequiredLevel;
-        loadout.LineName = fresh.LineName;
-        loadout.LineStrength = fresh.LineStrength;
-        loadout.LineSensitivity = fresh.LineSensitivity;
-        loadout.LineStealth = fresh.LineStealth;
-        loadout.AbrasionResistance = fresh.AbrasionResistance;
-        loadout.LineDepth = fresh.LineDepth;
-        loadout.LineRequiredLevel = fresh.LineRequiredLevel;
-        loadout.LineDurability = fresh.LineDurability;
-        loadout.LureName = fresh.LureName;
-        loadout.Attraction = fresh.Attraction;
-        loadout.RarityBonus = fresh.RarityBonus;
-        loadout.LureDepth = fresh.LureDepth;
-        loadout.LureDurabilityRemaining = fresh.LureDurabilityRemaining;
-        loadout.LureRequiredLevel = fresh.LureRequiredLevel;
-        loadout.LureQuantity = fresh.LureQuantity;
-        loadout.RodDurability = fresh.RodDurability;
-        loadout.ReelDurability = fresh.ReelDurability;
-        loadout.MilestoneRarityBonus = fresh.MilestoneRarityBonus;
-        loadout.FishingLevel = fresh.FishingLevel;
-        loadout.GemBonuses = fresh.GemBonuses;
-        loadout.ActiveTargetLureRecipeId = fresh.ActiveTargetLureRecipeId;
-        loadout.ActiveTargetLureUses = fresh.ActiveTargetLureUses;
-        loadout.ActiveTargetLureId = fresh.ActiveTargetLureId;
-        loadout.RodGearTier = fresh.RodGearTier;
-        loadout.SpotGearEffectiveness = fresh.SpotGearEffectiveness;
+            var fresh = await _equipmentService.BuildLoadoutAsync(player.Id, player.FishingLevel, milestoneBuffs.RarityBonus);
+            loadout.RodName = fresh.RodName;
+            loadout.Sensitivity = fresh.Sensitivity;
+            loadout.CastRange = fresh.CastRange;
+            loadout.MaxStrength = fresh.MaxStrength;
+            loadout.RodRequiredLevel = fresh.RodRequiredLevel;
+            loadout.ReelName = fresh.ReelName;
+            loadout.DragPower = fresh.DragPower;
+            loadout.GearRatio = fresh.GearRatio;
+            loadout.LineCapacity = fresh.LineCapacity;
+            loadout.Smoothness = fresh.Smoothness;
+            loadout.ReelRequiredLevel = fresh.ReelRequiredLevel;
+            loadout.LineName = fresh.LineName;
+            loadout.LineStrength = fresh.LineStrength;
+            loadout.LineSensitivity = fresh.LineSensitivity;
+            loadout.LineStealth = fresh.LineStealth;
+            loadout.AbrasionResistance = fresh.AbrasionResistance;
+            loadout.LineDepth = fresh.LineDepth;
+            loadout.LineRequiredLevel = fresh.LineRequiredLevel;
+            loadout.LineDurability = fresh.LineDurability;
+            loadout.LureName = fresh.LureName;
+            loadout.Attraction = fresh.Attraction;
+            loadout.RarityBonus = fresh.RarityBonus;
+            loadout.LureDepth = fresh.LureDepth;
+            loadout.LureDurabilityRemaining = fresh.LureDurabilityRemaining;
+            loadout.LureRequiredLevel = fresh.LureRequiredLevel;
+            loadout.LureQuantity = fresh.LureQuantity;
+            loadout.RodDurability = fresh.RodDurability;
+            loadout.ReelDurability = fresh.ReelDurability;
+            loadout.MilestoneRarityBonus = fresh.MilestoneRarityBonus;
+            loadout.FishingLevel = fresh.FishingLevel;
+            loadout.GemBonuses = fresh.GemBonuses;
+            loadout.ActiveTargetLureRecipeId = fresh.ActiveTargetLureRecipeId;
+            loadout.ActiveTargetLureUses = fresh.ActiveTargetLureUses;
+            loadout.ActiveTargetLureId = fresh.ActiveTargetLureId;
+            loadout.RodGearTier = fresh.RodGearTier;
+            loadout.SpotGearEffectiveness = fresh.SpotGearEffectiveness;
+        };
+
+        if (acquireLock)
+        {
+            await WithDbLock(body);
+        }
+        else
+        {
+            await body();
+        }
     }
 
     private IReadOnlyList<FishDexEntry> GetFishDex() => _fishDexCache;
@@ -383,7 +416,7 @@ public partial class Home : IAsyncDisposable
         int lineTier = myLines.Count > 0 ? myLines.Max(l => GearProgressionCatalog.GetGearTier(l.Name)) : 1;
         int lureTier = myLures.Count > 0 ? myLures.Max(l => GearProgressionCatalog.GetGearTier(l.Name)) : 1;
         double dex = GearProgressionCatalog.OverallDexPercent(GetFishDex());
-        int mythCount = fishRecords.Count(r => r.FishName.StartsWith("?_??E", StringComparison.Ordinal));
+        int mythCount = fishRecords.Count(r => r.FishName.StartsWith("神话·", StringComparison.Ordinal));
         return GearProgressionCatalog.ComputeGraduationPercent(rodTier, reelTier, lineTier, lureTier, dex, mythCount);
     }
 
@@ -401,19 +434,37 @@ public partial class Home : IAsyncDisposable
     }
 
     private bool HasDeepSeaPermanent() =>
-        spotLicenses.Any(l => l.SpotName == "??C?[??" && l.HasPermanent);
+        spotLicenses.Any(l => l.SpotName == "近海礁石" && l.HasPermanent);
 
-    private async Task ReloadSpotLicensesAsync()
+    private async Task ReloadSpotLicensesAsync(bool acquireLock = true)
     {
-        spotLicenses = await _spotLicenseService.GetLicensesAsync(player!.Id);
+        Func<Task> body = async () =>
+        {
+            spotLicenses = await _spotLicenseService.GetLicensesAsync(player!.Id);
+        };
+
+        if (acquireLock)
+        {
+            await WithDbLock(body);
+        }
+        else
+        {
+            await body();
+        }
     }
 
     private async Task PaySpotRental(string spotName)
     {
         (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _spotLicenseService.TryPayDailyRentalAsync(player!, spotName));
+        await WithDbLock(async () =>
+        {
+            result = await _spotLicenseService.TryPayDailyRentalAsync(player!, spotName);
+            if (result.ok)
+            {
+                await ReloadSpotLicensesAsync(acquireLock: false);
+            }
+        });
         spotLicenseMessage = result.msg;
-        if (result.ok) await WithDbLock(ReloadSpotLicensesAsync);
     }
 
     private async Task BuySpotPermanent(string spotName)
@@ -424,19 +475,31 @@ public partial class Home : IAsyncDisposable
             result = await _spotLicenseService.TryBuyPermanentAsync(player!, spotName);
             if (result.ok)
             {
-                await ReloadSpotLicensesAsync();
+                await ReloadSpotLicensesAsync(acquireLock: false);
                 await _achievementService.SyncProgressAsync(player!, fishRecords, true);
             }
         });
         spotLicenseMessage = result.msg;
     }
 
-    private async Task ReloadMilestonesAsync()
+    private async Task ReloadMilestonesAsync(bool acquireLock = true)
     {
-        milestoneBuffs = await _achievementService.GetBuffsAsync(player!.Id);
-        milestoneUnlockIds = (await _achievementService.GetUnlockedItemIdsAsync(player.Id)).ToHashSet();
-        achievementViews = await _achievementService.GetViewsAsync(player, fishRecords, HasDeepSeaPermanent());
-        InvalidateHouseBuffs();
+        Func<Task> body = async () =>
+        {
+            milestoneBuffs = await _achievementService.GetBuffsAsync(player!.Id);
+            milestoneUnlockIds = (await _achievementService.GetUnlockedItemIdsAsync(player.Id)).ToHashSet();
+            achievementViews = await _achievementService.GetViewsAsync(player, fishRecords, HasDeepSeaPermanent());
+            InvalidateHouseBuffs();
+        };
+
+        if (acquireLock)
+        {
+            await WithDbLock(body);
+        }
+        else
+        {
+            await body();
+        }
     }
 
     private async Task RefreshAfterExpeditionAsync()
@@ -448,21 +511,30 @@ public partial class Home : IAsyncDisposable
     private async Task ClaimAchievement(string id)
     {
         (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _achievementService.TryClaimRewardAsync(player!, id));
+        await WithDbLock(async () =>
+        {
+            result = await _achievementService.TryClaimRewardAsync(player!, id);
+            if (result.ok)
+            {
+                await ReloadMilestonesAsync(acquireLock: false);
+            }
+        });
         milestoneMessage = result.msg;
-        if (result.ok) await ReloadMilestonesAsync();
     }
 
     private async Task BuyMilestoneItem(string id)
     {
         (bool ok, string msg) result = default;
-        await WithDbLock(async () => result = await _achievementService.TryBuyShopItemAsync(player!, id));
-        milestoneMessage = result.msg;
-        if (result.ok)
+        await WithDbLock(async () =>
         {
-            await ReloadMilestonesAsync();
-            await ReloadGearAsync();
-        }
+            result = await _achievementService.TryBuyShopItemAsync(player!, id);
+            if (result.ok)
+            {
+                await ReloadMilestonesAsync(acquireLock: false);
+                await ReloadGearAsync(acquireLock: false);
+            }
+        });
+        milestoneMessage = result.msg;
     }
 
     private async Task DisassembleFish(Fish fish)
@@ -500,12 +572,24 @@ public partial class Home : IAsyncDisposable
     // 烹饪 / 喂食 → Home.Cooking.cs（乐观 UI）
 
     // Reload alchemy panel
-    private async Task ReloadAlchemyAsync()
+    private async Task ReloadAlchemyAsync(bool acquireLock = true)
     {
         if (player is null) return;
-        playerGems = await _alchemyService.GetGemsAsync(player.Id);
-        playerTargetLures = await _alchemyService.GetTargetLuresAsync(player.Id);
-        await ReloadGearAsync();
+        Func<Task> body = async () =>
+        {
+            playerGems = await _alchemyService.GetGemsAsync(player.Id);
+            playerTargetLures = await _alchemyService.GetTargetLuresAsync(player.Id);
+            await ReloadGearAsync(acquireLock: false);
+        };
+
+        if (acquireLock)
+        {
+            await WithDbLock(body);
+        }
+        else
+        {
+            await body();
+        }
     }
 
     private async Task CraftGem(string recipeId)
@@ -518,14 +602,14 @@ public partial class Home : IAsyncDisposable
                 result = await _alchemyService.CraftGemAsync(player!, cat, recipeId);
                 _catProgressionService.AddXp(cat, 15);
                 await _cyberCatService.SaveAsync(cat);
+                await ReloadAlchemyAsync(acquireLock: false);
             });
             alchemyMessage = result!.Message;
-            await ReloadAlchemyAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "CraftGem ????F{RecipeId}", recipeId);
-            alchemyMessage = "?????????C??c?@?d?";
+            Logger.LogWarning(ex, "CraftGem 失败 {RecipeId}", recipeId);
+            alchemyMessage = "合成失败，请稍后重试";
         }
     }
 
@@ -539,14 +623,14 @@ public partial class Home : IAsyncDisposable
                 result = await _alchemyService.CraftTargetLureAsync(player!, cat, recipeId);
                 _catProgressionService.AddXp(cat, 25);
                 await _cyberCatService.SaveAsync(cat);
+                await ReloadAlchemyAsync(acquireLock: false);
             });
             alchemyMessage = result!.Message;
-            await ReloadAlchemyAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "CraftTargetLure ????F{RecipeId}", recipeId);
-            alchemyMessage = "????????????C??c?@?d?";
+            Logger.LogWarning(ex, "CraftTargetLure 失败 {RecipeId}", recipeId);
+            alchemyMessage = "合成失败，请稍后重试";
         }
     }
 
@@ -558,9 +642,9 @@ public partial class Home : IAsyncDisposable
             result = await _alchemyService.CraftLineAsync(player!, cat, recipeId, _equipmentService);
             _catProgressionService.AddXp(cat, 20);
             await _cyberCatService.SaveAsync(cat);
+            await ReloadAlchemyAsync(acquireLock: false);
         });
         alchemyMessage = result!.Message;
-        await ReloadAlchemyAsync();
     }
 
     private async Task CraftGear(string recipeId)
@@ -571,17 +655,20 @@ public partial class Home : IAsyncDisposable
             result = await _alchemyService.CraftGearAsync(player!, cat, recipeId, _equipmentService, GetFishDex(), HasSpotAccess);
             _catProgressionService.AddXp(cat, 25);
             await _cyberCatService.SaveAsync(cat);
+            await ReloadAlchemyAsync(acquireLock: false);
         });
         alchemyMessage = result!.Message;
-        await ReloadAlchemyAsync();
     }
 
     private async Task SocketGem(Guid gemId, GearGemSlot slot)
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.SocketGemAsync(player!, gemId, slot));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.SocketGemAsync(player!, gemId, slot);
+            await ReloadAlchemyAsync(acquireLock: false);
+        });
         alchemyMessage = result!.Message;
-        await ReloadAlchemyAsync();
     }
 
     private Task SocketGemFromTab((Guid GemId, GearGemSlot Slot) args) =>
@@ -590,17 +677,23 @@ public partial class Home : IAsyncDisposable
     private async Task EquipTargetLure(Guid lureId)
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.EquipTargetLureAsync(player!.Id, lureId));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.EquipTargetLureAsync(player!.Id, lureId);
+            await ReloadAlchemyAsync(acquireLock: false);
+        });
         alchemyMessage = result!.Message;
-        await ReloadAlchemyAsync();
     }
 
     private async Task UnequipTargetLure()
     {
         AlchemyResult? result = null;
-        await WithDbLock(async () => result = await _alchemyService.UnequipTargetLureAsync(player!.Id));
+        await WithDbLock(async () =>
+        {
+            result = await _alchemyService.UnequipTargetLureAsync(player!.Id);
+            await ReloadAlchemyAsync(acquireLock: false);
+        });
         alchemyMessage = result!.Message;
-        await ReloadAlchemyAsync();
     }
 
     private void OnTargetLureConsumed() => _ = HandleTargetLureConsumedAsync();
@@ -612,7 +705,7 @@ public partial class Home : IAsyncDisposable
         await WithDbLock(async () =>
         {
             await _alchemyService.ConsumeTargetLureUseAsync(player.Id, lureId.Value);
-            await ReloadGearAsync();
+            await ReloadGearAsync(acquireLock: false);
             playerTargetLures = await _alchemyService.GetTargetLuresAsync(player.Id);
         });
         await InvokeAsync(StateHasChanged);
@@ -770,10 +863,10 @@ public partial class Home : IAsyncDisposable
 
     private static string RarityLabel(FishRarity r) => r switch
     {
-        FishRarity.Rare      => "?H?L",
-        FishRarity.Epic      => "?j?",
-        FishRarity.Legendary => "??",
-        _                    => "????"
+        FishRarity.Rare      => "稀有",
+        FishRarity.Epic      => "史诗",
+        FishRarity.Legendary => "传说",
+        _                    => "普通"
     };
 
     private FoodBuffSnapshot GetFoodBuffSnapshot() =>
@@ -782,7 +875,7 @@ public partial class Home : IAsyncDisposable
     private static string FormatBuffRemaining(DateTime expiresAt)
     {
         var remaining = expiresAt - DateTime.UtcNow;
-        if (remaining <= TimeSpan.Zero) return "?????";
+        if (remaining <= TimeSpan.Zero) return "已过期";
         if (remaining.TotalHours >= 1)
             return $"{(int)remaining.TotalHours}h{remaining.Minutes}m";
         return $"{Math.Max(1, (int)remaining.TotalMinutes)}m";

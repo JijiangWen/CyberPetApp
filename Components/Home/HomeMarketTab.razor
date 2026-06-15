@@ -138,7 +138,7 @@
                                 <div class="offer-meta">
                                     <span>@MarketService.BuyerDesc(offer.BuyerType) · 过期 @OfferExpiryText(offer)</span>
                                     <span class="hint" style="font-size:9px;">
-                                        还价成功率 @((int)(MarketService.ComputeCounterSuccessRate(Session.Cat.Happiness) * 100))%
+                                        还价成功率 @((int)(MarketService.ComputeCounterSuccessRate(Session.Cat.Happiness, Session.Cat.Chm) * 100))%
                                     </span>
                                 </div>
                                 <div class="offer-actions">

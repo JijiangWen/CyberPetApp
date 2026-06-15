@@ -2591,3 +2591,175 @@ body::after {
     background: linear-gradient(180deg, var(--panel) 0%, rgba(56,139,253,.08) 100%);
 }
 
+/* ── Auto-Repair Tab Styling ── */
+.auto-repair-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    margin-top: 8px;
+}
+
+.auto-repair-header h3 {
+    font-size: 13px;
+    color: var(--cyan);
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.auto-repair-header p {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.auto-repair-buy-card,
+.auto-repair-settings-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border-hi);
+}
+
+.auto-repair-buy-card .tool-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.auto-repair-buy-card .tool-desc {
+    font-size: 11px;
+    color: var(--text-2);
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.auto-repair-buy-card .tool-price {
+    font-size: 11px;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: block;
+}
+
+.auto-repair-settings-card .status-badge {
+    font-size: 10px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 2px;
+    display: inline-block;
+    letter-spacing: .05em;
+}
+
+.auto-repair-settings-card .status-badge.active {
+    background: #12261e;
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+}
+
+.auto-repair-settings-card .status-badge.inactive {
+    background: #221414;
+    color: var(--red);
+    border: 1px solid #4a1818;
+}
+
+.auto-repair-settings-card .settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.auto-repair-settings-card .setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auto-repair-settings-card .setting-item label {
+    font-size: 11px;
+    color: var(--text-2);
+}
+
+.auto-repair-settings-card .slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auto-repair-settings-card .slider-wrapper input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+    accent-color: var(--cyan);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    height: 6px;
+    outline: none;
+}
+
+.auto-repair-settings-card .range-val {
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--cyan);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* Switch styling */
+.switch-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.switch-container input[type="checkbox"] {
+    display: none;
+}
+
+.switch-container .slider {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    background-color: var(--muted2);
+    transition: .2s;
+    border-radius: 9px;
+    border: 1px solid var(--border-hi);
+}
+
+.switch-container .slider:before {
+    position: absolute;
+    content: "";
+    height: 10px;
+    width: 10px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text);
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.switch-container input:checked + .slider {
+    background-color: #0d2135;
+    border-color: var(--cyan-dim);
+}
+
+.switch-container input:checked + .slider:before {
+    transform: translateX(16px);
+    background-color: var(--cyan);
+}
+
+.switch-container .label-text {
+    font-size: 11px;
+    color: var(--text);
+}
+
+

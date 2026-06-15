@@ -72,6 +72,9 @@ public class AppDbContext : DbContext
             entity.Property(p => p.LegendaryCatchCount).HasDefaultValue(0);
             entity.Property(p => p.CookCount).HasDefaultValue(0);
             entity.Property(p => p.ExpeditionZoneId).HasMaxLength(32);
+            entity.Property(p => p.AutoRepairUnlocked).HasDefaultValue(false);
+            entity.Property(p => p.AutoRepairEnabled).HasDefaultValue(false);
+            entity.Property(p => p.AutoRepairThreshold).HasDefaultValue(20);
         });
 
         modelBuilder.Entity<CyberCat>(entity =>

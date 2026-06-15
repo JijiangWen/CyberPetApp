@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CyberPetApp.Models;
 using CyberPetApp.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -53,12 +53,15 @@ public partial class Home
 
         // 首次进入发放默认装备并构建运行时快照
         await _equipmentService.EnsureDefaultGearAsync(player.Id);
-        milestoneBuffs = await _achievementService.GetBuffsAsync(player.Id);
-        milestoneUnlockIds = (await _achievementService.GetUnlockedItemIdsAsync(player.Id)).ToHashSet();
+        await WithDbLock(async () =>
+        {
+            milestoneBuffs = await _achievementService.GetBuffsAsync(player.Id);
+            milestoneUnlockIds = (await _achievementService.GetUnlockedItemIdsAsync(player.Id)).ToHashSet();
+        });
         InvalidateHouseBuffs();
-        await ReloadSpotLicensesAsync();
-        await ReloadGearAsync();
-        await ReloadMilestonesAsync();
+        await ReloadSpotLicensesAsync(acquireLock: true);
+        await ReloadGearAsync(acquireLock: true);
+        await ReloadMilestonesAsync(acquireLock: true);
 
         BindGameSession();
         _titlebarFishingOn = fishingManager.IsFishing;
@@ -94,51 +97,84 @@ public partial class Home
             cat.ApplyActivityCost(CatActivityType.FishingCycle, GetHouseBuffs(), stats.EnergyCostMultiplier);
         }
         tickGeneration++;
+
+        _fishingCycleCount++;
+        var spot = fishingManager.CurrentSpot;
+        if (spot is not null)
+        {
+            int castFee = EconomySinks.CastFeeForSpot(spot.Name);
+            if (castFee > 0 && _fishingCycleCount % 10 == 0)
+            {
+                _ = ChargeCastFeeDuringFishingAsync(spot, castFee);
+            }
+        }
+
         TryRefreshSidebarVitals();
         BindGameSession();
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    private bool _isTickProcessing = false;
+
+    private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
         if (player is null) return;
 
-        var result = _tickOrchestrator.RunTick(
-            new GameTickInput
+        if (_isTickProcessing)
+        {
+            Logger.LogWarning("Previous game tick is still processing, skipping this tick.");
+            return;
+        }
+
+        _isTickProcessing = true;
+        try
+        {
+            var result = _tickOrchestrator.RunTick(
+                new GameTickInput
+                {
+                    Cat = cat,
+                    Player = player,
+                    WorkingPlace = workingPlace,
+                    Feeder = feeder,
+                    Waterer = waterer,
+                    HouseBuffs = GetHouseBuffs(),
+                    UnlockedFurnitureIds = UnlockedFurnitureIds(),
+                    HasWaterDispenser = HasWaterDispenser(),
+                    IsFishing = fishingManager.IsFishing,
+                    MarketOfferInterval = MarketService.NpcOfferIntervalForJob(workingPlace.Job),
+                    MaintenanceTicksPerDay = MaintenanceService.TicksPerGameDay
+                },
+                _tickCounters,
+                catStateLock);
+
+            await SaveGameTickAsync();
+            if (result.EarnedTicket)
+                await GrantStallTicketAsync();
+            if (result.FeederFoodChanged)
+                await SyncFeederAfterFeedAsync();
+            if (result.ConsumedWater)
+                await SyncWatererAfterWaterAsync();
+            if (result.RunMaintenance)
+                await TryMaintenanceAsync();
+            if (result.RunMarketNpcOffers)
+                await TryMarketNpcOffersAsync();
+
+            if (result.IsDirty)
             {
-                Cat = cat,
-                Player = player,
-                WorkingPlace = workingPlace,
-                Feeder = feeder,
-                Waterer = waterer,
-                HouseBuffs = GetHouseBuffs(),
-                UnlockedFurnitureIds = UnlockedFurnitureIds(),
-                HasWaterDispenser = HasWaterDispenser(),
-                IsFishing = fishingManager.IsFishing,
-                MarketOfferInterval = MarketService.NpcOfferIntervalForJob(workingPlace.Job),
-                MaintenanceTicksPerDay = MaintenanceService.TicksPerGameDay
-            },
-            _tickCounters,
-            catStateLock);
-
-        _ = SaveGameTickAsync();
-        if (result.EarnedTicket)
-            _ = GrantStallTicketAsync();
-        if (result.FeederFoodChanged)
-            _ = SyncFeederAfterFeedAsync();
-        if (result.ConsumedWater)
-            _ = SyncWatererAfterWaterAsync();
-        if (result.RunMaintenance)
-            _ = TryMaintenanceAsync();
-        if (result.RunMarketNpcOffers)
-            _ = TryMarketNpcOffersAsync();
-
-        if (!result.IsDirty) return;
-
-        tickGeneration++;
-        TryRefreshSidebarVitals();
-        BindGameSession();
-        InvokeAsync(StateHasChanged);
+                tickGeneration++;
+                TryRefreshSidebarVitals();
+                BindGameSession();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error occurred during OnTimerElapsed tick");
+        }
+        finally
+        {
+            _isTickProcessing = false;
+        }
     }
 
     private void DismissCatchBroadcast()
@@ -167,7 +203,7 @@ public partial class Home
         {
             await WithDbLock(async () =>
             {
-                await _marketService.TryGenerateNpcOffersAsync(player!.Id, cat.Happiness, GetHouseBuffs().NpcOfferChanceMultiplier);
+                await _marketService.TryGenerateNpcOffersAsync(player!.Id, cat.Happiness, GetHouseBuffs().NpcOfferChanceMultiplier, cat.Chm);
                 await ReloadMarketAsync();
             });
             await InvokeAsync(StateHasChanged);

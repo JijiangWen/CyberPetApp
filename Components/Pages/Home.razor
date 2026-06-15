@@ -275,7 +275,10 @@ else
                              OnEquipLureCommitted="FinalizeEquipLure"
                              OnRepairRodCommitted="FinalizeRepairRod"
                              OnRepairReelCommitted="FinalizeRepairReel"
-                             OnRepairLineCommitted="FinalizeRepairLine" />
+                             OnRepairLineCommitted="FinalizeRepairLine"
+                             OnBuyAutoRepairCommitted="FinalizeBuyAutoRepair"
+                             OnToggleAutoRepairCommitted="FinalizeToggleAutoRepair"
+                             OnChangeAutoRepairThresholdCommitted="FinalizeChangeAutoRepairThreshold" />
                 break;
                 case "cooking":
                 <HomeCookingTab IsActive="@(activeSection == "cooking")"

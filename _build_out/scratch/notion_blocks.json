@@ -1,0 +1,104 @@
+[
+  {
+    "type": "paragraph",
+    "paragraph": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "5.4 EF Core 并发冲突故障（DbContext Concurrency Crash）与高级防护 🛡️"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "paragraph",
+    "paragraph": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "在游戏的挂机钓鱼和频繁的主页面交互过程中，容易遇到以下重大技术故障："
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "bulleted_list_item",
+    "bulleted_list_item": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "1. 现象与错误日志："
+          }
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "当玩家挂机钓鱼一段时间，或者在钓鱼的同时频繁切换选项卡（如“装备”、“炼金”、“里程碑”）时，系统偶发“收鱼失败，请稍后重试”的红色提示，日志中伴随高频 System.InvalidOperationException: A second operation was started on this context instance before a previous operation completed. 异常。"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "bulleted_list_item",
+    "bulleted_list_item": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "2. 根本原因深度分析："
+          }
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "EF Core 的 DbContext 实例并非线程安全。在 Blazor Server 中，Scoped 作用域的 AppDbContext 绑定于 Circuit（连接电路），导致主心跳定时器、钓鱼后台线程与 UI 交互线程同时共享并并发操作同一个 DbContext 实例，从而触发冲突。"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "bulleted_list_item",
+    "bulleted_list_item": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "3. 非重入锁死锁风险（Deadlock Warning）："
+          }
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "WithDbLock 使用的 SemaphoreSlim(1,1) 是不可重入的。如果在一个已持锁的代码块内部再次嵌套调用尝试获取锁的方法，将会导致线程永久挂起，触发死锁。"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "bulleted_list_item",
+    "bulleted_list_item": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "4. 终极防护解决方案：有条件锁定（Conditional Locking Pattern）："
+          }
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "通过重构数据加载方法（如 ReloadGearAsync）支持可选参数 bool acquireLock = true。在 UI 直接调用的只读场景中默认加锁，而在嵌套流程中传入 acquireLock: false 避开二次加锁，完美兼顾线程安全与零死锁。同时，引入 _isTickProcessing 状态标记防止心跳重叠。"
+          }
+        }
+      ]
+    }
+  }
+]

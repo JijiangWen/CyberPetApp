@@ -5,6 +5,11 @@ public class Player
     public Guid Id { get; set; }
     public int Money { get; set; } = 100;
 
+    // ── 自动修复设置 ──
+    public bool AutoRepairUnlocked { get; set; } = false;
+    public bool AutoRepairEnabled { get; set; } = false;
+    public int AutoRepairThreshold { get; set; } = 20;
+
     // ── 多技能等级系统 ──
     public int FishingLevel { get; set; } = 1;
     public int FishingXp { get; set; }

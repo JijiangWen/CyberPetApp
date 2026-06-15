@@ -101,7 +101,7 @@ public class OfflineCompensationService
             if ((i + 1) % offerInterval == 0)
             {
                 await _market.TryGenerateNpcOffersAsync(
-                    player.Id, cat.Happiness, buffs.NpcOfferChanceMultiplier);
+                    player.Id, cat.Happiness, buffs.NpcOfferChanceMultiplier, cat.Chm);
                 offerCycles++;
             }
         }

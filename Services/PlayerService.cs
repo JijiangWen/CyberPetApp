@@ -95,6 +95,9 @@ public class PlayerService
             tracked.CookCount = player.CookCount;
             tracked.ExpeditionZoneId = player.ExpeditionZoneId;
             tracked.ExpeditionEndsAt = player.ExpeditionEndsAt;
+            tracked.AutoRepairUnlocked = player.AutoRepairUnlocked;
+            tracked.AutoRepairEnabled = player.AutoRepairEnabled;
+            tracked.AutoRepairThreshold = player.AutoRepairThreshold;
         }
     }
 

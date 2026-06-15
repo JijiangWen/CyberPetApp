@@ -175,6 +175,17 @@ public class GearMaterialService
         if (fish.Rarity >= FishRarity.Rare)
             list.Add((AlchemyMaterials.ScalePowder, 1));
 
+        // 允许在“地下暗河”（夜光引渠）、“极光冰湾”、“沉船墓场”等高阶钓点中，分解 Rare 以上的废弃机械类鱼种以 20% 概率掉落生锈齿轮组
+        if ((spot == "地下暗河" || spot == "极光冰湾" || spot == "沉船墓场") &&
+            fish.Rarity >= FishRarity.Rare &&
+            (fish.Name.Contains("齿轮") || fish.Name.Contains("发条") || fish.Name.Contains("机械") || fish.Name.Contains("金属") || fish.Name.Contains("铁皮") || fish.Name.Contains("零件") || fish.Name.Contains("锈")))
+        {
+            if (Random.Shared.NextDouble() < 0.20)
+            {
+                list.Add((AlchemyMaterials.GearSet, 1));
+            }
+        }
+
         if (spot is "镇外溪流" or "废弃鱼塘" && fish.Rarity == FishRarity.Common)
         {
             list.Add((AlchemyMaterials.BambooStrip, Random.Shared.Next(1, 4)));

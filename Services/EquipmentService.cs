@@ -456,8 +456,14 @@ public class EquipmentService
         };
     }
 
-    public async Task WearEquippedGearAsync(Guid playerId, bool lineBreakExtra, string? spotName = null)
+    public async Task<List<string>> WearEquippedGearAsync(Guid playerId, bool lineBreakExtra, string? spotName = null, bool isEscape = false)
     {
+        var logs = new List<string>();
+        if (isEscape && Random.Shared.NextDouble() >= 0.5)
+            return logs; // 脱钩：50% 概率完全免磨损
+
+        bool escapeLineOnly = isEscape && !lineBreakExtra;
+
         var rod = await _context.FishingRods.FirstOrDefaultAsync(r => r.PlayerId == playerId && r.IsEquipped);
         var reel = await _context.FishingReels.FirstOrDefaultAsync(r => r.PlayerId == playerId && r.IsEquipped);
         var fishingLine = await _context.FishingLines.FirstOrDefaultAsync(l => l.PlayerId == playerId && l.IsEquipped);
@@ -465,24 +471,39 @@ public class EquipmentService
         int wear = rng.Next(1, 4) + GearProgressionCatalog.SpotExtraWear(spotName);
         if (lineBreakExtra) wear += 5;
 
-        if (rod is not null)
+        if (!escapeLineOnly && rod is not null)
         {
             var rodAffix = GearCatalog.FindRod(rod.Name)?.Affix ?? GearAffix.Balanced;
-            rod.Durability = Math.Max(0, rod.Durability - (int)Math.Ceiling(wear * GearAffixHelper.WearMultiplier(rodAffix)));
+            int rodWear = (int)Math.Ceiling(wear * GearAffixHelper.WearMultiplier(rodAffix));
+            if (rodWear > 0 && rod.Durability > 0)
+            {
+                rod.Durability = Math.Max(0, rod.Durability - rodWear);
+                logs.Add($"鱼竿耐久 -{rodWear}");
+            }
         }
-        if (reel is not null)
+        if (!escapeLineOnly && reel is not null)
         {
             var reelAffix = GearCatalog.FindReel(reel.Name)?.Affix ?? GearAffix.Balanced;
-            reel.Durability = Math.Max(0, reel.Durability - (int)Math.Ceiling(wear * GearAffixHelper.WearMultiplier(reelAffix)));
+            int reelWear = (int)Math.Ceiling(wear * GearAffixHelper.WearMultiplier(reelAffix));
+            if (reelWear > 0 && reel.Durability > 0)
+            {
+                reel.Durability = Math.Max(0, reel.Durability - reelWear);
+                logs.Add($"渔轮耐久 -{reelWear}");
+            }
         }
         if (fishingLine is not null)
         {
             int lineWear = lineBreakExtra
                 ? Math.Max(1, (int)Math.Round(wear * (1 - fishingLine.AbrasionResistance)))
-                : wear;
-            fishingLine.Durability = Math.Max(0, fishingLine.Durability - lineWear);
+                : escapeLineOnly ? Math.Max(1, wear / 2) : wear;
+            if (lineWear > 0 && fishingLine.Durability > 0)
+            {
+                fishingLine.Durability = Math.Max(0, fishingLine.Durability - lineWear);
+                logs.Add($"鱼线耐久 -{lineWear}");
+            }
         }
         await _context.SaveChangesAsync();
+        return logs;
     }
 
     public async Task<(bool Ok, string Message)> RepairRodAsync(Player player, Guid rodId, bool fullRepair)
@@ -1104,6 +1125,21 @@ public class EquipmentService
         IsEquipped = lure.IsEquipped,
         IsCrafted = lure.IsCrafted
     };
+
+    public async Task<FishingRod?> GetEquippedRodAsync(Guid playerId)
+    {
+        return await _context.FishingRods.FirstOrDefaultAsync(r => r.PlayerId == playerId && r.IsEquipped);
+    }
+
+    public async Task<FishingReel?> GetEquippedReelAsync(Guid playerId)
+    {
+        return await _context.FishingReels.FirstOrDefaultAsync(r => r.PlayerId == playerId && r.IsEquipped);
+    }
+
+    public async Task<FishingLine?> GetEquippedLineAsync(Guid playerId)
+    {
+        return await _context.FishingLines.FirstOrDefaultAsync(l => l.PlayerId == playerId && l.IsEquipped);
+    }
 }
 
 public sealed class GearBuyRodEventArgs

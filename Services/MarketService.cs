@@ -121,12 +121,17 @@ public class MarketService
     }
 
     /// <summary>
-    /// 还价成功率 = clamp(50% + Happiness/1000×20% - 还价幅度×30%, 10%, 90%)
+    /// 还价成功率 = clamp(50% + Happiness/1000×20% + CHM/1000×15% - 还价幅度×30% + milestoneBonus, 10%, 90%)
     /// </summary>
+    public static double ComputeCounterSuccessRate(int catHappiness, int catChm, double counterPercent = CounterPercent, double milestoneBonus = 0)
+    {
+        double rate = 0.50 + (catHappiness / 1000.0) * 0.20 + (catChm / 1000.0) * 0.15 - counterPercent * 0.30 + milestoneBonus;
+        return Math.Clamp(rate, 0.10, 0.90);
+    }
+
     public static double ComputeCounterSuccessRate(int catHappiness, double counterPercent = CounterPercent, double milestoneBonus = 0)
     {
-        double rate = 0.50 + (catHappiness / 1000.0) * 0.20 - counterPercent * 0.30 + milestoneBonus;
-        return Math.Clamp(rate, 0.10, 0.90);
+        return ComputeCounterSuccessRate(catHappiness, 10, counterPercent, milestoneBonus);
     }
 
     public async Task<List<MarketListingView>> GetActiveListingsAsync(Guid playerId)
@@ -327,7 +332,7 @@ public class MarketService
         if (offer is null || offer.ExpiresAt <= DateTime.UtcNow)
             return (false, "报价不存在或已过期");
 
-        double successRate = ComputeCounterSuccessRate(cat.Happiness, CounterPercent, milestoneCounterBonus);
+        double successRate = ComputeCounterSuccessRate(cat.Happiness, cat.Chm, CounterPercent, milestoneCounterBonus);
         bool success = _random.NextDouble() < successRate;
         cat.ApplyActivityCost(CatActivityType.MarketCounter, houseBuffs);
 
@@ -360,7 +365,7 @@ public class MarketService
         return (false, $"{BuyerLabel(offer.BuyerType)} 拒绝还价，24h 内不再对此鱼出价（成功率 {(int)(successRate * 100)}%）");
     }
 
-    public async Task TryGenerateNpcOffersAsync(Guid playerId, int catHappiness = 500, double npcOfferChanceMultiplier = 1.0)
+    public async Task TryGenerateNpcOffersAsync(Guid playerId, int catHappiness = 500, double npcOfferChanceMultiplier = 1.0, int catChm = 10)
     {
         var now = DateTime.UtcNow;
         var listings = await _context.MarketListings
@@ -380,7 +385,7 @@ public class MarketService
             var buyer = PickBuyer(listing);
             if (await IsBuyerBannedAsync(listing.Id, buyer, now)) continue;
 
-            double pref = BuyerPreference(buyer, listing, catHappiness);
+            double pref = BuyerPreference(buyer, listing, catHappiness, catChm);
             if (pref < 0.3) continue;
 
             double jitter = 0.9 + _random.NextDouble() * 0.2;
@@ -446,8 +451,8 @@ public class MarketService
         return NpcBuyerType.StrayCat;
     }
 
-    /// <summary>NPC 偏好系数（相对 SellPrice），含人格溢价。</summary>
-    private static double BuyerPreference(NpcBuyerType buyer, MarketListing listing, int catHappiness)
+    /// <summary>NPC 偏好系数（相对 SellPrice），含人格溢价与魅力修正。</summary>
+    private static double BuyerPreference(NpcBuyerType buyer, MarketListing listing, int catHappiness, int catChm)
     {
         bool oversized = listing.SizePercentage > 100;
         double basePref = buyer switch
@@ -482,6 +487,10 @@ public class MarketService
             NpcBuyerType.MoodNpc => 0.70 + (catHappiness / 1000.0) * 0.50,
             _ => 0.5
         };
+
+        // 魅力修正：CHM/1000 × 15% 溢价
+        basePref += (catChm / 1000.0) * 0.15;
+
         return basePref;
     }
 

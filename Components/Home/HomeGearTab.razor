@@ -50,7 +50,10 @@
                        OnEquipLure="EquipLureClick"
                        OnRepairRod="RepairRodClick"
                        OnRepairReel="RepairReelClick"
-                       OnRepairLine="RepairLineClick" />
+                       OnRepairLine="RepairLineClick"
+                       OnBuyAutoRepair="BuyAutoRepairClick"
+                       OnToggleAutoRepair="ToggleAutoRepairClick"
+                       OnChangeAutoRepairThreshold="ChangeAutoRepairThresholdClick" />
     }
 </div>
 
@@ -81,6 +84,9 @@
     [Parameter] public EventCallback<(FishingRod Rod, bool Full)> OnRepairRodCommitted { get; set; }
     [Parameter] public EventCallback<(FishingReel Reel, bool Full)> OnRepairReelCommitted { get; set; }
     [Parameter] public EventCallback<(FishingLine Line, bool Full)> OnRepairLineCommitted { get; set; }
+    [Parameter] public EventCallback OnBuyAutoRepairCommitted { get; set; }
+    [Parameter] public EventCallback<bool> OnToggleAutoRepairCommitted { get; set; }
+    [Parameter] public EventCallback<int> OnChangeAutoRepairThresholdCommitted { get; set; }
 
     private string gearSubTab = "loadout";
     private string? _localMessage;
@@ -247,6 +253,21 @@
         _localMessage = $"[{line.Name}] +{EconomySinks.GearRepairPartialAmount} 耐久";
         RequestRender();
         _ = OnRepairLineCommitted.InvokeAsync((line, false));
+    }
+
+    private void BuyAutoRepairClick()
+    {
+        _ = OnBuyAutoRepairCommitted.InvokeAsync();
+    }
+
+    private void ToggleAutoRepairClick(bool val)
+    {
+        _ = OnToggleAutoRepairCommitted.InvokeAsync(val);
+    }
+
+    private void ChangeAutoRepairThresholdClick(int val)
+    {
+        _ = OnChangeAutoRepairThresholdCommitted.InvokeAsync(val);
     }
 
     private void SelectLoadoutTab()
