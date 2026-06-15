@@ -1,4 +1,4 @@
-﻿using CyberPetApp.Models;
+using CyberPetApp.Models;
 using CyberPetApp.Services;
 
 namespace CyberPetApp.Components.Pages;
@@ -15,45 +15,45 @@ public partial class Home
 
         if (!FishingSessionRegistry.TryStart(player.Id, CircuitId))
         {
-            fishingBlockMessage = "?????????????????????";
+            fishingBlockMessage = "正在处理其他钓鱼会话";
             return;
         }
 
         if (player.FishingLevel < spot.RequiredLevel)
         {
             FishingSessionRegistry.Stop(player.Id, CircuitId);
-            fishingBlockMessage = $"[{spot.Name}] ???? Lv.{spot.RequiredLevel}";
+            fishingBlockMessage = $"[{spot.Name}] 需要钓鱼等级达到 Lv.{spot.RequiredLevel}";
             return;
         }
 
         if (!loadout.MeetsGearLevel)
         {
             FishingSessionRegistry.Stop(player.Id, CircuitId);
-            fishingBlockMessage = $"??????????? Lv.{loadout.MinGearRequiredLevel}";
+            fishingBlockMessage = $"装备等级不足，需要钓鱼等级达到 Lv.{loadout.MinGearRequiredLevel}";
             return;
         }
 
         if (SpotLicenseCatalog.RequiresLicense(spot.Name) && !HasSpotAccess(spot.Name))
         {
             FishingSessionRegistry.Stop(player.Id, CircuitId);
-            fishingBlockMessage = $"[{spot.Name}] ?????????????";
+            fishingBlockMessage = $"[{spot.Name}] 未拥有许可证，需购买日租或永久证";
             return;
         }
 
         int castFee = EconomySinks.CastFeeForSpot(spot.Name);
-        bool paid = false;
-        await WithDbLock(async () => paid = await _playerService.TrySpendGoldAsync(player!, castFee));
-        if (!paid)
+        if (player.Money < castFee)
         {
             FishingSessionRegistry.Stop(player.Id, CircuitId);
-            fishingBlockMessage = $"????????? {castFee}g";
+            fishingBlockMessage = $"金币不足，需要抛竿费 {castFee}g";
             return;
         }
 
+        // ── 乐观 UI 更新 ──
+        player.Money -= castFee;
         fishingBlockMessage = null;
         feedMessage = $"已付抛竿费 {castFee}g";
         TryRefreshSidebarVitals();
-        await ReloadGearAsync();
+        
         loadout.SpotGearEffectiveness = GearProgressionCatalog.SpotGearEffectiveness(loadout.RodGearTier, spot.Name);
         fishingManager.StartFishing(spot, loadout,
             () => CatBuffService.MergeStateBuff(
@@ -62,12 +62,58 @@ public partial class Home
             () => CatBuffService.MergeStats(
                 CatFishingStatsHelper.Compute(cat),
                 GetFoodBuffSnapshot()));
+
+        tickGeneration++;
+        BindGameSession();
+        await InvokeAsync(StateHasChanged);
+
+        // 后台异步进行数据库金币扣除与同步
+        _ = PersistStartFishingAsync(spot, castFee);
+    }
+
+    private async Task PersistStartFishingAsync(FishingSpot spot, int castFee)
+    {
+        try
+        {
+            bool success = false;
+            await WithDbLock(async () =>
+            {
+                success = await _playerService.TrySpendGoldAsync(player!, castFee);
+                if (success)
+                {
+                    // 同步一下装备的最新状态
+                    await ReloadGearAsync();
+                }
+            });
+
+            if (!success)
+            {
+                // 回滚乐观更新
+                player!.Money += castFee;
+                fishingManager.StopFishing();
+                FishingSessionRegistry.Stop(player.Id, CircuitId);
+                fishingBlockMessage = "抛竿失败：同步数据库余额不足。";
+                feedMessage = "";
+                tickGeneration++;
+                BindGameSession();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PersistStartFishingAsync 失败，spot={SpotName}", spot.Name);
+        }
     }
 
     private void StopFishing()
     {
         fishingManager.StopFishing();
         FishingSessionRegistry.Stop(player!.Id, CircuitId);
+
+        // ── 乐观 UI ──
+        tickGeneration++;
+        BindGameSession();
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void OnFishCaught(Fish fish) => _ = HandleFishCaughtAsync(fish);

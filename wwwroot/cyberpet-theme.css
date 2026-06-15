@@ -2576,3 +2576,18 @@ body::after {
         filter: brightness(1.25);
     }
 }
+
+/* ═══ Cat Skins Wardrobe ═══ */
+.cat-skin-preview-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.g-card.equipped-card {
+    border-color: var(--cyan-dim);
+    background: linear-gradient(180deg, var(--panel) 0%, rgba(56,139,253,.08) 100%);
+}
+

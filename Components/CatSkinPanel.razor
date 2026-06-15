@@ -2,58 +2,58 @@
 @using CyberPetApp.Services
 @inject PlayerService PlayerService
 
-<div class="shop-panel slide-in fade-in">
-    <div class="shop-header">
-        <h2 class="text-gradient">猫咪外观商店</h2>
-        <div class="shop-stats">
-            <span class="gold-text"><i class="bi bi-coin"></i> @Player.Money</span>
+<div class="content-panel content-panel-stack">
+    <div class="panel-head">
+        <span class="panel-title"><PixelIcon Name="cat" /> WARDROBE.skins · 外观橱柜</span>
+        <span class="panel-meta">
+            金币 <span class="hl-gold">@Player.Money g</span>
+        </span>
+    </div>
+
+    <div class="section-tw tw">
+        <div class="tw-header">
+            <span class="tw-icon green"></span>
+            CAT.skins · 猫咪皮肤
         </div>
-    </div>
+        <div class="tw-body">
+            <div class="card-grid">
+                @foreach (var skin in CatSkinCatalog.Skins)
+                {
+                    var isUnlocked = Player.UnlockedCatSkins.Contains(skin.Id);
+                    var isEquipped = Cat.CurrentSkinId == skin.Id;
 
-    <div class="shop-desc mb-3 text-muted">
-        购买并装备新的猫咪皮肤，展现与众不同的魅力。
-    </div>
-
-    <div class="shop-grid">
-        @foreach (var skin in CatSkinCatalog.Skins)
-        {
-            var isUnlocked = Player.UnlockedCatSkins.Contains(skin.Id);
-            var isEquipped = Cat.CurrentSkinId == skin.Id;
-
-            <div class="shop-card @(isEquipped ? "equipped-card" : "")">
-                <div class="item-icon-box">
-                    <img src="@CatSpriteCatalog.ImagePath(skin.Id, "content")" alt="@skin.Name" class="item-img cat-skin-img" />
-                </div>
-                
-                <div class="item-info">
-                    <div class="item-name">@skin.Name</div>
-                    <div class="item-desc">@skin.Description</div>
-                    
-                    @if (isUnlocked)
-                    {
-                        @if (isEquipped)
+                    <div class="g-card @(isEquipped ? "equipped-card" : "")">
+                        <span class="sprite-frame">
+                            <img src="@CatSpriteCatalog.ImagePath(skin.Id, "content")" alt="@skin.Name" class="cat-skin-preview-img" />
+                        </span>
+                        
+                        <span class="c-name">@skin.Name</span>
+                        <p class="hint" style="font-size:9px;margin-top:2px;line-height:1.2;color:var(--text-2);flex-grow:1;">@skin.Description</p>
+                        
+                        @if (isUnlocked)
                         {
-                            <span class="text-success mt-2 d-block"><i class="bi bi-check-circle-fill"></i> 已装备</span>
+                            @if (isEquipped)
+                            {
+                                <span class="tag on" style="text-align: center;"><i class="bi bi-check-circle-fill"></i> 已装备</span>
+                            }
+                            else
+                            {
+                                <button class="g-btn primary" style="margin-top:4px;" @onclick="() => EquipSkin(skin)">
+                                    装备
+                                </button>
+                            }
                         }
                         else
                         {
-                            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="() => EquipSkin(skin)">
-                                <i class="bi bi-stars"></i> 装备
+                            <span class="c-price">售价 @skin.Price g</span>
+                            <button class="g-btn" style="margin-top:4px;" @onclick="() => UnlockSkin(skin)" disabled="@(Player.Money < skin.Price)">
+                                <i class="bi bi-unlock"></i> 解锁
                             </button>
                         }
-                    }
-                    else
-                    {
-                        <div class="item-price mt-2">
-                            <span class="gold-text">@skin.Price <i class="bi bi-coin"></i></span>
-                        </div>
-                        <button class="btn btn-sm btn-primary mt-2" @onclick="() => UnlockSkin(skin)" disabled="@(Player.Money < skin.Price)">
-                            <i class="bi bi-unlock"></i> 解锁
-                        </button>
-                    }
-                </div>
+                    </div>
+                }
             </div>
-        }
+        </div>
     </div>
 </div>
 
