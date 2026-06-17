@@ -1,0 +1,106 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inject BoatService BoatDb
+@inject PlayerService PlayerDb
+
+<div class="modal-backdrop" @onclick="OnClose">
+    <div class="modal-content glass-panel" @onclick:stopPropagation="true" style="border: 1px solid rgba(255, 0, 127, 0.3) !important; max-height: 85vh; width: 500px; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 0, 127, 0.15); padding: 12px 20px; background: rgba(255, 0, 127, 0.03);">
+            <span class="title" style="font-weight: bold; color: #ff007f; font-family: monospace; font-size: 13px;">👤 玩家个人档案.dat</span>
+            <button class="close-btn" style="background: none; border: none; color: #ff007f; font-size: 20px; cursor: pointer; line-height: 1;" @onclick="OnClose">×</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px;">
+            @if (isLoading)
+            {
+                <div class="loader" style="font-size: 12px; color: #8892b0; text-align: center; padding: 20px;">正在提取玩家机密档案...</div>
+            }
+            else if (targetPlayer == null)
+            {
+                <div class="error-msg" style="color: #ff0055; text-align: center; font-size: 12px;">未找到该玩家的云端数据。</div>
+            }
+            else
+            {
+                <!-- 头部名片区 -->
+                <div class="profile-card" style="display: flex; gap: 16px; background: rgba(255, 255, 255, 0.02); padding: 12px; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; align-items: center;">
+                    <div class="avatar-box" style="font-size: 32px; background: rgba(255, 0, 127, 0.1); width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; border-radius: 50%; border: 1px solid rgba(255, 0, 127, 0.2);">🐱</div>
+                    <div class="profile-details" style="font-size: 12px; display: flex; flex-direction: column; gap: 2px;">
+                        <h2 style="font-size: 16px; font-weight: bold; color: #ff007f; margin: 0 0 4px 0; font-family: monospace;">@targetUsername</h2>
+                        <div>钓鱼等级: <span style="color: #00f3ff; font-weight: bold;">Lv.@targetPlayer.FishingLevel</span></div>
+                        <div>烹饪等级: <span style="color: #00f3ff; font-weight: bold;">Lv.@targetPlayer.CookingLevel</span></div>
+                        <div>累计船钓鱼货: <span style="color: #00f3ff; font-weight: bold;">@catchHistory.Count 条</span></div>
+                    </div>
+                </div>
+
+                <!-- 船钓鱼货展示区 -->
+                <div class="catch-history-section" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="panel-header-sm" style="font-size: 12px; font-weight: bold; color: #b4c6e7; border-left: 3px solid #ff007f; padding-left: 8px; margin-bottom: 4px;">船钓专属鱼货历史 (Boat Catch Logs)</div>
+                    
+                    @if (catchHistory.Count == 0)
+                    {
+                        <p class="hint" style="color: #8892b0; font-size: 11px;">// 尚未进行过多人船钓，或者目前还没有钓上过鱼货。</p>
+                    }
+                    else
+                    {
+                        <div class="history-grid-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                            @foreach (var record in catchHistory)
+                            {
+                                <div class="fish-record-card rarity-@record.Rarity.ToString().ToLower()" style="background: rgba(16, 22, 35, 0.6); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
+                                    <div class="fish-header" style="display: flex; justify-content: space-between; font-weight: bold; font-family: monospace;">
+                                        <span class="fish-name" style="color: #ffffff;">@record.FishName</span>
+                                        <span class="rarity-badge">@record.Rarity</span>
+                                    </div>
+                                    <div class="fish-body" style="color: #8892b0; display: flex; flex-direction: column; gap: 1px;">
+                                        <div>体重: <strong style="color: #e0e6ed;">@record.Weight.ToString("F2") kg</strong></div>
+                                        <div>尺寸: <strong style="color: #e0e6ed;">@record.SizePercentage.ToString("F0")%</strong></div>
+                                        <div style="font-size: 9px; color: #667290; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">载具: @record.BoatName</div>
+                                    </div>
+                                    <div class="fish-footer" style="font-size: 8px; color: #556080; border-top: 1px solid rgba(255, 255, 255, 0.02); padding-top: 2px; text-align: right;">
+                                        @record.CaughtAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid PlayerId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private Player? targetPlayer;
+    private string targetUsername = "";
+    private List<BoatCatchRecord> catchHistory = new();
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        try
+        {
+            // 读取玩家基本等级资料
+            targetPlayer = await PlayerDb.GetPlayerAsync(PlayerId);
+            
+            // 读取账户用户名
+            targetUsername = await PlayerDb.GetUsernameAsync(PlayerId);
+
+            // 读取该玩家的所有船钓鱼货历史记录
+            catchHistory = await BoatDb.GetBoatCatchHistoryAsync(PlayerId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("加载玩家资料失败: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

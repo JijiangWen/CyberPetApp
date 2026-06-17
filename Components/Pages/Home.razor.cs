@@ -37,6 +37,7 @@ public partial class Home : IAsyncDisposable
     [Inject] private ILogger<Home> Logger { get; set; } = default!;
     [Inject] private CircuitSessionContext _circuitSession { get; set; } = default!;
     [Inject] private GameTickOrchestrator _tickOrchestrator { get; set; } = default!;
+    [Inject] private OnlineTracker _onlineTracker { get; set; } = default!;
 
     private CyberCat cat = new CyberCat();
     private AutoFeeder feeder = new AutoFeeder();

@@ -32,6 +32,8 @@ public class FishingManager : IDisposable
     public string StatusText { get; private set; } = "";
     public double PhaseTotalSeconds { get; private set; }
     public double PhaseRemainingSeconds { get; private set; }
+    public bool IsFakeBiting { get; private set; }
+    public double FakeBiteRemainingSeconds { get; private set; }
     public FishingSpot? CurrentSpot { get; private set; }
     public Fish? LastCaughtFish { get; private set; }
     public FishingLoadout Loadout { get; private set; } = new();
@@ -187,29 +189,73 @@ public class FishingManager : IDisposable
         }
     }
 
-    /// <summary>循环观察直到咬钩；空口不扣猫活动消耗。</summary>
+    /// <summary>循环观察直到咬钩；支持截口与假口波纹模拟。</summary>
     private async Task<bool> WaitForBiteAsync(
         FishingSpot spot, CatFishingStats catStats, CatFishingBuff catBuff, CancellationToken ct)
     {
-        int emptyChecks = 0;
-        while (!ct.IsCancellationRequested)
+        IsFakeBiting = false;
+        FakeBiteRemainingSeconds = 0;
+
+        double waitSeconds = FishingWaitCalculator.ComputeWaitSeconds(
+            Loadout, catStats, catBuff, spot);
+
+        // 1. 2% 概率触发“截口”（Drop Bite）
+        bool isDropBite = _random.NextDouble() < 0.02;
+        if (isDropBite)
         {
-            double waitSeconds = FishingWaitCalculator.ComputeWaitSeconds(
-                Loadout, catStats, catBuff, spot);
-            await RunPhaseAsync(FishingState.Waiting, waitSeconds,
-                "正在抛竿... 观察水面中... 🌊", ct);
-
-            double biteChance = FishingWaitCalculator.ComputeBiteChance(
-                Loadout, catStats, catBuff, spot);
-            if (_random.NextDouble() < biteChance)
-                return true;
-
-            emptyChecks++;
-            if (emptyChecks == 1 || emptyChecks % 4 == 0)
-                Log($"水面暂无动静，继续守望... (咬钩率 {biteChance:P0})", "info");
+            waitSeconds = 2.0 + _random.NextDouble() * 3.0; // 2~5秒直接咬钩
+            Log("鱼饵刚刚落水！水底黑影暴起！⚡", "rare");
         }
 
-        return false;
+        State = FishingState.Waiting;
+        StatusText = "正在抛竿... 观察水面中... 🌊";
+        PhaseTotalSeconds = waitSeconds;
+        PhaseRemainingSeconds = waitSeconds;
+        Changed?.Invoke();
+
+        var end = DateTime.UtcNow.AddSeconds(waitSeconds);
+        int tickCount = 0;
+        while (DateTime.UtcNow < end && !ct.IsCancellationRequested)
+        {
+            await Task.Delay(250, ct);
+            double elapsed = waitSeconds - (end - DateTime.UtcNow).TotalSeconds;
+            PhaseRemainingSeconds = Math.Max(0, (end - DateTime.UtcNow).TotalSeconds);
+
+            // 假口判定逻辑：仅在非“截口”时出现
+            if (!isDropBite)
+            {
+                if (IsFakeBiting)
+                {
+                    FakeBiteRemainingSeconds = Math.Max(0, FakeBiteRemainingSeconds - 0.25);
+                    if (FakeBiteRemainingSeconds <= 0)
+                    {
+                        IsFakeBiting = false;
+                    }
+                }
+                else
+                {
+                    // 每 1 秒（每 4 次 250ms tick）进行一次假口判定
+                    tickCount++;
+                    if (tickCount >= 4)
+                    {
+                        tickCount = 0;
+                        double proximity = Math.Clamp(elapsed / waitSeconds, 0, 1);
+                        double fakeBiteChance = proximity * 0.08; // 越接近最终咬钩时间，假口频率越高
+                        if (_random.NextDouble() < fakeBiteChance)
+                        {
+                            IsFakeBiting = true;
+                            FakeBiteRemainingSeconds = 1.5 + _random.NextDouble() * 1.5; // 1.5 到 3 秒的试探
+                        }
+                    }
+                }
+            }
+
+            Changed?.Invoke();
+        }
+
+        IsFakeBiting = false;
+        FakeBiteRemainingSeconds = 0;
+        return !ct.IsCancellationRequested;
     }
 
     private async Task RunPhaseAsync(FishingState state, double seconds, string text, CancellationToken ct)

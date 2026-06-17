@@ -14,11 +14,26 @@
             {
                 <div class="phase-box phase-@Manager.State.ToString().ToLower()">
                     <div class="phase-text">@Manager.StatusText</div>
-                    <div class="s-row">
-                        <span class="s-label">@PhaseLabel()</span>
-                        <code class="abar abar-happy">@PhaseBar()</code>
-                        <span class="s-val" style="font-size:10px;">@Manager.PhaseRemainingSeconds.ToString("0.0")s</span>
-                    </div>
+                    @if (Manager.State == FishingState.Waiting)
+                    {
+                        <div class="s-row" style="font-family: monospace; display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; align-items: center;">
+                                <span style="color: #8892b0;">已抛竿: <span style="color: #00f3ff; font-weight: bold;">@FormatElapsed(Manager.PhaseTotalSeconds - Manager.PhaseRemainingSeconds)</span></span>
+                                <span style="color: #8892b0;">水面状态: <span style="color: @(Manager.IsFakeBiting ? "#ff007f" : "#39ff14"); font-weight: bold;">@GetWaterState(Manager.IsFakeBiting, Manager.PhaseRemainingSeconds, Manager.PhaseTotalSeconds)</span></span>
+                            </div>
+                            <div style="color: #00f3ff; letter-spacing: 2px; font-size: 11px; text-shadow: 0 0 5px #00f3ff; padding: 4px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 1px solid rgba(0, 243, 255, 0.08); text-align: center;">
+                                @GetWaterVisual(Manager.IsFakeBiting, Manager.PhaseRemainingSeconds, Manager.PhaseTotalSeconds)
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="s-row">
+                            <span class="s-label">@PhaseLabel()</span>
+                            <code class="abar abar-happy">@PhaseBar()</code>
+                            <span class="s-val" style="font-size:10px;">@Manager.PhaseRemainingSeconds.ToString("0.0")s</span>
+                        </div>
+                    }
                 </div>
             }
             @if (Manager.EventLog.Count > 0)
@@ -27,7 +42,7 @@
                     @foreach (var log in Manager.EventLog.TakeLast(5))
                     {
                         <div class="log-line log-@log.Kind">
-                            <span class="log-time">[@log.Time.ToString("HH:mm:ss")]</span> @log.Text
+                             <span class="log-time">[@log.Time.ToString("HH:mm:ss")]</span> @log.Text
                         </div>
                     }
                 </div>
@@ -74,6 +89,28 @@
         _lastState = Manager.State;
         _lastPhaseRemaining = Manager.PhaseRemainingSeconds;
         _lastLogCount = Manager.EventLog.Count;
+    }
+
+    private string FormatElapsed(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return $"{(int)ts.TotalMinutes:00}:{ts.Seconds:00}";
+    }
+
+    private string GetWaterState(bool isFakeBiting, double remaining, double total)
+    {
+        if (isFakeBiting) return "浮漂轻摇 🐟";
+        double elapsed = total - remaining;
+        bool showRipples = ((int)elapsed % 7) < 3; // Natural breathing cycle
+        return showRipples ? "水波微兴 🍃" : "水平如镜 🌊";
+    }
+
+    private string GetWaterVisual(bool isFakeBiting, double remaining, double total)
+    {
+        if (isFakeBiting) return "🐟 ≈≈ ≈≈ ≈≈ ≈≈ ≈≈ ≈≈ 🐟";
+        double elapsed = total - remaining;
+        bool showRipples = ((int)elapsed % 7) < 3; // Natural breathing cycle
+        return showRipples ? "🍃~ ~ ~ ~ ~ ~ ~ ~ ~ ~" : "🌊░░░░░░░░░░░░░░░░░░░░";
     }
 
     private string PhaseLabel() => Manager.State switch

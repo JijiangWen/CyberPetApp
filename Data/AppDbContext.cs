@@ -35,6 +35,8 @@ public class AppDbContext : DbContext
     public DbSet<PlayerGem> PlayerGems { get; set; } = null!;
     public DbSet<PlayerTargetLure> PlayerTargetLures { get; set; } = null!;
     public DbSet<PlayerCatBuff> PlayerCatBuffs { get; set; } = null!;
+    public DbSet<PlayerBoat> PlayerBoats { get; set; } = null!;
+    public DbSet<BoatCatchRecord> BoatCatchRecords { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -348,6 +350,26 @@ public class AppDbContext : DbContext
             entity.HasOne<Player>()
                 .WithMany()
                 .HasForeignKey(b => b.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerBoat>(entity =>
+        {
+            entity.HasKey(b => b.Id);
+            entity.HasIndex(b => new { b.PlayerId, b.BoatType }).IsUnique();
+            entity.HasOne<Player>()
+                .WithMany()
+                .HasForeignKey(b => b.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BoatCatchRecord>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.HasIndex(r => r.PlayerId);
+            entity.HasOne<Player>()
+                .WithMany()
+                .HasForeignKey(r => r.PlayerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

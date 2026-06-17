@@ -4,4 +4,6 @@ namespace CyberPetApp.Services;
 public class CircuitSessionContext
 {
     public string? CircuitId { get; set; }
+    public Guid PlayerId { get; set; }
+    public string Username { get; set; } = "";
 }

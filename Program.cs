@@ -44,7 +44,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
 
     options.UseNpgsql(connectionString));
 
@@ -129,6 +129,11 @@ builder.Services.AddScoped<GameTickOrchestrator>();
 // P2-5：Circuit 断开时清理钓鱼会话注册表
 builder.Services.AddScoped<CircuitSessionContext>();
 builder.Services.AddScoped<CircuitHandler, FishingCircuitHandler>();
+
+// Multiplayer Boat Fishing Services
+builder.Services.AddSingleton<BoatSessionManager>();
+builder.Services.AddSingleton<OnlineTracker>();
+builder.Services.AddScoped<BoatService>();
 
 // P2-2：轻量版已实现 GameTickOrchestrator（见 Services/GameTickOrchestrator.cs）；全站 IHostedService 仍 TODO
 // P2-3：InteractiveAuto 需 WASM Client 项目，本轮未迁移；Tab 已用 HomeTabBase.ShouldRender 降刷新

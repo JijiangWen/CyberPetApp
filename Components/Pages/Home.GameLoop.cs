@@ -31,6 +31,10 @@ public partial class Home
 
         GameSessionRegistry.Register(playerId, CircuitId);
 
+        _circuitSession.PlayerId = player.Id;
+        _circuitSession.Username = username;
+        _onlineTracker.RegisterOnline(CircuitId, player.Id, username);
+
         isLoading = false;
         cat = await _cyberCatService.GetOrCreateAsync(playerId);
         feeder = await _feederService.LoadOrCreateAsync(playerId);

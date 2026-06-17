@@ -1,0 +1,644 @@
+@using CyberPetApp.Models
+@using CyberPetApp.Services
+@inject BoatSessionManager SessionManager
+@inject OnlineTracker Tracker
+@inject BoatService BoatDb
+@inject CircuitSessionContext SessionContext
+@implements IDisposable
+
+<div class="boat-tab-container">
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert-bar neon-cyan" style="padding: 8px; background: rgba(0, 243, 255, 0.1); border: 1px solid #00f3ff; border-radius: 4px; margin-bottom: 12px; font-size: 11px;">
+            // @statusMessage
+        </div>
+    }
+
+    @if (currentSession == null)
+    {
+        <!-- 第一部分：未加入房间（显示购买与创建界面） -->
+        <div class="grid-2col">
+            <!-- 1. 船只商店 -->
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <i class="bi bi-shop"></i> 码头造船厂 (Boat Shop)
+                </div>
+                <div class="panel-body">
+                    <div class="boat-item">
+                        <div class="boat-details">
+                            <span class="boat-title">「木制划桨舢板」</span>
+                            <span class="boat-meta">承载：2只猫咪 · 售价：1,000 g</span>
+                        </div>
+                        <button class="g-btn btn-cyan" @onclick='() => BuyBoat("wood_boat", "木制划桨舢板", 1000, 2)'>
+                            购买并取得所有权
+                        </button>
+                    </div>
+
+                    <div class="boat-item">
+                        <div class="boat-details">
+                            <span class="boat-title">「赛博脉冲双体游艇」</span>
+                            <span class="boat-meta">承载：4只猫咪 · 售价：5,000 g</span>
+                        </div>
+                        <button class="g-btn btn-magenta" @onclick='() => BuyBoat("cyber_yacht", "赛博脉冲双体游艇", 5000, 4)'>
+                            购买并取得所有权
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 我拥有的小船 & 待处理邀请 -->
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <i class="bi bi-compass"></i> 我的启航准备 (Departure)
+                </div>
+                <div class="panel-body">
+                    <div class="section-title" style="font-weight: bold; margin-bottom: 8px; font-size: 12px; color: #b4c6e7;">选择拥有的小船出海：</div>
+                    @if (myBoats.Count == 0)
+                    {
+                        <p class="hint" style="color: #8892b0; font-size: 11px;">// 你当前名下没有小船，请在左侧造船厂购买。</p>
+                    }
+                    else
+                    {
+                        <div class="owned-boats" style="display: flex; flex-direction: column; gap: 8px;">
+                            @foreach (var boat in myBoats)
+                            {
+                                <div class="boat-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 4px;">
+                                    <div class="boat-card-info" style="font-size: 12px;">
+                                        <strong>@boat.CustomName</strong> (容纳: @boat.MaxCapacity 人)
+                                    </div>
+                                    <button class="g-btn btn-cyan btn-sm" style="padding: 4px 8px; font-size: 11px;" @onclick="() => CreateRoom(boat)">
+                                        作为船长起航
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="separator" style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 15px 0;"></div>
+
+                    <div class="section-title" style="font-weight: bold; margin-bottom: 8px; font-size: 12px; color: #b4c6e7;">待处理组队邀请：</div>
+                    @if (pendingInvites.Count == 0)
+                    {
+                        <p class="hint" style="color: #8892b0; font-size: 11px;">// 暂无任何船长对你发送邀请。</p>
+                    }
+                    else
+                    {
+                        @foreach (var invite in pendingInvites)
+                        {
+                            <div class="invite-card" style="background: rgba(255, 0, 127, 0.05); border: 1px dashed rgba(255, 0, 127, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 11px;">
+                                <div>来自船长 <strong>@invite.HostName</strong> 的邀请: 期待您登上 <strong>@invite.InviteeName</strong> 联机船钓！</div>
+                                <div class="card-actions" style="margin-top: 8px; display: flex; gap: 8px;">
+                                    <button class="g-btn btn-green btn-sm" style="padding: 3px 6px; font-size: 10px;" @onclick="() => AcceptInvite(invite)">接受</button>
+                                    <button class="g-btn btn-sm" style="padding: 3px 6px; font-size: 10px; border-color: #ff0055; color: #ff0055;" @onclick="() => DeclineInvite(invite)">拒绝</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- 第二部分：已处于组队会话中 -->
+        <div class="glass-panel lobby-panel @(currentSession.Status == BoatSessionStatus.Fishing ? "fishing-mode" : "")">
+            <div class="lobby-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0, 243, 255, 0.15); padding-bottom: 10px; margin-bottom: 12px;">
+                <div class="lobby-title" style="font-size: 16px; font-weight: bold; color: #00f3ff;">
+                    🚢 【@currentSession.BoatName】 - 乘风破浪联机中
+                    <span class="status-badge" style="font-size: 10px; margin-left: 8px; padding: 2px 6px; background: rgba(0, 243, 255, 0.2); border: 1px solid #00f3ff; border-radius: 3px;">
+                        @(currentSession.Status == BoatSessionStatus.Lobby ? "大厅准备中" : "正于深海垂钓")
+                    </span>
+                </div>
+                <div class="lobby-actions" style="display: flex; gap: 8px;">
+                    @if (currentSession.OwnerId == playerId)
+                    {
+                        @if (currentSession.Status == BoatSessionStatus.Lobby)
+                        {
+                            <button class="g-btn btn-green" @onclick="StartBoatFishing">
+                                <i class="bi bi-play-fill"></i> 全员出海船钓！
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="g-btn" style="border-color: #ffaa00; color: #ffaa00;" @onclick="StopBoatFishing">
+                                <i class="bi bi-stop-fill"></i> 停止船钓回港
+                            </button>
+                        }
+                    }
+                    <button class="g-btn" style="border-color: #ff0055; color: #ff0055;" @onclick="LeaveRoom">离开小船</button>
+                </div>
+            </div>
+
+            <div class="grid-3col">
+                <!-- 1. 同船船员列表 -->
+                <div class="inner-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 12px;">
+                    <div class="panel-header-sm">同船探险家 (Members @currentSession.Members.Count/@currentSession.MaxCapacity)</div>
+                    <div class="member-list" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                        @foreach (var member in currentSession.Members)
+                        {
+                            <div class="member-row" style="display: flex; align-items: center; justify-content: space-between; padding: 6px; background: rgba(255, 255, 255, 0.02); border-radius: 4px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="member-dot @(member.Key == currentSession.OwnerId ? "owner" : "crew")" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: @(member.Key == currentSession.OwnerId ? "#00f3ff" : "#ff007f");"></span>
+                                    <span class="member-name clickable" style="font-size: 12px; cursor: pointer; text-decoration: underline;" @onclick="() => OpenPlayerProfile(member.Key)">@member.Value</span>
+                                </div>
+                                @if (member.Key == currentSession.OwnerId)
+                                {
+                                    <span class="pill-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(0, 243, 255, 0.2); border: 1px solid #00f3ff; border-radius: 3px; color: #00f3ff;">船长</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    @if (currentSession.OwnerId == playerId && currentSession.Status == BoatSessionStatus.Lobby)
+                    {
+                        <div class="invite-online-section" style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+                            <div class="panel-header-sm">可邀请的在线玩家</div>
+                            <div class="online-list" style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; max-height: 150px; overflow-y: auto;">
+                                @if (availableOnlinePlayers.Count == 0)
+                                {
+                                    <div class="hint" style="color: #8892b0; font-size: 11px;">// 暂无可邀请的闲置玩家在线</div>
+                                }
+                                @foreach (var online in availableOnlinePlayers)
+                                {
+                                    <div class="online-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: rgba(255, 255, 255, 0.01); border-radius: 4px;">
+                                        <span style="font-size: 11px;">@online.Name</span>
+                                        <button class="g-btn btn-cyan btn-xs" style="padding: 2px 4px; font-size: 9px;" @onclick="() => InvitePlayer(online.Id, online.Name)">邀请加入</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- 2. 联机抛竿垂钓交互区 -->
+                <div class="inner-panel col-span-2" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 12px;">
+                    <div class="panel-header-sm">船钓甲板实时区</div>
+                    <div class="deck-interaction">
+                        @if (currentSession.Status == BoatSessionStatus.Lobby)
+                        {
+                            <div class="deck-idle-msg">
+                                <i class="bi bi-anchor animate-bounce"></i>
+                                <p style="font-size: 12px; margin-top: 8px;">锚已抛下，等待船长开启出海指令。</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="boat-fishing-interface" style="display: flex; flex-direction: column; width: 100%; height: 100%; justify-content: space-between;">
+                                <div class="fish-water-visual">
+                                    <div class="cyber-boat-img">🚢</div>
+                                    <div class="fishing-ripples"></div>
+                                </div>
+                                <div class="boat-fishing-action" style="text-align: center; z-index: 2; margin-top: auto; padding-bottom: 15px;">
+                                    <p class="neon-cyan" style="font-size: 11px; margin-bottom: 8px;">
+                                        @if (isAutoFishing)
+                                        {
+                                            <span style="color: #39ff14;">● 联机挂机中 (@(isFishingWait ? "等鱼咬钩..." : "起鱼中..."))</span>
+                                        }
+                                        else
+                                        {
+                                            <span>此处为深海联机钓域（掉落稀有与传说鱼类几率提升！）</span>
+                                        }
+                                    </p>
+                                    @if (isAutoFishing && isFishingWait)
+                                    {
+                                        <div style="margin: 8px auto; max-width: 300px; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 243, 255, 0.15); border-radius: 6px; font-family: monospace;">
+                                            <div class="s-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #00f3ff; margin-bottom: 6px;">
+                                                <span>已抛竿: <strong>@FormatRemainingTime(boatTotalSeconds - boatRemainingSeconds)</strong></span>
+                                                <span>水面: <strong style="color: @(isBoatFakeBiting ? "#ff007f" : "#39ff14");">@GetBoatWaterState(isBoatFakeBiting, boatRemainingSeconds, boatTotalSeconds)</strong></span>
+                                            </div>
+                                            <div style="color: #00f3ff; letter-spacing: 2px; font-size: 11px; text-shadow: 0 0 5px #00f3ff; text-align: center; background: rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 4px; border: 1px solid rgba(0, 243, 255, 0.08);">
+                                                @GetBoatWaterVisual(isBoatFakeBiting, boatRemainingSeconds, boatTotalSeconds)
+                                            </div>
+                                        </div>
+                                    }
+                                    <button class="g-btn @(isAutoFishing ? "btn-cyan" : "btn-magenta")" style="padding: 10px 24px; font-size: 13px;" @onclick="ToggleAutoFishing">
+                                        @(isAutoFishing ? "停止联机挂机" : "开始联机挂机")
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- 3. 联机实时聊天/动态播报面板 -->
+                    <div class="action-logs-panel">
+                        <div class="panel-header-sm">同船实时状态日志</div>
+                        <div class="logs-container" id="logs-box">
+                            @if (currentSession.ActionLogs.Count == 0)
+                            {
+                                <div class="log-line" style="color: #8892b0;">// 暂无动态记录</div>
+                            }
+                            @foreach (var log in currentSession.ActionLogs)
+                            {
+                                <div class="log-line">@log</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- 弹窗：玩家资料卡 -->
+    @if (selectedPlayerId != null)
+    {
+        <PlayerProfileModal PlayerId="selectedPlayerId.Value" OnClose="ClosePlayerProfile" />
+    }
+</div>
+
+@code {
+    [CascadingParameter] public GameSessionState Session { get; set; } = null!;
+
+    private Guid playerId;
+    private string username = "";
+    private List<PlayerBoat> myBoats = new();
+    private List<BoatInvitation> pendingInvites = new();
+    private BoatSession? currentSession;
+    private List<(Guid Id, string Name)> availableOnlinePlayers = new();
+    private string statusMessage = "";
+    private bool isFishingWait = false;
+    private Guid? selectedPlayerId;
+    private bool isAutoFishing = false;
+    private CancellationTokenSource? autoFishingCts;
+
+    private double boatTotalSeconds = 0;
+    private double boatRemainingSeconds = 0;
+    private bool isBoatFakeBiting = false;
+    private double boatFakeBiteRemaining = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        playerId = SessionContext.PlayerId;
+        username = SessionContext.Username;
+
+        if (playerId != Guid.Empty)
+        {
+            // 在全局在线列表里注册自己
+            Tracker.RegisterOnline(SessionContext.CircuitId ?? "", playerId, username);
+        }
+
+        // 加载名下小船
+        await LoadMyBoatsAsync();
+        RefreshSessionData();
+
+        // 订阅事件，实现真正的实时更新
+        SessionManager.OnSessionUpdated += HandleSessionUpdated;
+        SessionManager.OnInvitationReceived += HandleInvitationReceived;
+        Tracker.OnOnlineListChanged += HandleOnlineListChanged;
+    }
+
+    private async Task LoadMyBoatsAsync()
+    {
+        myBoats = await BoatDb.GetPlayerBoatsAsync(playerId);
+    }
+
+    private void RefreshSessionData()
+    {
+        currentSession = SessionManager.GetSessionForPlayer(playerId);
+        pendingInvites = SessionManager.GetInvitationsForPlayer(playerId);
+        
+        var online = Tracker.GetOnlinePlayers();
+        availableOnlinePlayers = SessionManager.GetAvailablePlayers(playerId, online);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task BuyBoat(string type, string name, int price, int capacity)
+    {
+        var result = await BoatDb.PurchaseBoatAsync(playerId, type, name, price, capacity);
+        statusMessage = result.Message;
+        if (result.Success)
+        {
+            await LoadMyBoatsAsync();
+            if (Session?.Player != null)
+            {
+                Session.Player.Money -= price;
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CreateRoom(PlayerBoat boat)
+    {
+        SessionManager.CreateSession(playerId, username, boat);
+        RefreshSessionData();
+    }
+
+    private void InvitePlayer(Guid targetId, string targetName)
+    {
+        if (currentSession == null) return;
+        bool success = SessionManager.SendInvitation(currentSession.SessionId, playerId, username, targetId, targetName);
+        statusMessage = success ? $"已对 {targetName} 送出邀请" : "邀请失败，小船已满";
+    }
+
+    private void AcceptInvite(BoatInvitation invite)
+    {
+        bool success = SessionManager.AcceptInvitation(invite.InvitationId, playerId, username);
+        statusMessage = success ? "成功登船！" : "登船失败，邀请已过期或人已满";
+        RefreshSessionData();
+    }
+
+    private void DeclineInvite(BoatInvitation invite)
+    {
+        SessionManager.DeclineInvitation(invite.InvitationId);
+        RefreshSessionData();
+    }
+
+    private void StartBoatFishing()
+    {
+        if (currentSession == null) return;
+        SessionManager.StartFishing(currentSession.SessionId);
+    }
+
+    private void StopBoatFishing()
+    {
+        if (currentSession == null) return;
+        SessionManager.StopFishing(currentSession.SessionId);
+    }
+
+    private void LeaveRoom()
+    {
+        StopAutoFishing();
+        SessionManager.LeaveSession(playerId);
+        RefreshSessionData();
+    }
+
+    private async Task SimulateCatchFish()
+    {
+        if (currentSession == null || isFishingWait) return;
+        isFishingWait = true;
+        
+        // 模拟起鱼间隔 1.5 秒
+        await Task.Delay(1500);
+
+        // 随机产生一条联机鱼货
+        var random = new Random();
+        string[] fishNames = { "深海霓虹鲷", "重金属带鱼", "晶核帝王蟹", "极光巨鱿", "万伏电击鳗", "黄金吞天鲤" };
+        string pickedFish = fishNames[random.Next(fishNames.Length)];
+        FishRarity rarity = (FishRarity)random.Next(0, 4);
+        double weight = random.NextDouble() * 30 + 1; // 1 ~ 31 kg
+
+        var mockFish = new Fish(pickedFish, 20, 20, 20, (int)(weight * 50), rarity, weight)
+        {
+            PlayerId = playerId,
+            SizePercentage = random.Next(50, 150)
+        };
+
+        // 保存进数据库
+        await BoatDb.SaveBoatCatchAsync(playerId, username, currentSession.BoatName, mockFish);
+
+        // 内存广播
+        SessionManager.BroadcastCatch(currentSession.SessionId, username, pickedFish, rarity, weight);
+
+        isFishingWait = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void StopAutoFishing()
+    {
+        isAutoFishing = false;
+        autoFishingCts?.Cancel();
+        autoFishingCts?.Dispose();
+        autoFishingCts = null;
+    }
+
+    private void ToggleAutoFishing()
+    {
+        if (isAutoFishing)
+        {
+            StopAutoFishing();
+            statusMessage = "已停止联机挂机。";
+        }
+        else
+        {
+            isAutoFishing = true;
+            autoFishingCts = new CancellationTokenSource();
+            statusMessage = "联机挂机已启动...";
+            _ = RunAutoFishingLoopAsync(autoFishingCts.Token);
+        }
+    }
+
+    private async Task RunAutoFishingLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            var random = new Random();
+            while (!ct.IsCancellationRequested && isAutoFishing && currentSession != null && currentSession.Status == BoatSessionStatus.Fishing)
+            {
+                isFishingWait = true;
+                isBoatFakeBiting = false;
+                boatFakeBiteRemaining = 0;
+
+                // 默认出海钓鱼基础期望时间与单人一致，统一 5分钟 (300秒)
+                double baseWait = 300.0;
+                double reduction = 0;
+
+                if (Session != null && Session.Loadout != null)
+                {
+                    var loadout = Session.Loadout;
+                    reduction = loadout.EffectiveAttraction * 0.5
+                        + loadout.FishingLevel * 0.003
+                        + loadout.CastRange * 0.02
+                        + Math.Max(0, loadout.RodGearTier - 1) * 0.015
+                        + Math.Max(0, loadout.LureGearTier - 1) * 0.01;
+                    reduction = Math.Min(0.55, reduction);
+                }
+
+                double factor = 1.0 - reduction;
+                if (Session != null && Session.Cat != null)
+                {
+                    var catStats = CatFishingStatsHelper.Compute(Session.Cat);
+                    factor *= catStats.WaitMultiplier;
+                }
+
+                double expectedWait = baseWait * factor;
+
+                // 1. 2% 概率触发“截口”（Drop Bite）
+                bool isDropBite = random.NextDouble() < 0.02;
+                double waitSeconds;
+                if (isDropBite)
+                {
+                    waitSeconds = 2.0 + random.NextDouble() * 3.0; // 2~5秒直接咬钩
+                    currentSession.ActionLogs.Add($"[系统] 玩家 {username} 的鱼饵刚落水就被巨物截杀！⚡");
+                }
+                else
+                {
+                    // 根据船只等级，决定“命运扭曲系数”
+                    double levelFactor = currentSession.BoatType == "cyber_yacht" ? (55.0 - 1.0) / 59.0 : (35.0 - 1.0) / 59.0;
+                    double power = Math.Clamp(1.5 - levelFactor, 0.5, 1.5);
+
+                    // 扭曲随机数
+                    double u = 1.0 - random.NextDouble(); // (0, 1]
+                    double distortedU = Math.Pow(u, power);
+
+                    // 带入泊松指数公式
+                    double exponentialRandom = -Math.Log(distortedU);
+                    double finalWait = expectedWait * exponentialRandom;
+
+                    // 限幅
+                    double minWait = 120.0 - (levelFactor * 90.0);
+                    double maxWait = 900.0 + (levelFactor * 600.0);
+                    waitSeconds = Math.Clamp(finalWait, minWait, maxWait);
+                }
+
+                boatTotalSeconds = waitSeconds;
+                boatRemainingSeconds = waitSeconds;
+                await InvokeAsync(StateHasChanged);
+
+                var end = DateTime.UtcNow.AddSeconds(waitSeconds);
+                int tickCount = 0;
+                while (DateTime.UtcNow < end && !ct.IsCancellationRequested && isAutoFishing && currentSession != null && currentSession.Status == BoatSessionStatus.Fishing)
+                {
+                    await Task.Delay(250, ct);
+                    double elapsed = waitSeconds - (end - DateTime.UtcNow).TotalSeconds;
+                    boatRemainingSeconds = Math.Max(0, (end - DateTime.UtcNow).TotalSeconds);
+
+                    // 假口判定逻辑：仅在非“截口”时出现
+                    if (!isDropBite)
+                    {
+                        if (isBoatFakeBiting)
+                        {
+                            boatFakeBiteRemaining = Math.Max(0, boatFakeBiteRemaining - 0.25);
+                            if (boatFakeBiteRemaining <= 0)
+                            {
+                                isBoatFakeBiting = false;
+                            }
+                        }
+                        else
+                        {
+                            // 每 1 秒进行一次假口判定
+                            tickCount++;
+                            if (tickCount >= 4)
+                            {
+                                tickCount = 0;
+                                double proximity = Math.Clamp(elapsed / waitSeconds, 0, 1);
+                                double fakeBiteChance = proximity * 0.08; // 越接近最终时间概率越高
+                                if (random.NextDouble() < fakeBiteChance)
+                                {
+                                    isBoatFakeBiting = true;
+                                    boatFakeBiteRemaining = 1.5 + random.NextDouble() * 1.5;
+                                }
+                            }
+                        }
+                    }
+
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                isBoatFakeBiting = false;
+                boatFakeBiteRemaining = 0;
+
+                if (ct.IsCancellationRequested || !isAutoFishing || currentSession == null || currentSession.Status != BoatSessionStatus.Fishing)
+                    break;
+
+                isFishingWait = false;
+                await InvokeAsync(StateHasChanged);
+
+                // 随机产生一条联机鱼货
+                string[] fishNames = { "深海霓虹鲷", "重金属带鱼", "晶核帝王蟹", "极光巨鱿", "万伏电击鳗", "黄金吞天鲤" };
+                string pickedFish = fishNames[random.Next(fishNames.Length)];
+                FishRarity rarity = (FishRarity)random.Next(0, 4);
+                double weight = random.NextDouble() * 30 + 1; // 1 ~ 31 kg
+
+                var mockFish = new Fish(pickedFish, 20, 20, 20, (int)(weight * 50), rarity, weight)
+                {
+                    PlayerId = playerId,
+                    SizePercentage = random.Next(50, 150)
+                };
+
+                // 保存进数据库
+                await BoatDb.SaveBoatCatchAsync(playerId, username, currentSession.BoatName, mockFish);
+
+                // 内存广播
+                SessionManager.BroadcastCatch(currentSession.SessionId, username, pickedFish, rarity, weight);
+
+                await InvokeAsync(StateHasChanged);
+
+                // 收竿后休息1秒再开始下一轮
+                await Task.Delay(1000, ct);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore cancellation
+        }
+        finally
+        {
+            isFishingWait = false;
+            isAutoFishing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OpenPlayerProfile(Guid id)
+    {
+        selectedPlayerId = id;
+    }
+
+    private void ClosePlayerProfile()
+    {
+        selectedPlayerId = null;
+    }
+
+    private void HandleSessionUpdated(Guid sessionId)
+    {
+        if (currentSession?.SessionId == sessionId || currentSession == null)
+        {
+            RefreshSessionData();
+            if (currentSession == null || currentSession.Status != BoatSessionStatus.Fishing)
+            {
+                StopAutoFishing();
+            }
+        }
+    }
+
+    private void HandleInvitationReceived(Guid inviteeId, BoatInvitation invite)
+    {
+        if (inviteeId == playerId)
+        {
+            statusMessage = $"📩 收到来自 {invite.HostName} 的登船邀请！";
+            RefreshSessionData();
+        }
+    }
+
+    private void HandleOnlineListChanged()
+    {
+        RefreshSessionData();
+    }
+
+    private string FormatRemainingTime(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return $"{(int)ts.TotalMinutes:00}:{ts.Seconds:00}";
+    }
+
+    private double GetProgressPercent(double remaining, double total)
+    {
+        if (total <= 0) return 0;
+        double done = total - remaining;
+        return Math.Clamp((done / total) * 100, 0, 100);
+    }
+
+    private string GetBoatWaterState(bool isFakeBiting, double remaining, double total)
+    {
+        if (isFakeBiting) return "浮漂轻摇 🐟";
+        double elapsed = total - remaining;
+        bool showRipples = ((int)elapsed % 7) < 3; // Natural breathing cycle
+        return showRipples ? "水波微兴 🍃" : "水平如镜 🌊";
+    }
+
+    private string GetBoatWaterVisual(bool isFakeBiting, double remaining, double total)
+    {
+        if (isFakeBiting) return "🐟 ≈≈ ≈≈ ≈≈ ≈≈ ≈≈ ≈≈ 🐟";
+        double elapsed = total - remaining;
+        bool showRipples = ((int)elapsed % 7) < 3; // Natural breathing cycle
+        return showRipples ? "🍃~ ~ ~ ~ ~ ~ ~ ~ ~ ~" : "🌊░░░░░░░░░░░░░░░░░░░░";
+    }
+
+    public void Dispose()
+    {
+        // 注销事件监听，防止内存泄露
+        SessionManager.OnSessionUpdated -= HandleSessionUpdated;
+        SessionManager.OnInvitationReceived -= HandleInvitationReceived;
+        Tracker.OnOnlineListChanged -= HandleOnlineListChanged;
+        StopAutoFishing();
+    }
+}

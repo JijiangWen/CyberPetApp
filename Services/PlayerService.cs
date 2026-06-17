@@ -363,4 +363,15 @@ public class PlayerService
         player.UnlockedCatSkins.Add(skinId);
         return true;
     }
+
+    public async Task<Player?> GetPlayerAsync(Guid playerId)
+    {
+        return await _context.Players.AsNoTracking().FirstOrDefaultAsync(p => p.Id == playerId);
+    }
+
+    public async Task<string> GetUsernameAsync(Guid playerId)
+    {
+        var account = await _context.GameAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.PlayerId == playerId);
+        return account?.Username ?? "未知玩家";
+    }
 }

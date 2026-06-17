@@ -160,6 +160,15 @@ else
                             <span class="tab-badge">@PendingOfferCount()</span>
                         }
                     </button>
+                    <button class="g-tab @(activeSection=="boat"?"active":"")"
+                            @onclick='()=>SelectSectionAsync("boat")' title="联机小船">
+                        <span class="t-dot"></span>
+                        <i class="bi bi-anchor" style="font-size: 14px; margin-right: 4px;"></i>
+                        <span class="tab-text">
+                            <span class="tab-cn">联机小船</span>
+                            <span class="tab-en">multiplayer.boat</span>
+                        </span>
+                    </button>
                 </div>
                 <div class="tab-group tab-group-growth">
                     <span class="tab-group-label">成长</span>
@@ -408,6 +417,9 @@ else
                                  OnListFishOnMarket="ListFishOnMarket"
                                  OnGoToMarket="GoToMarketFromBackpack"
                                  OnUpgradeBackpack="HandleUpgradeBackpack" />
+                break;
+                case "boat":
+                <HomeBoatTab />
                 break;
 
             }
