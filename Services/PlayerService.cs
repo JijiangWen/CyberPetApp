@@ -98,6 +98,8 @@ public class PlayerService
             tracked.AutoRepairUnlocked = player.AutoRepairUnlocked;
             tracked.AutoRepairEnabled = player.AutoRepairEnabled;
             tracked.AutoRepairThreshold = player.AutoRepairThreshold;
+            tracked.AutoRefillUnlocked = player.AutoRefillUnlocked;
+            tracked.AutoRefillEnabled = player.AutoRefillEnabled;
         }
     }
 

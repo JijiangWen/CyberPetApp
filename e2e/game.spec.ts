@@ -94,4 +94,86 @@ test.describe('CYBERPET OS', () => {
       await expect(page.locator('.content-scroll')).toBeVisible();
     }
   });
+
+  test('自动喂食器与水槽：一键批量装填、精力补充液兼容与自动装填', async ({ page }) => {
+    test.setTimeout(60_000);
+    await registerAndEnter(page);
+
+    // 1. 在生活商店购买材料
+    await clickTab(page, '生活商店');
+    // 购买“超能红牛”精力补充液 (45g)
+    await page.locator('button').filter({ hasText: /buy\(45 g\)/ }).first().click();
+    await page.waitForTimeout(500);
+    // 购买“猫乐滋”混合肉干粮 (15g)
+    await page.locator('button').filter({ hasText: /buy\(15 g\)/ }).first().click();
+    await page.waitForTimeout(500);
+    // 购买凉白开水 (2g)
+    await page.locator('button').filter({ hasText: /buy\(2 g\)/ }).first().click();
+    await page.waitForTimeout(500);
+
+    // 2. 解锁房间和家具
+    await clickTab(page, '家园');
+
+    // 解锁厨房 (200g)
+    const kitchenLockBtn = page.locator('button.floor-room:has-text("厨房")');
+    await kitchenLockBtn.click();
+    await page.waitForTimeout(1000);
+    await page.locator('button:has-text("unlock(200 g)")').click();
+    await page.waitForTimeout(1000);
+
+    // 回到客厅，购买饮水泉 (200g)
+    await page.locator('button.floor-room:has-text("客厅")').click();
+    await page.waitForTimeout(1000);
+    await page.locator('button:has-text("buy(200 g)")').click();
+    await page.waitForTimeout(1000);
+
+    // 去厨房，购买智能喂食站 (400g)
+    await page.locator('button.floor-room:has-text("厨房")').click();
+    await page.waitForTimeout(1000);
+    await page.locator('button:has-text("buy(400 g)")').click();
+    await page.waitForTimeout(2000); // 等待 tick 运行
+
+    // 验证自动装填未解锁时，槽位保持为空 (LOCKED tag exists)
+    await expect(page.locator('.tag').filter({ hasText: 'LOCKED' })).toBeVisible();
+    await expect(page.locator('.auto-care-slot.filled')).toHaveCount(0);
+
+    // 测试手动一键批量装填食物
+    const batchFillFeederBtn = page.locator('button:has-text("一键批量装填")').first();
+    await expect(batchFillFeederBtn).toBeEnabled();
+    await batchFillFeederBtn.click();
+    await page.waitForTimeout(1000);
+
+    // 验证食物和饮料被成功装填
+    await expect(page.locator('.auto-care-slot.filled').filter({ hasText: '“超能红牛”精力补充液' })).toBeVisible();
+    await expect(page.locator('.auto-care-slot.filled').filter({ hasText: '“猫乐滋”混合肉干粮' })).toBeVisible();
+
+    // 回到客厅，测试手动一键批量装填水
+    await page.locator('button.floor-room:has-text("客厅")').click();
+    await page.waitForTimeout(1000);
+    const batchFillWatererBtn = page.locator('button:has-text("一键批量装填")').first();
+    await expect(batchFillWatererBtn).toBeEnabled();
+    await batchFillWatererBtn.click();
+    await page.waitForTimeout(1000);
+    await expect(page.locator('.auto-care-slot.filled').filter({ hasText: '凉白开水' })).toBeVisible();
+
+    // 3. 测试解锁自动装填
+    // 解锁自动装填系统 (1000g)
+    const unlockAutoRefillBtn = page.locator('button:has-text("解锁(1000g)")').first();
+    await expect(unlockAutoRefillBtn).toBeEnabled();
+    await unlockAutoRefillBtn.click();
+    await page.waitForTimeout(1000);
+    await expect(page.locator('.tag').filter({ hasText: 'ACTIVE' })).toBeVisible();
+
+    // 4. 验证解锁后自动装填生效
+    // 去生活商店再买一个精力补充液
+    await clickTab(page, '生活商店');
+    await page.locator('button').filter({ hasText: /buy\(45 g\)/ }).first().click();
+    await page.waitForTimeout(500);
+
+    await clickTab(page, '家园');
+    // 去厨房验证喂食器中自动装填了第二个精力补充液
+    await page.locator('button.floor-room:has-text("厨房")').click();
+    await page.waitForTimeout(2000);
+    await expect(page.locator('.auto-care-slot.filled').filter({ hasText: '“超能红牛”精力补充液' })).toHaveCount(2);
+  });
 });

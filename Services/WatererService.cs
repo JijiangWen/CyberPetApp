@@ -121,4 +121,77 @@ public class WatererService
             await _context.SaveChangesAsync();
         }
     }
+
+    /// <summary>一键将背包中的凉白开水批量装填到自动饮水器中（扣加工费 1g/份）。</summary>
+    public async Task<(int LoadedCount, string Message)> BatchAddWaterFromBackpackAsync(Player player, AutoWaterer waterer)
+    {
+        int limit = waterer.MaxWaterCount - waterer.WaterCount;
+        if (limit <= 0)
+            return (0, "饮水器已满");
+
+        var dbPlayer = await _context.Players.FindAsync(player.Id);
+        if (dbPlayer is null)
+            return (0, "玩家不存在");
+
+        int feePerUnit = EconomySinks.WatererProcessingFee;
+        if (dbPlayer.Money < feePerUnit)
+            return (0, $"金币不足，装水加工费需 {feePerUnit}g/份");
+
+        var item = await _context.BackpackItems
+            .FirstOrDefaultAsync(b => b.PlayerId == player.Id && b.ItemName == WaterCatalog.Purified.Name);
+        if (item is null || item.Quantity <= 0)
+            return (0, $"背包里没有 {WaterCatalog.Purified.Name}");
+
+        int toLoad = Math.Min(item.Quantity, limit);
+        int loaded = 0;
+
+        var existingSlots = await _context.WatererWaters
+            .Where(w => w.AutoWatererId == waterer.Id)
+            .Select(w => w.SlotIndex)
+            .ToListAsync();
+
+        var water = WaterCatalog.Purified;
+
+        for (int i = 0; i < toLoad; i++)
+        {
+            if (dbPlayer.Money < feePerUnit)
+                break;
+
+            dbPlayer.Money -= feePerUnit;
+            item.Quantity--;
+
+            int slot = 0;
+            while (existingSlots.Contains(slot))
+            {
+                slot++;
+            }
+            existingSlots.Add(slot);
+
+            _context.WatererWaters.Add(new WatererWater
+            {
+                AutoWatererId = waterer.Id,
+                Name = water.Name,
+                ThirstRestore = water.ThirstRestore,
+                SlotIndex = slot
+            });
+
+            waterer.AddWater(water);
+            loaded++;
+        }
+
+        if (item.Quantity <= 0)
+        {
+            _context.BackpackItems.Remove(item);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // 同步内存状态
+        player.Money = dbPlayer.Money;
+        int left = player.Backpack.GetValueOrDefault(water.Name) - loaded;
+        if (left <= 0) player.Backpack.Remove(water.Name);
+        else player.Backpack[water.Name] = left;
+
+        return (loaded, $"一键装填成功：装入 {loaded} 份凉白开水，共扣除加工费 {loaded * feePerUnit}g");
+    }
 }

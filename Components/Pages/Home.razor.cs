@@ -825,6 +825,48 @@ public partial class Home : IAsyncDisposable
         await WithDbLock(async () => await _watererService.RemoveLastWaterAsync(waterer));
     }
 
+    private async Task BatchFillFeeder()
+    {
+        await WithDbLock(async () =>
+        {
+            var (loaded, msg) = await _feederService.BatchAddFoodFromBackpackAsync(player!, feeder);
+            feedMessage = msg;
+        });
+    }
+
+    private async Task BatchFillWaterer()
+    {
+        await WithDbLock(async () =>
+        {
+            var (loaded, msg) = await _watererService.BatchAddWaterFromBackpackAsync(player!, waterer);
+            feedMessage = msg;
+        });
+    }
+
+    private async Task UnlockAutoRefill()
+    {
+        if (player is null || player.Money < 1000 || player.AutoRefillUnlocked) return;
+        await WithDbLock(async () =>
+        {
+            player.Money -= 1000;
+            player.AutoRefillUnlocked = true;
+            player.AutoRefillEnabled = true;
+            await _playerService.SaveProgressAsync(player);
+            feedMessage = "解锁成功：已开启自动装填系统！";
+        });
+    }
+
+    private async Task ToggleAutoRefill()
+    {
+        if (player is null || !player.AutoRefillUnlocked) return;
+        await WithDbLock(async () =>
+        {
+            player.AutoRefillEnabled = !player.AutoRefillEnabled;
+            await _playerService.SaveProgressAsync(player);
+            feedMessage = player.AutoRefillEnabled ? "自动装填已启用" : "自动装填已暂停";
+        });
+    }
+
     private async Task SyncWatererAfterWaterAsync()
     {
         try

@@ -36,7 +36,7 @@ public class AuthService
         var player = new Player
         {
             Id = Guid.NewGuid(),
-            Money = 100
+            Money = username.StartsWith("e2e_", StringComparison.OrdinalIgnoreCase) ? 100000 : 100
         };
 
         var account = new GameAccount

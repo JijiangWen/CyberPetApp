@@ -44,7 +44,11 @@
                         OnAddCookedFood="OnAddCookedFood"
                         OnRemoveFood="OnRemoveFood"
                         OnAddWater="OnAddWater"
-                        OnRemoveWater="OnRemoveWater" />
+                        OnRemoveWater="OnRemoveWater"
+                        OnBatchFillFood="OnBatchFillFood"
+                        OnBatchFillWater="OnBatchFillWater"
+                        OnUnlockAutoRefill="OnUnlockAutoRefill"
+                        OnToggleAutoRefill="OnToggleAutoRefill" />
     }
 </div>
 
@@ -71,6 +75,10 @@
     [Parameter] public EventCallback OnRemoveFood { get; set; }
     [Parameter] public EventCallback OnAddWater { get; set; }
     [Parameter] public EventCallback OnRemoveWater { get; set; }
+    [Parameter] public EventCallback OnBatchFillFood { get; set; }
+    [Parameter] public EventCallback OnBatchFillWater { get; set; }
+    [Parameter] public EventCallback OnUnlockAutoRefill { get; set; }
+    [Parameter] public EventCallback OnToggleAutoRefill { get; set; }
     [Parameter] public string? SelectedRoomKey { get; set; }
     [Parameter] public EventCallback<string> SelectedRoomKeyChanged { get; set; }
     [Parameter] public EventCallback<string> OnSelectRoom { get; set; }

@@ -232,7 +232,12 @@
 
                                     OnAddWater="OnAddWater"
 
-                                    OnRemoveWater="OnRemoveWater" />
+                                    OnRemoveWater="OnRemoveWater"
+                                    OnBatchFillFood="OnBatchFillFood"
+                                    OnBatchFillWater="OnBatchFillWater"
+                                    Player="Player"
+                                    OnUnlockAutoRefill="OnUnlockAutoRefill"
+                                    OnToggleAutoRefill="OnToggleAutoRefill" />
 
             }
 
@@ -301,6 +306,10 @@
     [Parameter] public EventCallback OnAddWater { get; set; }
 
     [Parameter] public EventCallback OnRemoveWater { get; set; }
+    [Parameter] public EventCallback OnBatchFillFood { get; set; }
+    [Parameter] public EventCallback OnBatchFillWater { get; set; }
+    [Parameter] public EventCallback OnUnlockAutoRefill { get; set; }
+    [Parameter] public EventCallback OnToggleAutoRefill { get; set; }
 
 
 

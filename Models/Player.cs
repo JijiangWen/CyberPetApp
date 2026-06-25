@@ -10,6 +10,10 @@ public class Player
     public bool AutoRepairEnabled { get; set; } = false;
     public int AutoRepairThreshold { get; set; } = 20;
 
+    // ── 自动装填设置 ──
+    public bool AutoRefillUnlocked { get; set; } = false;
+    public bool AutoRefillEnabled { get; set; } = false;
+
     // ── 多技能等级系统 ──
     public int FishingLevel { get; set; } = 1;
     public int FishingXp { get; set; }

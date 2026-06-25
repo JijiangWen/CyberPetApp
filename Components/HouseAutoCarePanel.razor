@@ -6,6 +6,45 @@
         <span class="auto-care-meta">tick: 2s · daemon</span>
     </div>
 
+    @if (FeederUnlocked || WatererUnlocked)
+    {
+        <div class="auto-care-unit settings" style="border: 1px solid var(--accent-dim, #3a4b5c); border-radius: 4px; padding: 12px; margin-bottom: 16px; background: rgba(20, 30, 40, 0.4);">
+            <div class="auto-care-unit-head" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <PixelIcon Name="tool" />
+                    <span class="auto-care-title" style="font-weight: bold; color: var(--text-color, #c8d6e5);">智能自动装填系统</span>
+                </div>
+                <span class="tag @(Player.AutoRefillUnlocked ? (Player.AutoRefillEnabled ? "on" : "off") : "off")" style="font-size: 10px; padding: 2px 6px; border-radius: 2px; font-family: monospace;">
+                    @(Player.AutoRefillUnlocked ? (Player.AutoRefillEnabled ? "ACTIVE" : "PAUSED") : "LOCKED")
+                </span>
+            </div>
+            @if (Player.AutoRefillUnlocked)
+            {
+                <div class="s-row" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                    <span class="s-label" style="color: var(--text-muted, #8a9baf);">自动装填功能</span>
+                    <button type="button" class="g-btn" @onclick="OnToggleAutoRefill">
+                        @(Player.AutoRefillEnabled ? "暂停自动装填" : "启用自动装填")
+                    </button>
+                </div>
+                <p class="hint auto-care-hint" style="font-size: 11px; color: var(--text-dark, #5a6b7f); margin-top: 4px; line-height: 1.4;">
+                    // 启用后：每 2s 自动将背包中的食物、饮料和凉白开水装填入槽（需加工费）
+                </p>
+            }
+            else
+            {
+                <div class="s-row" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                    <span class="s-label" style="color: var(--text-muted, #8a9baf);">解锁自动装填</span>
+                    <button type="button" class="g-btn primary" disabled="@(Player.Money < 1000)" @onclick="OnUnlockAutoRefill">
+                        解锁(1000g)
+                    </button>
+                </div>
+                <p class="hint auto-care-hint" style="font-size: 11px; color: var(--text-dark, #5a6b7f); margin-top: 4px; line-height: 1.4;">
+                    // 一次性金币解锁。解锁后无需手动装填，后台将自动从背包补给食物和水
+                </p>
+            }
+        </div>
+    }
+
     @if (ShowFeeder)
     {
     @* ── 智能喂食站 ── *@
@@ -44,6 +83,10 @@
                 }
             </div>
             <div class="btn-group auto-care-actions">
+                <button type="button" class="g-btn primary" disabled="@(!CanBatchFillFood())"
+                        @onclick="OnBatchFillFood">
+                    一键批量装填
+                </button>
                 <button type="button" class="g-btn" disabled="@(!HasBackpackFood(NormalFood.Name))"
                         @onclick="() => OnAddFood.InvokeAsync(NormalFood)">
                     <span class="item-sprite sp-24 item-food"></span>add(@NormalFood.Name)
@@ -52,12 +95,21 @@
                         @onclick="() => OnAddFood.InvokeAsync(LuxuryFood)">
                     <span class="item-sprite sp-24 item-can"></span>add(@LuxuryFood.Name)
                 </button>
+                @foreach (var item in GetFeederFoodsInBackpack().Where(x => x.Name != NormalFood.Name && x.Name != LuxuryFood.Name))
+                {
+                    <button type="button" class="g-btn" @onclick="() => OnAddFood.InvokeAsync(item.FoodObj)">
+                        add(@item.Name)
+                    </button>
+                }
                 @foreach (var cooked in CookBook.Recipes.Where(r => r.AllowAutoFeeder))
                 {
-                    <button type="button" class="g-btn" disabled="@(!HasBackpackFood(cooked.FoodName))"
-                            @onclick="() => OnAddCookedFood.InvokeAsync(cooked.FoodName)">
-                        add(@cooked.FoodName)
-                    </button>
+                    @if (!GetFeederFoodsInBackpack().Any(x => x.Name == cooked.FoodName))
+                    {
+                        <button type="button" class="g-btn" disabled="@(!HasBackpackFood(cooked.FoodName))"
+                                @onclick="() => OnAddCookedFood.InvokeAsync(cooked.FoodName)">
+                            add(@cooked.FoodName)
+                        </button>
+                    }
                 }
                 <button type="button" class="g-btn" @onclick="OnRemoveFood">remove(last)</button>
             </div>
@@ -107,6 +159,10 @@
                 }
             </div>
             <div class="btn-group auto-care-actions">
+                <button type="button" class="g-btn primary" disabled="@(!CanBatchFillWater())"
+                        @onclick="OnBatchFillWater">
+                    一键批量装填
+                </button>
                 <button type="button" class="g-btn" disabled="@(!HasBackpackWater())"
                         @onclick="OnAddWater">add(凉白开水)</button>
                 <button type="button" class="g-btn" @onclick="OnRemoveWater">remove(last)</button>
@@ -151,6 +207,7 @@
 @code {
     public record PassiveFurnitureEntry(string FurnitureId, string DisplayName, bool Unlocked, string? PassiveLabel);
 
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
     [Parameter, EditorRequired] public AutoFeeder Feeder { get; set; } = null!;
     [Parameter, EditorRequired] public AutoWaterer Waterer { get; set; } = null!;
     [Parameter, EditorRequired] public Food NormalFood { get; set; } = null!;
@@ -170,6 +227,35 @@
     [Parameter] public EventCallback OnRemoveFood { get; set; }
     [Parameter] public EventCallback OnAddWater { get; set; }
     [Parameter] public EventCallback OnRemoveWater { get; set; }
+    [Parameter] public EventCallback OnBatchFillFood { get; set; }
+    [Parameter] public EventCallback OnBatchFillWater { get; set; }
+    [Parameter] public EventCallback OnUnlockAutoRefill { get; set; }
+    [Parameter] public EventCallback OnToggleAutoRefill { get; set; }
+
+    private bool CanBatchFillFood()
+    {
+        if (Feeder.FoodCount >= Feeder.MaxFoodCount) return false;
+        var shop = new Shop();
+        return Backpack.Keys.Any(name => FeederService.TryGetFeederFood(name, shop, out _));
+    }
+
+    private bool CanBatchFillWater()
+    {
+        if (Waterer.WaterCount >= Waterer.MaxWaterCount) return false;
+        return Backpack.GetValueOrDefault(WaterCatalog.Purified.Name) > 0;
+    }
+
+    private IEnumerable<(string Name, int Qty, Food FoodObj)> GetFeederFoodsInBackpack()
+    {
+        var shop = new Shop();
+        foreach (var kvp in Backpack)
+        {
+            if (FeederService.TryGetFeederFood(kvp.Key, shop, out var food) && food is not null)
+            {
+                yield return (kvp.Key, kvp.Value, food);
+            }
+        }
+    }
 
     private bool HasBackpackFood(string name) =>
         Backpack.GetValueOrDefault(name) > 0;
